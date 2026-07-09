@@ -35,6 +35,9 @@ const supportsCache = {};
 const blueskyFeatures = {
   '@mastodon/mentions': true,
   '@mastodon/post-bookmark': true,
+  '@mastodon/lists': true,
+  '@mastodon/filters': true,
+  '@mastodon/trending-hashtags': true,
 };
 
 const semverExtract = /^\d+\.\d+(\.\d+)?/;

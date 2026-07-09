@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@atproto/api": "^0.20.27",
+    "@atproto/oauth-client-browser": "^0.4.7",
     "@formatjs/intl-localematcher": "~0.8.10",
     "@formatjs/intl-segmenter": "~12.2.10",
     "@formkit/auto-animate": "~0.9.0",

@@ -6,6 +6,7 @@
 import {
   atUriToId,
   blueskyInstanceInfo,
+  BSKY_WEB,
   didFromAtUri,
   feedItemToStatus,
   idToAtUri,
@@ -16,6 +17,10 @@ import {
 } from './convert';
 
 const MAX_IMAGE_SIZE = 950_000; // Bluesky blob limit is ~976KB
+
+// Bluesky's Discover ("What's Hot") feed generator
+const DISCOVER_FEED =
+  'at://did:plc:z72i7hdynmk6r22z27h6tvur/app.bsky.feed.generator/whats-hot';
 
 let atprotoPromise;
 export function loadAtproto() {
@@ -99,12 +104,34 @@ export function createBlueskyClient({
   service,
   instance,
   session,
+  did,
+  authType, // 'password' (default) | 'oauth'
   onSessionChange,
 }) {
   let agent = null;
 
   let resumePromise = null;
   async function ready() {
+    if (authType === 'oauth') {
+      // OAuth sessions are restored via @atproto/oauth-client-browser;
+      // tokens live in its own IndexedDB store and auto-refresh
+      if (agent) return;
+      if (!resumePromise) {
+        resumePromise = (async () => {
+          const [{ Agent }, { restoreOAuthSession }] = await Promise.all([
+            loadAtproto(),
+            import('./oauth'),
+          ]);
+          const oauthSession = await restoreOAuthSession(did);
+          agent = new Agent(oauthSession);
+        })().catch((e) => {
+          resumePromise = null;
+          throw e;
+        });
+      }
+      await resumePromise;
+      return;
+    }
     if (!agent) {
       const { AtpAgent } = await loadAtproto();
       agent = new AtpAgent({
@@ -127,6 +154,11 @@ export function createBlueskyClient({
       });
     }
     await resumePromise;
+  }
+
+  // Works for both credential sessions and OAuth sessions
+  function agentDid() {
+    return agent?.did || agent?.session?.did || did;
   }
 
   // Caches to map AT-URIs back to data needed for actions
@@ -164,6 +196,148 @@ export function createBlueskyClient({
       }
       throw e;
     }
+  }
+
+  // ----- Muted words (mapped to Mastodon filters) -----
+  const MUTED_WORDS_TTL = 5 * 60 * 1000;
+  let mutedWordsCache = null; // { words, fetchedAt }
+  async function getMutedWords(force) {
+    if (
+      !force &&
+      mutedWordsCache &&
+      Date.now() - mutedWordsCache.fetchedAt < MUTED_WORDS_TTL
+    ) {
+      return mutedWordsCache.words;
+    }
+    try {
+      const prefs = await agent.getPreferences();
+      mutedWordsCache = {
+        words: prefs.moderationPrefs?.mutedWords || [],
+        fetchedAt: Date.now(),
+      };
+    } catch (e) {
+      console.error(e);
+      mutedWordsCache = { words: [], fetchedAt: Date.now() };
+    }
+    return mutedWordsCache.words;
+  }
+
+  const FILTER_CONTEXTS = [
+    'home',
+    'notifications',
+    'public',
+    'thread',
+    'account',
+  ];
+  function mutedWordToFilter(word) {
+    const id = word.id || word.value;
+    return {
+      id,
+      title: word.value,
+      context: FILTER_CONTEXTS,
+      expiresAt: word.expiresAt || null,
+      filterAction: 'hide',
+      keywords: [
+        {
+          id,
+          keyword: word.value,
+          wholeWord: !/\s/.test(word.value),
+        },
+      ],
+    };
+  }
+
+  function escapeRegExp(str) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  // Bluesky applies muted words client-side; stamp Mastodon-style
+  // `filtered` results so phanpy's existing filter UI handles them
+  function applyMutedWords(status, words) {
+    const target = status?.reblog || status;
+    if (!target || !words?.length) return status;
+    const text = `${target.text || ''} ${(target.tags || [])
+      .map((t) => t.name)
+      .join(' ')}`;
+    const matches = [];
+    for (const word of words) {
+      if (word.expiresAt && Date.parse(word.expiresAt) < Date.now()) continue;
+      const value = word.value;
+      let matched;
+      if (/\s/.test(value)) {
+        matched = text.toLowerCase().includes(value.toLowerCase());
+      } else {
+        try {
+          matched = new RegExp(
+            `(?:^|[^\\p{L}\\p{N}#])${escapeRegExp(value)}(?:$|[^\\p{L}\\p{N}])`,
+            'iu',
+          ).test(text);
+        } catch (e) {
+          matched = text.toLowerCase().includes(value.toLowerCase());
+        }
+      }
+      if (matched) matches.push(word);
+    }
+    if (matches.length) {
+      target.filtered = matches.map((word) => {
+        const { keywords, ...filter } = mutedWordToFilter(word);
+        return {
+          filter,
+          keywordMatches: [word.value],
+          statusMatches: null,
+        };
+      });
+    }
+    return status;
+  }
+
+  async function withMutedWords(statuses) {
+    try {
+      const words = await getMutedWords();
+      if (words.length) {
+        for (const status of statuses) {
+          if (status) applyMutedWords(status, words);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return statuses;
+  }
+
+  // ----- Lists -----
+  const LIST_COLLECTION = 'app.bsky.graph.list';
+  const LISTITEM_COLLECTION = 'app.bsky.graph.listitem';
+  const listItemUris = new Map(); // `${listUri}|${memberDid}` → listitem record uri
+
+  function listViewToMasto(list) {
+    return {
+      id: atUriToId(list.uri),
+      title: list.name,
+      repliesPolicy: 'list',
+      exclusive: false,
+      _bluesky: true,
+    };
+  }
+
+  async function findListItemUri(listUri, memberDid) {
+    const key = `${listUri}|${memberDid}`;
+    if (listItemUris.has(key)) return listItemUris.get(key);
+    let cursor;
+    for (let page = 0; page < 10; page++) {
+      const res = await agent.app.bsky.graph.getList({
+        list: listUri,
+        limit: 100,
+        cursor,
+      });
+      for (const item of res.data.items || []) {
+        listItemUris.set(`${listUri}|${item.subject.did}`, item.uri);
+      }
+      if (listItemUris.has(key)) return listItemUris.get(key);
+      cursor = res.data.cursor;
+      if (!cursor) break;
+    }
+    return null;
   }
 
   function trackPost(post) {
@@ -302,7 +476,7 @@ export function createBlueskyClient({
         });
         // masto's reblog() returns a boost wrapper with .reblog
         return {
-          id: `${id}+repost+${agent.session.did}`,
+          id: `${id}+repost+${agentDid()}`,
           reblog: status,
           _bluesky: true,
           _instance: instance,
@@ -533,9 +707,10 @@ export function createBlueskyClient({
       return await refreshedStatus(res.uri);
     } catch (e) {
       // AppView may not have indexed it yet — build locally
-      const profile = agent.session
-        ? { did: agent.session.did, handle: agent.session.handle }
-        : {};
+      const profile = {
+        did: agentDid(),
+        handle: agent.session?.handle || '',
+      };
       const status = postToStatus(
         {
           uri: res.uri,
@@ -657,7 +832,7 @@ export function createBlueskyClient({
       async block() {
         await ready();
         await agent.app.bsky.graph.block.create(
-          { repo: agent.session.did },
+          { repo: agentDid() },
           {
             subject: id,
             createdAt: new Date().toISOString(),
@@ -672,7 +847,7 @@ export function createBlueskyClient({
         if (blockUri) {
           const rkey = blockUri.split('/').pop();
           await agent.app.bsky.graph.block.delete({
-            repo: agent.session.did,
+            repo: agentDid(),
             rkey,
           });
         }
@@ -706,7 +881,28 @@ export function createBlueskyClient({
         list: async () => [],
       },
       lists: {
-        list: async () => [],
+        // Lists (of mine) that contain this account — Bluesky has no
+        // direct lookup, so scan my curate lists' members
+        list: async () => {
+          await ready();
+          const res = await agent.app.bsky.graph.getLists({
+            actor: agentDid(),
+            limit: 50,
+          });
+          const myLists = (res.data.lists || []).filter((l) =>
+            /curatelist/.test(l.purpose || ''),
+          );
+          const containing = [];
+          for (const list of myLists) {
+            try {
+              const itemUri = await findListItemUri(list.uri, id);
+              if (itemUri) containing.push(listViewToMasto(list));
+            } catch (e) {
+              console.error(e);
+            }
+          }
+          return containing;
+        },
       },
       familiarFollowers: {
         fetch: async () => [],
@@ -742,16 +938,137 @@ export function createBlueskyClient({
         list: async () => [],
       },
       lists: {
-        list: async () => [],
-        $select: () => ({
-          fetch: async () => ({}),
-          accounts: { list: async () => [] },
-        }),
+        list: async () => {
+          await ready();
+          const res = await agent.app.bsky.graph.getLists({
+            actor: agentDid(),
+            limit: 100,
+          });
+          return (res.data.lists || [])
+            .filter((l) => /curatelist/.test(l.purpose || ''))
+            .map(listViewToMasto);
+        },
+        create: async ({ title }) => {
+          await ready();
+          const res = await agent.app.bsky.graph.list.create(
+            { repo: agentDid() },
+            {
+              purpose: 'app.bsky.graph.defs#curatelist',
+              name: title,
+              createdAt: new Date().toISOString(),
+            },
+          );
+          return {
+            id: atUriToId(res.uri),
+            title,
+            repliesPolicy: 'list',
+            exclusive: false,
+            _bluesky: true,
+          };
+        },
+        $select: (id) => {
+          const listUri = idToAtUri(id);
+          const rkey = listUri.split('/').pop();
+          return {
+            fetch: async () => {
+              await ready();
+              const res = await agent.app.bsky.graph.getList({
+                list: listUri,
+                limit: 1,
+              });
+              return listViewToMasto(res.data.list);
+            },
+            update: async ({ title }) => {
+              await ready();
+              const existing = await agent.com.atproto.repo.getRecord({
+                repo: agentDid(),
+                collection: LIST_COLLECTION,
+                rkey,
+              });
+              await agent.com.atproto.repo.putRecord({
+                repo: agentDid(),
+                collection: LIST_COLLECTION,
+                rkey,
+                record: { ...existing.data.value, name: title },
+              });
+              return {
+                id,
+                title,
+                repliesPolicy: 'list',
+                exclusive: false,
+                _bluesky: true,
+              };
+            },
+            remove: async () => {
+              await ready();
+              await agent.app.bsky.graph.list.delete({
+                repo: agentDid(),
+                rkey,
+              });
+              return {};
+            },
+            accounts: {
+              list: ({ limit = 40 } = {}) =>
+                paginator(async (cursor) => {
+                  await ready();
+                  const res = await agent.app.bsky.graph.getList({
+                    list: listUri,
+                    limit,
+                    cursor,
+                  });
+                  const items = (res.data.items || []).map((item) => {
+                    listItemUris.set(
+                      `${listUri}|${item.subject.did}`,
+                      item.uri,
+                    );
+                    trackProfile(item.subject);
+                    return profileToAccount(item.subject, instance);
+                  });
+                  return { items, cursor: res.data.cursor };
+                }),
+              create: async ({ accountIds }) => {
+                await ready();
+                const ids = Array.isArray(accountIds)
+                  ? accountIds
+                  : [accountIds];
+                for (const memberDid of ids) {
+                  const res = await agent.app.bsky.graph.listitem.create(
+                    { repo: agentDid() },
+                    {
+                      list: listUri,
+                      subject: memberDid,
+                      createdAt: new Date().toISOString(),
+                    },
+                  );
+                  listItemUris.set(`${listUri}|${memberDid}`, res.uri);
+                }
+                return {};
+              },
+              remove: async ({ accountIds }) => {
+                await ready();
+                const ids = Array.isArray(accountIds)
+                  ? accountIds
+                  : [accountIds];
+                for (const memberDid of ids) {
+                  const itemUri = await findListItemUri(listUri, memberDid);
+                  if (itemUri) {
+                    await agent.app.bsky.graph.listitem.delete({
+                      repo: agentDid(),
+                      rkey: itemUri.split('/').pop(),
+                    });
+                    listItemUris.delete(`${listUri}|${memberDid}`);
+                  }
+                }
+                return {};
+              },
+            },
+          };
+        },
       },
       accounts: {
         verifyCredentials: async () => {
           await ready();
-          const res = await agent.getProfile({ actor: agent.session.did });
+          const res = await agent.getProfile({ actor: agentDid() });
           return profileToAccount(res.data, instance);
         },
         lookup: async ({ acct }) => {
@@ -796,10 +1113,10 @@ export function createBlueskyClient({
               await ready();
               const res = await agent.getTimeline({ limit, cursor });
               res.data.feed.forEach(trackFeedItem);
-              return {
-                items: res.data.feed.map(toFeedStatus).filter(Boolean),
-                cursor: res.data.cursor,
-              };
+              const items = await withMutedWords(
+                res.data.feed.map(toFeedStatus).filter(Boolean),
+              );
+              return { items, cursor: res.data.cursor };
             }),
         },
         tag: {
@@ -807,18 +1124,42 @@ export function createBlueskyClient({
             list: ({ limit = 20 } = {}) =>
               paginator(async (cursor) => {
                 await ready();
+                // Multi-word "tags" come from trending topics — search
+                // them as phrases instead of hashtags
+                const q = /\s/.test(hashtag) ? hashtag : `#${hashtag}`;
                 const res = await agent.app.bsky.feed.searchPosts({
-                  q: `#${hashtag}`,
+                  q,
                   limit,
                   cursor,
                 });
                 res.data.posts.forEach(trackPost);
-                return {
-                  items: res.data.posts.map(toStatus).filter(Boolean),
-                  cursor: res.data.cursor,
-                };
+                const items = await withMutedWords(
+                  res.data.posts.map(toStatus).filter(Boolean),
+                );
+                return { items, cursor: res.data.cursor };
               }),
           }),
+        },
+        list: {
+          $select: (id) => {
+            const listUri = idToAtUri(id);
+            return {
+              list: ({ limit = 20 } = {}) =>
+                paginator(async (cursor) => {
+                  await ready();
+                  const res = await agent.app.bsky.feed.getListFeed({
+                    list: listUri,
+                    limit,
+                    cursor,
+                  });
+                  res.data.feed.forEach(trackFeedItem);
+                  const items = await withMutedWords(
+                    res.data.feed.map(toFeedStatus).filter(Boolean),
+                  );
+                  return { items, cursor: res.data.cursor };
+                }),
+            };
+          },
         },
       },
       tags: {
@@ -860,7 +1201,7 @@ export function createBlueskyClient({
           paginator(async (cursor) => {
             await ready();
             const res = await agent.getActorLikes({
-              actor: agent.session.did,
+              actor: agentDid(),
               limit,
               cursor,
             });
@@ -895,10 +1236,53 @@ export function createBlueskyClient({
       },
       trends: {
         statuses: {
-          list: () => paginator(async () => ({ items: [], cursor: null })),
+          // Bluesky's Discover ("What's Hot") feed
+          list: ({ limit = 20 } = {}) =>
+            paginator(async (cursor) => {
+              await ready();
+              const res = await agent.app.bsky.feed.getFeed({
+                feed: DISCOVER_FEED,
+                limit,
+                cursor,
+              });
+              res.data.feed.forEach(trackFeedItem);
+              const items = await withMutedWords(
+                res.data.feed.map(toFeedStatus).filter(Boolean),
+              );
+              return { items, cursor: res.data.cursor };
+            }),
         },
         tags: {
-          list: () => paginator(async () => ({ items: [], cursor: null })),
+          // Bluesky trending topics, mapped to Mastodon trending-tag shape
+          list: ({ limit = 10 } = {}) =>
+            paginator(async () => {
+              await ready();
+              let topics = [];
+              try {
+                const res = await agent.app.bsky.unspecced.getTrends({
+                  limit,
+                });
+                topics = (res.data.trends || []).map((t) => ({
+                  name: t.displayName || t.topic,
+                  url: `${BSKY_WEB}${t.link || ''}`,
+                  history: [{ day: '', uses: t.postCount || 0, accounts: 0 }],
+                }));
+              } catch (e) {
+                try {
+                  const res = await agent.app.bsky.unspecced.getTrendingTopics({
+                    limit,
+                  });
+                  topics = (res.data.topics || []).map((t) => ({
+                    name: t.displayName || t.topic,
+                    url: `${BSKY_WEB}${t.link || ''}`,
+                    history: [{ day: '', uses: 0, accounts: 0 }],
+                  }));
+                } catch (e2) {
+                  console.error(e2);
+                }
+              }
+              return { items: topics, cursor: null };
+            }),
         },
         links: {
           list: () => paginator(async () => ({ items: [], cursor: null })),
@@ -908,7 +1292,10 @@ export function createBlueskyClient({
         list: () => paginator(async () => ({ items: [], cursor: null })),
       },
       filters: {
-        list: async () => [],
+        list: async () => {
+          await ready();
+          return (await getMutedWords(true)).map(mutedWordToFilter);
+        },
       },
       media: {
         $select: (id) => ({
@@ -935,7 +1322,99 @@ export function createBlueskyClient({
         },
       },
       filters: {
-        list: async () => [],
+        // Mastodon v2 filters mapped onto Bluesky muted words.
+        // One filter = one muted word; multi-keyword filters become
+        // multiple muted words.
+        list: async () => {
+          await ready();
+          return (await getMutedWords(true)).map(mutedWordToFilter);
+        },
+        create: async ({
+          title,
+          keywordsAttributes,
+          keywords_attributes,
+          expiresIn,
+          expires_in,
+        } = {}) => {
+          await ready();
+          const attrs = keywordsAttributes || keywords_attributes || [];
+          let keywords = attrs
+            .filter((k) => !k._destroy && k.keyword)
+            .map((k) => k.keyword);
+          if (!keywords.length && title) keywords = [title];
+          if (!keywords.length) throw new Error('No keywords to mute');
+          const expiresSec = expiresIn ?? expires_in;
+          const expiresAt = expiresSec
+            ? new Date(Date.now() + expiresSec * 1000).toISOString()
+            : undefined;
+          await agent.addMutedWords(
+            keywords.map((value) => ({
+              value,
+              targets: ['content', 'tag'],
+              actorTarget: 'all',
+              ...(expiresAt ? { expiresAt } : {}),
+            })),
+          );
+          const words = await getMutedWords(true);
+          const created = words.find((w) => w.value === keywords[0]);
+          return created
+            ? mutedWordToFilter(created)
+            : mutedWordToFilter({ value: keywords[0] });
+        },
+        $select: (id) => ({
+          fetch: async () => {
+            await ready();
+            const words = await getMutedWords();
+            const word = words.find((w) => (w.id || w.value) === id);
+            if (!word) throw new Error('Filter not found');
+            return mutedWordToFilter(word);
+          },
+          update: async ({
+            title,
+            keywordsAttributes,
+            keywords_attributes,
+            expiresIn,
+            expires_in,
+          } = {}) => {
+            await ready();
+            const words = await getMutedWords(true);
+            const word = words.find((w) => (w.id || w.value) === id);
+            if (!word) throw new Error('Filter not found');
+            const attrs = keywordsAttributes || keywords_attributes || [];
+            let keywords = attrs
+              .filter((k) => !k._destroy && k.keyword)
+              .map((k) => k.keyword);
+            if (!keywords.length && title) keywords = [title];
+            const expiresSec = expiresIn ?? expires_in;
+            const expiresAt = expiresSec
+              ? new Date(Date.now() + expiresSec * 1000).toISOString()
+              : undefined;
+            await agent.removeMutedWord(word);
+            if (keywords.length) {
+              await agent.addMutedWords(
+                keywords.map((value) => ({
+                  value,
+                  targets: word.targets || ['content', 'tag'],
+                  actorTarget: word.actorTarget || 'all',
+                  ...(expiresAt ? { expiresAt } : {}),
+                })),
+              );
+            }
+            const after = await getMutedWords(true);
+            const updated = after.find((w) => w.value === keywords[0]);
+            return updated
+              ? mutedWordToFilter(updated)
+              : mutedWordToFilter({ value: keywords[0] || word.value });
+          },
+          remove: async () => {
+            await ready();
+            const words = await getMutedWords(true);
+            const word = words.find((w) => (w.id || w.value) === id);
+            if (word) await agent.removeMutedWord(word);
+            await getMutedWords(true);
+            return {};
+          },
+        }),
       },
       search: {
         list: async ({ q, type, limit = 20 }) => {

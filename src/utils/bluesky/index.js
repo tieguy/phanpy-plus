@@ -22,10 +22,18 @@ export function isBlueskyAccount(account) {
   return account?.accountType === 'bluesky';
 }
 
-export function getBlueskyAccounts() {
-  return getAccounts().filter(
-    (a) => isBlueskyAccount(a) && a.blueskySession?.refreshJwt,
+// Logged-in check that works for both auth modes: app-password sessions
+// keep a refresh JWT in the account; OAuth sessions keep tokens in the
+// OAuth client's own store and only mark the account with blueskyAuth
+export function isBlueskyLoggedIn(account) {
+  return (
+    isBlueskyAccount(account) &&
+    (account.blueskyAuth === 'oauth' || !!account.blueskySession?.refreshJwt)
   );
+}
+
+export function getBlueskyAccounts() {
+  return getAccounts().filter(isBlueskyLoggedIn);
 }
 
 // Instances (hostnames) that belong to logged-in Bluesky accounts
@@ -70,6 +78,8 @@ export function getBlueskyClient(account) {
     service: account.blueskyService || DEFAULT_BLUESKY_SERVICE,
     instance: account.instanceURL,
     session: account.blueskySession,
+    did,
+    authType: account.blueskyAuth || 'password',
     onSessionChange: (session) => persistSessionForAccount(did, session),
   });
   blueskyClients[did] = client;
@@ -83,7 +93,7 @@ export function blueskyApi(account) {
     masto: client.masto,
     streaming: undefined,
     client,
-    authenticated: !!account.blueskySession?.refreshJwt,
+    authenticated: isBlueskyLoggedIn(account),
     instance: account.instanceURL,
   };
 }
@@ -154,7 +164,72 @@ export async function loginBluesky({ service, identifier, password }) {
   return session.did;
 }
 
+// Complete an AT Protocol OAuth callback (or restore the pending flow),
+// save the account, and make it current. Returns the DID, or null if
+// there was nothing to complete.
+export async function completeBlueskyOAuth() {
+  const { initBlueskyOAuth } = await import('./oauth');
+  const result = await initBlueskyOAuth();
+  if (!result?.session) return null;
+  const { session } = result;
+  const did = session.did || session.sub;
+
+  const { Agent } = await loadAtproto();
+  const agent = new Agent(session);
+  let profile;
+  try {
+    const res = await agent.getProfile({ actor: did });
+    profile = res.data;
+  } catch (e) {
+    profile = { did, handle: '' };
+  }
+
+  // Best-effort: label the account with its auth server's host
+  let instance = 'bsky.social';
+  let service = DEFAULT_BLUESKY_SERVICE;
+  try {
+    const issuer = session.serverMetadata?.issuer;
+    if (issuer) {
+      instance = new URL(issuer).host.toLowerCase();
+      service = issuer.replace(/\/+$/, '');
+    }
+  } catch (e) {}
+
+  seedInstanceInfo(instance);
+
+  const accounts = getAccounts();
+  const existing = accounts.find((a) => a.info.id === did);
+  const accountData = {
+    info: profileToAccount(profile, instance),
+    instanceURL: instance,
+    // Marker value: real tokens live in the OAuth client's own store.
+    // Must be truthy so "logged out" checks (!account.accessToken) pass.
+    accessToken: 'oauth',
+    accountType: 'bluesky',
+    blueskyAuth: 'oauth',
+    blueskyService: service,
+    blueskySession: null,
+    vapidKey: null,
+  };
+  if (existing) {
+    Object.assign(existing, accountData, { updatedAt: Date.now() });
+  } else {
+    accounts.push({ ...accountData, createdAt: Date.now() });
+  }
+  saveAccounts(accounts);
+  setCurrentAccountID(did);
+  delete blueskyClients[did];
+  return did;
+}
+
 export function logoutBluesky(accountID) {
+  const account = getAccounts().find((a) => a.info.id === accountID);
+  if (account?.blueskyAuth === 'oauth') {
+    // Fire-and-forget token revocation via the OAuth client
+    import('./oauth')
+      .then(({ revokeOAuthSession }) => revokeOAuthSession(accountID))
+      .catch(() => {});
+  }
   delete blueskyClients[accountID];
 }
 
@@ -171,9 +246,6 @@ export function getOtherNetworkAccounts() {
   }
   // Current is Mastodon → Bluesky accounts
   return accounts.filter(
-    (a) =>
-      isBlueskyAccount(a) &&
-      a.blueskySession?.refreshJwt &&
-      a.info.id !== currentID,
+    (a) => isBlueskyLoggedIn(a) && a.info.id !== currentID,
   );
 }

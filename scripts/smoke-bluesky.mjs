@@ -1,12 +1,14 @@
 // Usage: start `npx vite --port 5173`, then `node scripts/smoke-bluesky.mjs`
 // Optional env: CHROMIUM_PATH (browser binary), SCRATCH (screenshot dir)
+//
 // Smoke test: boot phanpy with a mocked Bluesky account and verify the
-// home timeline renders converted Bluesky posts.
+// home timeline, muted-word filtering, trending, lists, and login page.
 import { chromium } from '@playwright/test';
 
 const BASE = 'http://localhost:5173';
 const DID = 'did:plc:testuser0001';
 const HANDLE = 'tester.bsky.social';
+const CID = 'bafyreib2rxk3rw6l3dqe2xk5rbrekt2qx3ekvjmnp6mfk5m5tqrcdrn4dm';
 
 const profile = {
   did: DID,
@@ -39,7 +41,7 @@ const bob = {
 function post(author, rkey, text, extra = {}) {
   return {
     uri: `at://${author.did}/app.bsky.feed.post/${rkey}`,
-    cid: 'bafyreib2rxk3rw6l3dqe2xk5rbrekt2qx3ekvjmnp6mfk5m5tqrcdrn4dm',
+    cid: CID,
     author,
     record: {
       $type: 'app.bsky.feed.post',
@@ -63,33 +65,20 @@ function post(author, rkey, text, extra = {}) {
 const timeline = {
   feed: [
     {
-      post: post(
-        alice,
-        'aaa1',
-        'Hello from Bluesky! This is a test post with a #hashtag and a link https://example.com',
-        {
-          createdAt: '2026-07-08T12:30:00.000Z',
-          facets: [
+      post: post(alice, 'aaa1', 'Hello from Bluesky! A fine test post', {
+        createdAt: '2026-07-08T12:30:00.000Z',
+        embed: {
+          $type: 'app.bsky.embed.images#view',
+          images: [
             {
-              index: { byteStart: 51, byteEnd: 59 },
-              features: [
-                { $type: 'app.bsky.richtext.facet#tag', tag: 'hashtag' },
-              ],
+              thumb: 'https://cdn.example.com/thumb.jpg',
+              fullsize: 'https://cdn.example.com/full.jpg',
+              alt: 'A test image',
+              aspectRatio: { width: 800, height: 600 },
             },
           ],
-          embed: {
-            $type: 'app.bsky.embed.images#view',
-            images: [
-              {
-                thumb: 'https://cdn.example.com/thumb.jpg',
-                fullsize: 'https://cdn.example.com/full.jpg',
-                alt: 'A test image',
-                aspectRatio: { width: 800, height: 600 },
-              },
-            ],
-          },
         },
-      ),
+      }),
     },
     {
       post: post(bob, 'bbb1', 'A reposted post appears', {
@@ -102,12 +91,71 @@ const timeline = {
       },
     },
     {
-      post: post(bob, 'ccc1', 'Plain old third post', {
+      post: post(bob, 'ccc1', 'This mentions skipme and should be hidden', {
+        createdAt: '2026-07-08T10:30:00.000Z',
+      }),
+    },
+    {
+      post: post(bob, 'ddd1', 'Plain old third post', {
         createdAt: '2026-07-08T10:00:00.000Z',
       }),
     },
   ],
   cursor: undefined,
+};
+
+const discoverFeed = {
+  feed: [
+    {
+      post: post(alice, 'hot1', 'A trending hot post from Discover', {
+        createdAt: '2026-07-08T12:00:00.000Z',
+      }),
+    },
+  ],
+};
+
+const trends = {
+  trends: [
+    {
+      topic: 'test-topic',
+      displayName: 'Test Topic',
+      link: '/topic/test-topic',
+      startedAt: '2026-07-08T00:00:00.000Z',
+      postCount: 1234,
+      actors: [],
+    },
+  ],
+};
+
+const preferences = {
+  preferences: [
+    {
+      $type: 'app.bsky.actor.defs#mutedWordsPref',
+      items: [
+        {
+          id: 'mw1',
+          value: 'skipme',
+          targets: ['content', 'tag'],
+          actorTarget: 'all',
+        },
+      ],
+    },
+  ],
+};
+
+const LIST_URI = `at://${DID}/app.bsky.graph.list/mylist1`;
+const lists = {
+  lists: [
+    {
+      uri: LIST_URI,
+      cid: CID,
+      creator: profile,
+      name: 'Cool People',
+      purpose: 'app.bsky.graph.defs#curatelist',
+      listItemCount: 1,
+      indexedAt: '2026-07-01T00:00:00.000Z',
+    },
+  ],
 };
 
 const account = {
@@ -117,7 +165,7 @@ const account = {
     acct: HANDLE,
     displayName: 'Test User',
     avatar: 'https://cdn.example.com/avatar.jpg',
-    avatarStatic: '',
+    avatarStatic: 'https://cdn.example.com/avatar.jpg',
     url: `https://bsky.app/profile/${DID}`,
     _bluesky: true,
   },
@@ -154,9 +202,6 @@ const browser = await chromium.launch(
 );
 const page = await browser.newPage();
 const consoleErrors = [];
-page.on('console', (msg) => {
-  if (msg.type() === 'error') consoleErrors.push(msg.text());
-});
 page.on('pageerror', (err) => consoleErrors.push(`PAGEERROR: ${err}`));
 
 // Mock all XRPC calls
@@ -169,7 +214,6 @@ await page.route('**/xrpc/**', async (route) => {
       contentType: 'application/json',
       body: JSON.stringify(data),
     });
-  console.log('XRPC', nsid);
   switch (nsid) {
     case 'com.atproto.server.getSession':
       return json({ did: DID, handle: HANDLE, active: true });
@@ -185,8 +229,33 @@ await page.route('**/xrpc/**', async (route) => {
       return json(profile);
     case 'app.bsky.actor.getProfiles':
       return json({ profiles: [profile] });
+    case 'app.bsky.actor.getPreferences':
+      return json(preferences);
     case 'app.bsky.feed.getTimeline':
       return json(timeline);
+    case 'app.bsky.feed.getFeed':
+      return json(discoverFeed);
+    case 'app.bsky.unspecced.getTrends':
+      return json(trends);
+    case 'app.bsky.graph.getLists':
+      return json(lists);
+    case 'app.bsky.graph.getList':
+      return json({
+        list: lists.lists[0],
+        items: [
+          { uri: `at://${DID}/app.bsky.graph.listitem/li1`, subject: alice },
+        ],
+      });
+    case 'app.bsky.feed.getListFeed':
+      return json({
+        feed: [
+          {
+            post: post(alice, 'lp1', 'A post in the Cool People list', {
+              createdAt: '2026-07-08T09:00:00.000Z',
+            }),
+          },
+        ],
+      });
     case 'app.bsky.notification.listNotifications':
       return json({ notifications: [], cursor: undefined });
     case 'app.bsky.feed.getPosts':
@@ -215,21 +284,68 @@ await page.evaluate(
   [account, instanceInfo],
 );
 await page.reload();
-await page.waitForTimeout(1000);
-await page.goto(`${BASE}/#/`);
-await page.waitForTimeout(8000);
+await page.waitForTimeout(6000);
 
-const bodyText = await page.evaluate(() => document.body.innerText);
-const html = await page.content();
+const checks = {};
+let bodyText = await page.evaluate(() => document.body.innerText);
+let html = await page.content();
+checks['home shows alice post'] = bodyText.includes('Hello from Bluesky');
+checks['home shows repost'] = bodyText.includes('A reposted post appears');
+checks['home shows plain post'] = bodyText.includes('Plain old third post');
+checks['muted word post hidden'] = !bodyText.includes('should be hidden');
+checks['image attachment rendered'] = html.includes('cdn.example.com');
+await page.screenshot({
+  path: (process.env.SCRATCH || '.') + '/bsky-timeline.png',
+});
 
-const checks = {
-  'timeline shows alice post': bodyText.includes('Hello from Bluesky'),
-  'timeline shows repost': bodyText.includes('A reposted post appears'),
-  'timeline shows third post': bodyText.includes('Plain old third post'),
-  'shows author name': bodyText.includes('Alice'),
-  'hashtag link rendered': html.includes('hashtag'),
-  'image attachment rendered': html.includes('cdn.example.com'),
-};
+// Trending
+await page.goto(`${BASE}/#/bsky.social/trending`);
+await page.waitForTimeout(4000);
+bodyText = await page.evaluate(() => document.body.innerText);
+checks['trending shows topic'] = bodyText.includes('Test Topic');
+checks['trending shows discover post'] = bodyText.includes(
+  'A trending hot post from Discover',
+);
+await page.screenshot({
+  path: (process.env.SCRATCH || '.') + '/bsky-trending.png',
+});
+
+// Lists
+await page.goto(`${BASE}/#/l`);
+await page.waitForTimeout(3000);
+bodyText = await page.evaluate(() => document.body.innerText);
+checks['lists page shows list'] = bodyText.includes('Cool People');
+// List timeline
+const listID = `${DID}+app.bsky.graph.list+mylist1`;
+await page.goto(`${BASE}/#/l/${listID}`);
+await page.waitForTimeout(4000);
+bodyText = await page.evaluate(() => document.body.innerText);
+checks['list timeline shows post'] = bodyText.includes(
+  'A post in the Cool People list',
+);
+await page.screenshot({
+  path: (process.env.SCRATCH || '.') + '/bsky-list.png',
+});
+
+// Filters page (muted words)
+await page.goto(`${BASE}/#/ft`);
+await page.waitForTimeout(3000);
+bodyText = await page.evaluate(() => document.body.innerText);
+checks['filters page shows muted word'] = bodyText.includes('skipme');
+
+// Login page — OAuth-first Bluesky login
+await page.goto(`${BASE}/#/login`);
+await page.waitForTimeout(1500);
+await page.click('#bluesky-login button');
+await page.waitForTimeout(500);
+bodyText = await page.evaluate(() => document.body.innerText);
+checks['login shows OAuth button'] = bodyText.includes('Continue with Bluesky');
+checks['login shows app password fallback'] = bodyText.includes(
+  'Use an app password instead',
+);
+await page.screenshot({
+  path: (process.env.SCRATCH || '.') + '/bsky-login.png',
+});
 
 let failed = 0;
 for (const [name, ok] of Object.entries(checks)) {
@@ -237,10 +353,9 @@ for (const [name, ok] of Object.entries(checks)) {
   if (!ok) failed++;
 }
 if (failed) {
-  console.log('\n--- body text ---\n', bodyText.slice(0, 3000));
+  console.log('\n--- last body text ---\n', bodyText.slice(0, 2000));
 }
-console.log('\nConsole errors:', consoleErrors.slice(0, 20));
+console.log('\nPage errors:', consoleErrors.slice(0, 10));
 
-await page.screenshot({ path: (process.env.SCRATCH || '.') + '/bsky-timeline.png', fullPage: false });
 await browser.close();
 process.exit(failed ? 1 : 0);

@@ -35,9 +35,30 @@ function bskyPost(author, rkey, text, createdAt) {
 
 const bskyTimeline = {
   feed: [
-    { post: bskyPost(alice, 'aaa1', 'Bluesky post NEWEST', '2026-07-08T12:30:00.000Z') },
-    { post: bskyPost(alice, 'aaa2', 'Bluesky post MIDDLE', '2026-07-08T11:00:00.000Z') },
-    { post: bskyPost(alice, 'aaa3', 'Bluesky post OLDEST', '2026-07-08T09:00:00.000Z') },
+    {
+      post: bskyPost(
+        alice,
+        'aaa1',
+        'Bluesky post NEWEST',
+        '2026-07-08T12:30:00.000Z',
+      ),
+    },
+    {
+      post: bskyPost(
+        alice,
+        'aaa2',
+        'Bluesky post MIDDLE',
+        '2026-07-08T11:00:00.000Z',
+      ),
+    },
+    {
+      post: bskyPost(
+        alice,
+        'aaa3',
+        'Bluesky post OLDEST',
+        '2026-07-08T09:00:00.000Z',
+      ),
+    },
   ],
 };
 
@@ -166,12 +187,22 @@ page.on('pageerror', (err) => consoleErrors.push(`PAGEERROR: ${err}`));
 await page.route('**/xrpc/**', async (route) => {
   const nsid = new URL(route.request().url()).pathname.split('/xrpc/')[1];
   const json = (data) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(data),
+    });
   switch (nsid) {
     case 'com.atproto.server.getSession':
       return json({ did: DID, handle: HANDLE, active: true });
     case 'com.atproto.server.refreshSession':
-      return json({ did: DID, handle: HANDLE, accessJwt: 'a2', refreshJwt: 'r2', active: true });
+      return json({
+        did: DID,
+        handle: HANDLE,
+        accessJwt: 'a2',
+        refreshJwt: 'r2',
+        active: true,
+      });
     case 'app.bsky.feed.getTimeline':
       return json(bskyTimeline);
     case 'app.bsky.notification.listNotifications':
@@ -187,7 +218,11 @@ await page.route('**/mastodon.example/**', async (route) => {
   const url = new URL(route.request().url());
   const path = url.pathname;
   const json = (data) =>
-    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(data) });
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(data),
+    });
   if (path === '/api/v1/timelines/home') return json(mastoTimeline);
   if (path === '/api/v2/instance') return json(mastoInstanceInfo);
   if (path === '/api/v1/preferences') return json({});
@@ -215,7 +250,9 @@ await page.evaluate(
     localStorage.setItem(
       'nodeInfos',
       JSON.stringify({
-        'mastodon.example': { software: { name: 'mastodon', version: '4.3.0' } },
+        'mastodon.example': {
+          software: { name: 'mastodon', version: '4.3.0' },
+        },
         'bsky.social': { software: { name: 'bluesky', version: '1.0.0' } },
       }),
     );
@@ -257,12 +294,16 @@ try {
   const hasCrossPost = composeText.includes('Also post to');
   console.log(hasCrossPost ? '✅' : '❌', 'compose shows cross-post toggle');
   if (!hasCrossPost) failed++;
-  await page.screenshot({ path: (process.env.SCRATCH || '.') + '/compose.png' });
+  await page.screenshot({
+    path: (process.env.SCRATCH || '.') + '/compose.png',
+  });
 } catch (e) {
   console.log('❌ compose open failed', e.message);
   failed++;
 }
-await page.screenshot({ path: (process.env.SCRATCH || '.') + '/merged-timeline.png' });
+await page.screenshot({
+  path: (process.env.SCRATCH || '.') + '/merged-timeline.png',
+});
 console.log('Page errors:', consoleErrors.slice(0, 10));
 await browser.close();
 process.exit(failed ? 1 : 0);

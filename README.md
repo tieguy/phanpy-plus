@@ -35,11 +35,14 @@ Everything is designed and engineered following my taste and vision. This is a p
 
 This fork lets you use Bluesky and Mastodon side by side in one app:
 
-- 🦋 **Log in with Bluesky** — on the Log in page, use your handle + an [app password](https://bsky.app/settings/app-passwords). Custom PDS hosts work too (type the full service URL as the handle's server later if needed).
+- 🦋 **Log in with Bluesky** — on the Log in page, enter your handle and you'll be sent to your PDS to authorize via **AT Protocol OAuth** (custom PDS hosts work automatically). An [app password](https://bsky.app/settings/app-passwords) fallback is also available.
 - 🐘🦋 **Merged home timeline** — when you're logged in to both a Mastodon account and a Bluesky account, the Home timeline interleaves both feeds chronologically. Toggle via *Settings → Merged timeline*.
 - ✍️ **Cross-posting** — the compose box grows an "Also post to @you.bsky.social" checkbox (for new public posts). Write once, post to both networks. Images are re-uploaded to Bluesky (auto-resized under its 1 MB limit); content warnings become a `CW:` prefix.
 - ❤️ **Full interactions** — like, repost, reply, quote-render, bookmark, follow/unfollow, mute, block, delete — on Bluesky posts from within phanpy, even while browsing as your Mastodon account.
 - 🧵 **Threads, profiles, notifications, search, likes, bookmarks** for Bluesky accounts all work through the same phanpy UI.
+- 🔥 **Trending** — Bluesky's trending topics and the Discover ("What's Hot") feed show up in phanpy's Trending page.
+- 📋 **Lists** — view, create, rename, delete Bluesky lists; add/remove members; browse list timelines.
+- 🙈 **Filters** — phanpy's Filters page manages your Bluesky **muted words** (add/edit/remove), and muted words are applied to Bluesky timelines client-side, just like the official app.
 
 How it works: a small adapter layer (`src/utils/bluesky/`) wraps [`@atproto/api`](https://github.com/bluesky-social/atproto/tree/main/packages/api) and converts Bluesky posts/profiles into Mastodon-shaped objects, exposing a masto.js-compatible facade. The rest of phanpy doesn't know the difference. `@atproto/api` is lazy-loaded, so Mastodon-only users don't pay the bundle cost.
 
@@ -48,8 +51,8 @@ Current limitations:
 - No polls, editing, scheduled posts, or pinning on Bluesky (protocol/API limitations).
 - Video cross-posting to Bluesky is not supported yet (images only). Bluesky videos in the timeline show a poster; playback works best in Safari (HLS).
 - Bluesky notifications appear in the same Notifications page, but push notifications are Mastodon-only.
-- Trending/Lists/Filters pages are Mastodon-only.
-- Sessions use app passwords (not OAuth) for now — credentials are stored in your browser's localStorage, same as Mastodon tokens.
+- Mastodon filters have titles and multiple keywords; Bluesky muted words are flat. A multi-keyword filter becomes multiple muted words (one "filter" per word).
+- OAuth on a deployed domain requires building with `PHANPY_WEBSITE` set to that origin (see below) so `/oauth/client-metadata.json` is generated — the AT Protocol authorization server fetches it. On `localhost` dev, a loopback OAuth client is used and no file is needed. App-password sessions are stored in localStorage (like Mastodon tokens); OAuth tokens are managed by the OAuth client in IndexedDB with auto-refresh.
 
 ### Hosting your own (e.g. Fly.io)
 
@@ -57,8 +60,10 @@ Phanpy is a fully static site — any static host works (the compose pop-out and
 
 ```sh
 npm install
-npm run build     # outputs to dist/
+PHANPY_WEBSITE=https://your-domain.example npm run build   # outputs to dist/
 ```
+
+Setting `PHANPY_WEBSITE` to your deployed origin is required for Bluesky OAuth login (it generates `dist/oauth/client-metadata.json`, which Bluesky's authorization servers fetch to verify this app). Without it, the app-password login still works.
 
 For [Fly.io](https://fly.io), the simplest setup is their static-site pattern:
 
@@ -85,6 +90,9 @@ with a `Dockerfile` like:
 FROM node:22-slim AS build
 WORKDIR /app
 COPY . .
+# Set to your app's public URL — required for Bluesky OAuth login
+ARG PHANPY_WEBSITE=https://your-phanpy-plus.fly.dev
+ENV PHANPY_WEBSITE=$PHANPY_WEBSITE
 RUN npm ci && npm run build
 
 FROM pierrezemb/gostatic
