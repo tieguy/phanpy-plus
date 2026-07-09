@@ -279,12 +279,26 @@ const checks = {
     (p, i) => i === 0 || p > positions[i - 1],
   ),
 };
+// Network badges: Bluesky posts get one, Mastodon posts don't
+const badgeCount = await page.$$eval('.network-badge', (els) => els.length);
+checks['bluesky posts have network badge'] = badgeCount === 3;
+checks['mastodon posts have no badge'] = await page.evaluate(() => {
+  const el = [...document.querySelectorAll('.status')].find((s) =>
+    s.innerText.includes('Mastodon post UPPER'),
+  );
+  return el ? !el.querySelector('.network-badge') : false;
+});
+
 let failed = 0;
 for (const [name, ok] of Object.entries(checks)) {
   console.log(ok ? '✅' : '❌', name, JSON.stringify(positions));
   if (!ok) failed++;
 }
 if (failed) console.log('\n--- body ---\n', bodyText.slice(0, 2500));
+
+await page.screenshot({
+  path: (process.env.SCRATCH || '.') + '/merged-timeline.png',
+});
 
 // Open compose and check cross-post toggle
 try {
@@ -301,9 +315,6 @@ try {
   console.log('❌ compose open failed', e.message);
   failed++;
 }
-await page.screenshot({
-  path: (process.env.SCRATCH || '.') + '/merged-timeline.png',
-});
 console.log('Page errors:', consoleErrors.slice(0, 10));
 await browser.close();
 process.exit(failed ? 1 : 0);

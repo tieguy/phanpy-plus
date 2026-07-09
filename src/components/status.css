@@ -3424,3 +3424,16 @@ a.card:is(:hover, :focus):visited {
     scale: 0 0.75;
   }
 }
+
+/* Network badge: subtle indicator for posts from another network
+   (e.g. Bluesky) in merged timelines */
+.status .network-badge {
+  flex-shrink: 0;
+  font-size: 0.8em;
+  opacity: 0.55;
+  filter: saturate(0.65);
+  align-self: center;
+}
+.status .extra-meta .network-badge {
+  opacity: 0.75;
+}

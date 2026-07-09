@@ -2304,6 +2304,15 @@ function Status({
                   index={snapStates.statusThreadNumber[sKey]}
                 />
               )}
+              {status._bluesky && (
+                <span
+                  class="network-badge"
+                  title="Bluesky"
+                  aria-label="Bluesky"
+                >
+                  🦋
+                </span>
+              )}
               {/* {inReplyToAccount && !withinContext && size !== 's' && (
                 <>
                   {' '}
@@ -2853,6 +2862,14 @@ function Status({
                   </span>
                 ) : (
                   <>
+                    {status._bluesky && (
+                      <>
+                        <span class="network-badge" title="Bluesky">
+                          🦋
+                        </span>{' '}
+                        <span>Bluesky</span> &bull;{' '}
+                      </>
+                    )}
                     <Icon icon={visibilityIconsMap[visibility]} alt="" />{' '}
                     <span>{_(visibilityText[visibility])}</span> &bull;{' '}
                     <a href={url} target="_blank" rel="noopener">
