@@ -12,8 +12,13 @@ import Modal from '../components/modal';
 import NavMenu from '../components/nav-menu';
 import RelativeTime from '../components/relative-time';
 import { api } from '../utils/api';
+import { getOtherNetworkAccounts } from '../utils/bluesky';
 import i18nDuration from '../utils/i18n-duration';
 import { getAPIVersions } from '../utils/store-utils';
+import {
+  applyMutedWordsSyncPlan,
+  computeMutedWordsSyncPlan,
+} from '../utils/sync-muted-words';
 import useInterval from '../utils/useInterval';
 import useTitle from '../utils/useTitle';
 
@@ -55,6 +60,8 @@ function Filters() {
   useTitle(t`Filters`, `/ft`);
   const [uiState, setUIState] = useState('default');
   const [showFiltersAddEditModal, setShowFiltersAddEditModal] = useState(false);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+  const canSync = getOtherNetworkAccounts().length > 0;
 
   const [reloadCount, reload] = useReducer((c) => c + 1, 0);
   const [filters, setFilters] = useState([]);
@@ -94,6 +101,17 @@ function Filters() {
               <Trans>Filters</Trans>
             </h1>
             <div class="header-side">
+              {canSync && (
+                <button
+                  type="button"
+                  class="plain"
+                  onClick={() => {
+                    setShowSyncModal(true);
+                  }}
+                >
+                  <Icon icon="transfer" size="l" alt={t`Sync muted words`} />
+                </button>
+              )}
               <button
                 type="button"
                 class="plain"
@@ -173,6 +191,23 @@ function Filters() {
           )}
         </main>
       </div>
+      {!!showSyncModal && (
+        <Modal
+          title={t`Sync muted words`}
+          onClose={() => {
+            setShowSyncModal(false);
+          }}
+        >
+          <MutedWordsSync
+            onClose={(result) => {
+              if (result?.state === 'success') {
+                reload();
+              }
+              setShowSyncModal(false);
+            }}
+          />
+        </Modal>
+      )}
       {!!showFiltersAddEditModal && (
         <Modal
           title={t`Add filter`}
@@ -608,6 +643,136 @@ function FiltersAddEdit({ filter, onClose }) {
             )}
           </footer>
         </form>
+      </main>
+    </div>
+  );
+}
+
+function MutedWordsSync({ onClose }) {
+  const { t } = useLingui();
+  const [uiState, setUIState] = useState('loading');
+  const [plan, setPlan] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const plan = await computeMutedWordsSyncPlan();
+        setPlan(plan);
+        setUIState('default');
+      } catch (e) {
+        console.error(e);
+        setUIState('error');
+      }
+    })();
+  }, []);
+
+  const nothingToSync =
+    plan && !plan.toBluesky.length && !plan.toMastodon.length;
+
+  return (
+    <div class="sheet" id="muted-words-sync-modal">
+      {!!onClose && (
+        <button type="button" class="sheet-close" onClick={() => onClose()}>
+          <Icon icon="x" alt={t`Close`} />
+        </button>
+      )}
+      <header>
+        <h2>
+          <Trans>Sync muted words</Trans>
+        </h2>
+      </header>
+      <main>
+        {uiState === 'loading' ? (
+          <p class="ui-state">
+            <Loader />
+          </p>
+        ) : uiState === 'error' ? (
+          <p class="ui-state">
+            <Trans>Unable to compare muted words.</Trans>
+          </p>
+        ) : nothingToSync ? (
+          <p class="ui-state">
+            <Trans>Both accounts already have the same muted words.</Trans>
+          </p>
+        ) : (
+          <>
+            <p>
+              <Trans>
+                Muted words will be copied both ways so each account has the
+                combined list. Nothing is ever removed.
+              </Trans>
+            </p>
+            {plan.toBluesky.length > 0 && (
+              <div>
+                <h3>
+                  <Plural
+                    value={plan.toBluesky.length}
+                    one="# word to Bluesky"
+                    other="# words to Bluesky"
+                  />
+                </h3>
+                <p>
+                  {plan.toBluesky.map((keyword) => (
+                    <>
+                      <span class="tag collapsed insignificant">
+                        {keyword}
+                      </span>{' '}
+                    </>
+                  ))}
+                </p>
+              </div>
+            )}
+            {plan.toMastodon.length > 0 && (
+              <div>
+                <h3>
+                  <Plural
+                    value={plan.toMastodon.length}
+                    one="# word to Mastodon"
+                    other="# words to Mastodon"
+                  />
+                </h3>
+                <p>
+                  {plan.toMastodon.map((keyword) => (
+                    <>
+                      <span class="tag collapsed insignificant">
+                        {keyword}
+                      </span>{' '}
+                    </>
+                  ))}
+                </p>
+                <p>
+                  <small class="insignificant">
+                    <Trans>
+                      These will be added to a “Muted words (synced)” filter.
+                    </Trans>
+                  </small>
+                </p>
+              </div>
+            )}
+            <footer>
+              <button
+                type="button"
+                disabled={uiState === 'applying'}
+                onClick={() => {
+                  setUIState('applying');
+                  (async () => {
+                    try {
+                      await applyMutedWordsSyncPlan(plan);
+                      onClose?.({ state: 'success' });
+                    } catch (e) {
+                      console.error(e);
+                      setUIState('error');
+                      alert(t`Unable to sync muted words`);
+                    }
+                  })();
+                }}
+              >
+                <Trans>Sync</Trans>
+              </button>{' '}
+              <Loader abrupt hidden={uiState !== 'applying'} />
+            </footer>
+          </>
+        )}
       </main>
     </div>
   );
