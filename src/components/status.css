@@ -3425,15 +3425,20 @@ a.card:is(:hover, :focus):visited {
   }
 }
 
-/* Network badge: subtle indicator for posts from another network
-   (e.g. Bluesky) in merged timelines */
+/* Network badge: subtle per-post network indicator (Mastodon elephant /
+   Bluesky butterfly) shown when logged in to both networks */
 .status .network-badge {
   flex-shrink: 0;
-  font-size: 0.8em;
-  opacity: 0.55;
-  filter: saturate(0.65);
   align-self: center;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-insignificant-color);
+  opacity: 0.6;
 }
 .status .extra-meta .network-badge {
-  opacity: 0.75;
+  display: inline;
+  opacity: 1;
+}
+.status .extra-meta .network-badge .icon {
+  vertical-align: middle;
 }

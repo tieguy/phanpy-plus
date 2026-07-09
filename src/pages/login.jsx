@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import logo from '../assets/logo.svg';
 
+import Icon from '../components/icon';
 import LangSelector from '../components/lang-selector';
 import Link from '../components/link';
 import Loader from '../components/loader';
@@ -352,7 +353,9 @@ function Login() {
         {showBluesky ? (
           <>
             <form onSubmit={onBlueskyOAuthSubmit}>
-              <h2>🦋 Bluesky</h2>
+              <h2>
+                <Icon icon="bluesky" alt="" /> Bluesky
+              </h2>
               <label>
                 <p>
                   <Trans>Handle</Trans>
@@ -449,7 +452,7 @@ function Login() {
               class="plain4"
               onClick={() => setShowBluesky(true)}
             >
-              🦋 <Trans>Log in with Bluesky</Trans>
+              <Icon icon="bluesky" alt="" /> <Trans>Log in with Bluesky</Trans>
             </button>
           </p>
         )}

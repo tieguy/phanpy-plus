@@ -294,6 +294,9 @@ checks['home shows repost'] = bodyText.includes('A reposted post appears');
 checks['home shows plain post'] = bodyText.includes('Plain old third post');
 checks['muted word post hidden'] = !bodyText.includes('should be hidden');
 checks['image attachment rendered'] = html.includes('cdn.example.com');
+// Single-network install → no per-post network badges
+checks['no network badges (single network)'] =
+  (await page.$$eval('.network-badge', (els) => els.length)) === 0;
 await page.screenshot({
   path: (process.env.SCRATCH || '.') + '/bsky-timeline.png',
 });

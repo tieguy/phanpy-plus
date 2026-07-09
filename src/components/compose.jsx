@@ -1834,7 +1834,15 @@ function Compose({
                     store.local.set('crossPostEnabled', checked ? '1' : '0');
                   }}
                 />{' '}
-                {isBlueskyAccount(crossPostAccounts[0]) ? '🦋' : '🐘'}{' '}
+                <Icon
+                  icon={
+                    isBlueskyAccount(crossPostAccounts[0])
+                      ? 'bluesky'
+                      : 'mastodon'
+                  }
+                  size="s"
+                  alt=""
+                />{' '}
                 <Trans>
                   Also post to{' '}
                   {crossPostAccounts

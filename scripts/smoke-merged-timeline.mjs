@@ -279,15 +279,18 @@ const checks = {
     (p, i) => i === 0 || p > positions[i - 1],
   ),
 };
-// Network badges: Bluesky posts get one, Mastodon posts don't
-const badgeCount = await page.$$eval('.network-badge', (els) => els.length);
-checks['bluesky posts have network badge'] = badgeCount === 3;
-checks['mastodon posts have no badge'] = await page.evaluate(() => {
-  const el = [...document.querySelectorAll('.status')].find((s) =>
-    s.innerText.includes('Mastodon post UPPER'),
-  );
-  return el ? !el.querySelector('.network-badge') : false;
-});
+// Network badges: with both networks logged in, every post shows its
+// network's icon — butterfly for Bluesky, elephant for Mastodon
+const bskyBadges = await page.$$eval(
+  '.network-badge[data-network="bluesky"]',
+  (els) => els.length,
+);
+const mastoBadges = await page.$$eval(
+  '.network-badge[data-network="mastodon"]',
+  (els) => els.length,
+);
+checks['bluesky posts have butterfly badge'] = bskyBadges === 3;
+checks['mastodon posts have elephant badge'] = mastoBadges === 2;
 
 let failed = 0;
 for (const [name, ok] of Object.entries(checks)) {

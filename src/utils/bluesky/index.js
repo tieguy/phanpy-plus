@@ -36,6 +36,18 @@ export function getBlueskyAccounts() {
   return getAccounts().filter(isBlueskyLoggedIn);
 }
 
+// Whether the user is logged in to both networks — used to decide when
+// per-post network badges are worth showing. Cached per page load
+// (account changes trigger a reload anyway).
+let multiNetwork = null;
+export function hasMultipleNetworks() {
+  if (multiNetwork !== null) return multiNetwork;
+  const accounts = getAccounts();
+  return (multiNetwork =
+    accounts.some(isBlueskyLoggedIn) &&
+    accounts.some((a) => !isBlueskyAccount(a) && a.accessToken));
+}
+
 // Instances (hostnames) that belong to logged-in Bluesky accounts
 export function isBlueskyInstance(instance) {
   if (!instance) return false;

@@ -22,7 +22,7 @@ import { useLongPress } from 'use-long-press';
 import { useSnapshot } from 'valtio';
 
 import { api, getPreferences } from '../utils/api';
-import { isBlueskyInstance } from '../utils/bluesky';
+import { hasMultipleNetworks, isBlueskyInstance } from '../utils/bluesky';
 import { langDetector } from '../utils/browser-translator';
 import { useEditHistory } from '../utils/edit-history-context';
 import FilterContext from '../utils/filter-context';
@@ -2304,13 +2304,16 @@ function Status({
                   index={snapStates.statusThreadNumber[sKey]}
                 />
               )}
-              {status._bluesky && (
+              {hasMultipleNetworks() && (
                 <span
                   class="network-badge"
-                  title="Bluesky"
-                  aria-label="Bluesky"
+                  data-network={status._bluesky ? 'bluesky' : 'mastodon'}
                 >
-                  🦋
+                  <Icon
+                    icon={status._bluesky ? 'bluesky' : 'mastodon'}
+                    size="s"
+                    alt={status._bluesky ? 'Bluesky' : 'Mastodon'}
+                  />
                 </span>
               )}
               {/* {inReplyToAccount && !withinContext && size !== 's' && (
@@ -2862,12 +2865,23 @@ function Status({
                   </span>
                 ) : (
                   <>
-                    {status._bluesky && (
+                    {hasMultipleNetworks() && (
                       <>
-                        <span class="network-badge" title="Bluesky">
-                          🦋
+                        <span
+                          class="network-badge"
+                          data-network={
+                            status._bluesky ? 'bluesky' : 'mastodon'
+                          }
+                        >
+                          <Icon
+                            icon={status._bluesky ? 'bluesky' : 'mastodon'}
+                            alt=""
+                          />{' '}
+                          <span>
+                            {status._bluesky ? 'Bluesky' : 'Mastodon'}
+                          </span>
                         </span>{' '}
-                        <span>Bluesky</span> &bull;{' '}
+                        &bull;{' '}
                       </>
                     )}
                     <Icon icon={visibilityIconsMap[visibility]} alt="" />{' '}

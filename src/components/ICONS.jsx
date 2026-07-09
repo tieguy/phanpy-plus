@@ -7,6 +7,8 @@ export const ICONS = {
   'x-circle': () => import('../iconify-icons/mingcute/close-circle-line.js'),
   transfer: () => import('../iconify-icons/mingcute/transfer-4-line.js'),
   rocket: () => import('../iconify-icons/mingcute/rocket-line.js'),
+  bluesky: () => import('../iconify-icons/mingcute/bluesky-social-fill.js'),
+  mastodon: () => import('../iconify-icons/mingcute/mastodon-fill.js'),
   'arrow-left': {
     module: () => import('../iconify-icons/mingcute/arrow-left-line.js'),
     rtl: true,
