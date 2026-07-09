@@ -12,6 +12,13 @@ import { useSnapshot } from 'valtio';
 
 import supportedLanguages from '../data/status-supported-languages';
 import { api, getPreferences } from '../utils/api';
+import {
+  getOtherNetworkAccounts,
+  isBlueskyAccount,
+  isBlueskyInstance,
+} from '../utils/bluesky';
+import { blueskyInstanceInfo } from '../utils/bluesky/convert';
+import { crossPostStatus } from '../utils/bluesky/cross-post';
 import db from '../utils/db';
 import { getDtfLocale } from '../utils/dtf-locale';
 import haptics from '../utils/haptics';
@@ -175,7 +182,18 @@ function Compose({
   const lf = LF(i18n.locale);
 
   console.warn('RENDER COMPOSER');
-  const { masto, instance } = api();
+  // Replies/edits/quotes of a post from another network/instance (e.g. a
+  // Bluesky post in the merged timeline) must be posted through that
+  // network's client
+  const targetInstance =
+    replyToStatus?._instance ||
+    editStatus?._instance ||
+    quoteStatus?._instance ||
+    null;
+  const { masto, instance } = targetInstance
+    ? api({ instance: targetInstance })
+    : api();
+  const isBlueskyTarget = isBlueskyInstance(instance);
   const [uiState, setUIState] = useState('default');
   const UID = useRef(draftStatus?.uid || uid());
   console.log('Compose UID', UID.current);
@@ -183,8 +201,23 @@ function Compose({
   const currentAccount = useMemo(getCurrentAccount, []);
   const currentAccountInfo = currentAccount.info;
 
-  const configuration = getCurrentInstanceConfiguration();
+  const configuration = isBlueskyTarget
+    ? blueskyInstanceInfo(instance).configuration
+    : getCurrentInstanceConfiguration();
   console.log('⚙️ Configuration', configuration);
+
+  // Cross-posting: other-network accounts this post can also go to
+  // (only for new, non-reply, non-quote posts)
+  const crossPostAccounts = useMemo(
+    () =>
+      !editStatus && !replyToStatus && !quoteStatus
+        ? getOtherNetworkAccounts()
+        : [],
+    [],
+  );
+  const [crossPost, setCrossPost] = useState(
+    store.local.get('crossPostEnabled') !== '0',
+  );
 
   const {
     statuses: {
@@ -1469,6 +1502,54 @@ function Compose({
                     // If idempotency key fails, try again without it
                     newStatus = await masto.v1.statuses.create(params);
                   }
+
+                  // Cross-post to other-network accounts (e.g. Bluesky)
+                  if (
+                    crossPost &&
+                    crossPostAccounts.length &&
+                    !scheduledAt &&
+                    !poll &&
+                    (visibility === 'public' || visibility === 'unlisted')
+                  ) {
+                    for (const account of crossPostAccounts) {
+                      try {
+                        const { skippedMedia } = await crossPostStatus({
+                          account,
+                          status,
+                          spoilerText,
+                          sensitive: sensitive || sensitiveMedia,
+                          language,
+                          visibility,
+                          mediaAttachments,
+                        });
+                        showToast(
+                          t`Cross-posted to @${
+                            account.info.acct || account.info.username
+                          }` +
+                            (skippedMedia?.length
+                              ? ` (${t`some attachments skipped`})`
+                              : ''),
+                        );
+                      } catch (e) {
+                        console.error(e);
+                        showToast(
+                          t`Unable to cross-post to @${
+                            account.info.acct || account.info.username
+                          }: ${e?.message || e}`,
+                        );
+                      }
+                    }
+                  } else if (
+                    crossPost &&
+                    crossPostAccounts.length &&
+                    (scheduledAt ||
+                      poll ||
+                      !(visibility === 'public' || visibility === 'unlisted'))
+                  ) {
+                    showToast(
+                      t`Cross-posting skipped (not supported for polls, scheduled or non-public posts)`,
+                    );
+                  }
                 }
                 states.composerState.minimized = false;
                 states.composerState.publishing = false;
@@ -1741,6 +1822,28 @@ function Compose({
             }}
             onCancel={() => setQuoteSuggestion(null)}
           />
+          {crossPostAccounts.length > 0 && (
+            <div class="toolbar cross-post-toolbar">
+              <label class="cross-post-option">
+                <input
+                  type="checkbox"
+                  checked={crossPost}
+                  onChange={(e) => {
+                    const { checked } = e.target;
+                    setCrossPost(checked);
+                    store.local.set('crossPostEnabled', checked ? '1' : '0');
+                  }}
+                />{' '}
+                {isBlueskyAccount(crossPostAccounts[0]) ? '🦋' : '🐘'}{' '}
+                <Trans>
+                  Also post to{' '}
+                  {crossPostAccounts
+                    .map((a) => `@${a.info.acct || a.info.username}`)
+                    .join(', ')}
+                </Trans>
+              </label>
+            </div>
+          )}
           <div class="toolbar compose-footer">
             <span class="add-toolbar-button-group spacer">
               {showAddButton && (

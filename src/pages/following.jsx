@@ -4,7 +4,9 @@ import { useSnapshot } from 'valtio';
 
 import Timeline from '../components/timeline';
 import { api } from '../utils/api';
+import { getOtherNetworkAccounts } from '../utils/bluesky';
 import { filteredItems } from '../utils/filters';
+import { createMergedTimelineIterator } from '../utils/merged-timeline';
 import states, { getStatus, saveStatus } from '../utils/states';
 import supports from '../utils/supports';
 import {
@@ -32,7 +34,23 @@ function Following({ title, path, id, ...props }) {
   const snapStates = useSnapshot(states);
   const homeIterable = useRef();
   const homeIterator = useRef();
+  const mergedIterator = useRef();
   const latestItem = useRef();
+  const latestItems = useRef({}); // per-instance latest item ID
+
+  // Other-network accounts (e.g. Bluesky accounts when the current account
+  // is Mastodon, and vice versa) merged into the home timeline
+  const otherSources = useRef(null);
+  if (otherSources.current === null) {
+    otherSources.current = snapStates.settings.mergedTimeline
+      ? getOtherNetworkAccounts().map((account) => {
+          const { masto: otherMasto, instance: otherInstance } = api({
+            account,
+          });
+          return { masto: otherMasto, instance: otherInstance };
+        })
+      : [];
+  }
 
   // Streaming only happens after instance is initialized
   useEffect(() => {
@@ -48,10 +66,29 @@ function Following({ title, path, id, ...props }) {
   const supportsPixelfed = supports('@pixelfed/home-include-reblogs');
 
   async function fetchHome(firstLoad) {
-    if (firstLoad || !homeIterator.current) {
+    const merged = otherSources.current?.length > 0;
+    if (
+      firstLoad ||
+      (merged ? !mergedIterator.current : !homeIterator.current)
+    ) {
       __BENCHMARK.start('fetch-home-first');
       homeIterable.current = masto.v1.timelines.home.list({ limit: LIMIT });
       homeIterator.current = homeIterable.current.values();
+      if (merged) {
+        mergedIterator.current = createMergedTimelineIterator([
+          {
+            instance,
+            makeIterator: () => homeIterator.current,
+          },
+          ...otherSources.current.map(
+            ({ masto: otherMasto, instance: otherInstance }) => ({
+              instance: otherInstance,
+              makeIterator: () =>
+                otherMasto.v1.timelines.home.list({ limit: LIMIT }).values(),
+            }),
+          ),
+        ]);
+      }
     }
     if (supportsPixelfed && homeIterable.current?.params) {
       if (typeof homeIterable.current.params === 'string') {
@@ -60,7 +97,9 @@ function Following({ title, path, id, ...props }) {
         homeIterable.current.params.include_reblogs = true;
       }
     }
-    const results = await homeIterator.current.next();
+    const results = merged
+      ? await mergedIterator.current.next(LIMIT)
+      : await homeIterator.current.next();
     let { value } = results;
     if (value?.length) {
       let latestItemChanged = false;
@@ -69,12 +108,21 @@ function Following({ title, path, id, ...props }) {
           latestItemChanged = true;
         }
         latestItem.current = value[0].id;
+        // Track latest item per source for checkForUpdates
+        const seen = {};
+        for (const item of value) {
+          const itemInstance = item._instance || instance;
+          if (!seen[itemInstance]) {
+            seen[itemInstance] = true;
+            latestItems.current[itemInstance] = item.id;
+          }
+        }
         console.log('First load', latestItem.current);
       }
 
       // value = filteredItems(value, 'home');
       value.forEach((item) => {
-        saveStatus(item, instance);
+        saveStatus(item, item._instance || instance);
       });
       value = dedupeBoosts(value, instance);
       if (firstLoad && latestItemChanged) clearFollowedTagsState();
@@ -95,31 +143,53 @@ function Following({ title, path, id, ...props }) {
   }
 
   async function checkForUpdates() {
-    try {
-      const opts = {
-        limit: 5,
-        since_id: latestItem.current,
-      };
-      if (supportsPixelfed) {
-        opts.include_reblogs = true;
-      }
-      const results = await masto.v1.timelines.home.list(opts).values().next();
-      let { value } = results;
-      console.log('checkForUpdates', latestItem.current, value);
-      const valueContainsLatestItem = value[0]?.id === latestItem.current; // since_id might not be supported
-      if (value?.length && !valueContainsLatestItem) {
-        latestItem.current = value[0].id;
-        value = dedupeBoosts(value, instance);
-        value = filteredItems(value, 'home');
-        if (value.some((item) => !item.reblog)) {
-          return true;
+    const sources = [
+      { masto, instance, main: true },
+      ...(otherSources.current || []),
+    ];
+    let hasUpdates = false;
+    for (const source of sources) {
+      try {
+        const sourceLatest = source.main
+          ? latestItem.current
+          : latestItems.current[source.instance];
+        const opts = {
+          limit: 5,
+          since_id: source.main ? sourceLatest : undefined,
+        };
+        if (source.main && supportsPixelfed) {
+          opts.include_reblogs = true;
         }
+        const results = await source.masto.v1.timelines.home
+          .list(opts)
+          .values()
+          .next();
+        let { value } = results;
+        console.log('checkForUpdates', source.instance, sourceLatest, value);
+        if (!sourceLatest) {
+          // No baseline yet for this source — record one, don't report updates
+          if (value?.[0]?.id) {
+            latestItems.current[source.instance] = value[0].id;
+          }
+          continue;
+        }
+        const valueContainsLatestItem = value[0]?.id === sourceLatest; // since_id might not be supported
+        if (value?.length && !valueContainsLatestItem) {
+          if (source.main) {
+            latestItem.current = value[0].id;
+          }
+          latestItems.current[source.instance] = value[0].id;
+          value = dedupeBoosts(value, source.instance);
+          value = filteredItems(value, 'home');
+          if (value.some((item) => !item.reblog)) {
+            hasUpdates = true;
+          }
+        }
+      } catch (e) {
+        console.error(e);
       }
-      return false;
-    } catch (e) {
-      console.error(e);
-      return false;
     }
+    return hasUpdates;
   }
 
   useEffect(() => {

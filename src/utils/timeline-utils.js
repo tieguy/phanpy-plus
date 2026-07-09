@@ -195,12 +195,14 @@ export function groupContext(items, instance) {
 
     // PREPARE FOR REPLY HINTS
     if (item.inReplyToId && item.inReplyToAccountId !== item.account.id) {
-      const sKey = statusKey(item.id, instance);
+      const itemInstance = item._instance || instance;
+      const sKey = statusKey(item.id, itemInstance);
       if (!states.statusReply[sKey]) {
         // If it's a reply and not a thread
         inReplyToIds.push({
           sKey,
           inReplyToId: item.inReplyToId,
+          instance: itemInstance,
         });
         // queueMicrotask(async () => {
         //   try {
@@ -234,18 +236,31 @@ export function groupContext(items, instance) {
       const { masto } = api({ instance });
       console.log('REPLYHINT', inReplyToIds);
 
+      // Items from another network/instance (e.g. Bluesky in a merged
+      // timeline) must be fetched via their own instance's client
+      const sameInstanceIds = inReplyToIds.filter(
+        (x) => (x.instance || instance) === instance,
+      );
+      const otherInstanceIds = inReplyToIds.filter(
+        (x) => (x.instance || instance) !== instance,
+      );
+
       // Fallback if batch fetch fails or returns nothing or not supported
-      async function fallbackFetch() {
-        for (let i = 0; i < inReplyToIds.length; i++) {
-          const { sKey, inReplyToId } = inReplyToIds[i];
+      async function fallbackFetch(idsList) {
+        for (let i = 0; i < idsList.length; i++) {
+          const {
+            sKey,
+            inReplyToId,
+            instance: itemInstance = instance,
+          } = idsList[i];
           try {
-            const replyToStatus = await fetchStatus(inReplyToId, instance);
-            saveStatus(replyToStatus, instance, {
+            const replyToStatus = await fetchStatus(inReplyToId, itemInstance);
+            saveStatus(replyToStatus, itemInstance, {
               skipThreading: true,
             });
             states.statusReply[sKey] = {
               id: replyToStatus.id,
-              instance,
+              instance: itemInstance,
             };
             // Pause 1s
             await new Promise((resolve) => setTimeout(resolve, 1000));
@@ -256,10 +271,16 @@ export function groupContext(items, instance) {
         }
       }
 
-      if (supports('@mastodon/fetch-multiple-statuses')) {
+      if (otherInstanceIds.length) {
+        fallbackFetch(otherInstanceIds);
+      }
+
+      if (!sameInstanceIds.length) {
+        // Nothing to fetch on this instance
+      } else if (supports('@mastodon/fetch-multiple-statuses')) {
         // This is batch fetching yooo, woot
         // Limit 20, returns 422 if exceeded https://github.com/mastodon/mastodon/pull/27871
-        const ids = inReplyToIds.map(({ inReplyToId }) => inReplyToId);
+        const ids = sameInstanceIds.map(({ inReplyToId }) => inReplyToId);
         (async () => {
           try {
             const replyToStatuses = await masto.v1.statuses.list({ id: ids });
@@ -268,7 +289,7 @@ export function groupContext(items, instance) {
                 saveStatus(replyToStatus, instance, {
                   skipThreading: true,
                 });
-                const sKey = inReplyToIds.find(
+                const sKey = sameInstanceIds.find(
                   ({ inReplyToId }) => inReplyToId === replyToStatus.id,
                 )?.sKey;
                 if (sKey) {
@@ -279,16 +300,16 @@ export function groupContext(items, instance) {
                 }
               }
             } else {
-              fallbackFetch();
+              fallbackFetch(sameInstanceIds);
             }
           } catch (e) {
             // Silently fail
             console.error(e);
-            fallbackFetch();
+            fallbackFetch(sameInstanceIds);
           }
         })();
       } else {
-        fallbackFetch();
+        fallbackFetch(sameInstanceIds);
       }
     }, 10);
   }

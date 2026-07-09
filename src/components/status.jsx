@@ -22,6 +22,7 @@ import { useLongPress } from 'use-long-press';
 import { useSnapshot } from 'valtio';
 
 import { api, getPreferences } from '../utils/api';
+import { isBlueskyInstance } from '../utils/bluesky';
 import { langDetector } from '../utils/browser-translator';
 import { useEditHistory } from '../utils/edit-history-context';
 import FilterContext from '../utils/filter-context';
@@ -403,7 +404,11 @@ function Status({
   }
   const { masto, instance, authenticated } = api({ instance: propInstance });
   const { instance: currentInstance } = api();
-  const sameInstance = instance === currentInstance;
+  // Logged-in Bluesky accounts can interact cross-network, so treat their
+  // instances as "same" (actions route through their own facade client)
+  const sameInstance =
+    instance === currentInstance ||
+    (authenticated && isBlueskyInstance(instance));
 
   let sKey = statusKey(statusID || status?.id, instance);
   const snapStates = useSnapshot(states);

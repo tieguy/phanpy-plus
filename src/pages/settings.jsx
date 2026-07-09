@@ -454,6 +454,20 @@ function Settings({ onClose }) {
                 <Trans>Boosts carousel</Trans>
               </label>
             </li>
+            <li class="block">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={snapStates.settings.mergedTimeline}
+                  onChange={(e) => {
+                    states.settings.mergedTimeline = e.target.checked;
+                  }}
+                />{' '}
+                <Trans>
+                  Merged timeline (combine Mastodon + Bluesky in Home)
+                </Trans>
+              </label>
+            </li>
             {!!TRANSLANG_INSTANCES && (
               <li class="block">
                 <label>

@@ -1330,3 +1330,15 @@
     }
   }
 }
+
+#compose-container .cross-post-toolbar {
+  padding: 4px 8px;
+  font-size: 90%;
+  color: var(--text-insignificant-color);
+}
+#compose-container .cross-post-toolbar .cross-post-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}

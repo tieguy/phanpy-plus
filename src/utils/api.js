@@ -3,6 +3,11 @@ import { createRestAPIClient, createStreamingAPIClient } from 'masto';
 
 import mem from '../utils/mem';
 
+import {
+  blueskyApi,
+  getBlueskyAccountForInstance,
+  isBlueskyAccount,
+} from './bluesky';
 import store from './store';
 import {
   getAccount,
@@ -231,6 +236,26 @@ export function api({ instance, accessToken, accountID, account } = {}) {
   // Always lowercase and trim the instance
   if (instance) {
     instance = instance.toLowerCase().trim();
+  }
+
+  // Bluesky accounts get a masto-compatible facade instead of a masto client
+  {
+    let bskyAccount = null;
+    if (account || accountID) {
+      const acc = account || getAccount(accountID);
+      if (isBlueskyAccount(acc)) bskyAccount = acc;
+    } else if (accessToken) {
+      const acc = getAccountByAccessToken(accessToken);
+      if (isBlueskyAccount(acc)) bskyAccount = acc;
+    } else if (instance) {
+      bskyAccount = getBlueskyAccountForInstance(instance);
+    } else {
+      const acc = getCurrentAcc();
+      if (isBlueskyAccount(acc)) bskyAccount = acc;
+    }
+    if (bskyAccount) {
+      return blueskyApi(bskyAccount);
+    }
   }
 
   // If instance and accessToken are provided, get the masto instance for that account

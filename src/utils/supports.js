@@ -30,11 +30,21 @@ const platformFeatures = {
 
 const supportsCache = {};
 
+// Explicit feature table for Bluesky accounts (via the AT Protocol facade).
+// Anything not listed here is unsupported.
+const blueskyFeatures = {
+  '@mastodon/mentions': true,
+  '@mastodon/post-bookmark': true,
+};
+
 const semverExtract = /^\d+\.\d+(\.\d+)?/;
 const atSoftwareSlashMatch = /^@([a-z]+)\//i;
 
 function supports(feature) {
   try {
+    if (getCurrentInstance()?._bluesky) {
+      return !!blueskyFeatures[feature];
+    }
     let { version, domain } = getCurrentInstance();
     let softwareName = getCurrentNodeInfo()?.software?.name || 'mastodon';
 

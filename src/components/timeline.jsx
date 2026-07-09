@@ -685,6 +685,9 @@ export const TimelineItem = memo(
     const { t } = useLingui();
     console.debug('RENDER TimelineItem', status.id);
     const { id: statusID, reblog, items, type, _pinned } = status;
+    // Items from another network/instance (e.g. Bluesky in a merged
+    // timeline) carry their own instance
+    if (status._instance) instance = status._instance;
     if (_pinned) useItemID = false;
     const actualStatusID = reblog?.id || statusID;
     const url = instance
@@ -752,9 +755,10 @@ export const TimelineItem = memo(
                     <li key={statusID} class="timeline-item-carousel-group">
                       {item.posts.map((item) => {
                         const { id: statusID, reblog, _pinned } = item;
+                        const itemInstance = item._instance || instance;
                         const actualStatusID = reblog?.id || statusID;
-                        const url = instance
-                          ? `/${instance}/s/${actualStatusID}`
+                        const url = itemInstance
+                          ? `/${itemInstance}/s/${actualStatusID}`
                           : `/s/${actualStatusID}`;
                         if (_pinned) useItemID = false;
                         return (
@@ -765,13 +769,13 @@ export const TimelineItem = memo(
                             {useItemID ? (
                               <Status
                                 statusID={statusID}
-                                instance={instance}
+                                instance={itemInstance}
                                 size="s"
                               />
                             ) : (
                               <Status
                                 status={item}
-                                instance={instance}
+                                instance={itemInstance}
                                 size="s"
                               />
                             )}
@@ -783,8 +787,9 @@ export const TimelineItem = memo(
                 }
 
                 const actualStatusID = reblog?.id || statusID;
-                const url = instance
-                  ? `/${instance}/s/${actualStatusID}`
+                const itemInstance = item._instance || instance;
+                const url = itemInstance
+                  ? `/${itemInstance}/s/${actualStatusID}`
                   : `/s/${actualStatusID}`;
                 if (_pinned) useItemID = false;
                 return (
@@ -796,7 +801,7 @@ export const TimelineItem = memo(
                       {useItemID ? (
                         <Status
                           statusID={statusID}
-                          instance={instance}
+                          instance={itemInstance}
                           size="s"
                           contentTextWeight
                           enableCommentHint
@@ -806,7 +811,7 @@ export const TimelineItem = memo(
                       ) : (
                         <Status
                           status={item}
-                          instance={instance}
+                          instance={itemInstance}
                           size="s"
                           contentTextWeight
                           enableCommentHint
@@ -825,7 +830,10 @@ export const TimelineItem = memo(
       const manyItems = fItems.length > 3;
       return fItems.map((item, i) => {
         const { id: statusID, _differentAuthor } = item;
-        const url = instance ? `/${instance}/s/${statusID}` : `/s/${statusID}`;
+        const itemInstance = item._instance || instance;
+        const url = itemInstance
+          ? `/${itemInstance}/s/${statusID}`
+          : `/s/${statusID}`;
         const isMiddle = i > 0 && i < fItems.length - 1;
         const isSpoiler = item.sensitive && !!item.spoilerText;
         const showCompact =
@@ -850,13 +858,13 @@ export const TimelineItem = memo(
               {showCompact ? (
                 <TimelineStatusCompact
                   status={item}
-                  instance={instance}
+                  instance={itemInstance}
                   filterContext={filterContext}
                 />
               ) : useItemID ? (
                 <Status
                   statusID={statusID}
-                  instance={instance}
+                  instance={itemInstance}
                   enableCommentHint={isEnd}
                   showFollowedTags={showFollowedTags}
                   // allowFilters={allowFilters}
@@ -864,7 +872,7 @@ export const TimelineItem = memo(
               ) : (
                 <Status
                   status={item}
-                  instance={instance}
+                  instance={itemInstance}
                   enableCommentHint={isEnd}
                   showFollowedTags={showFollowedTags}
                   // allowFilters={allowFilters}

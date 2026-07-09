@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import punycode from 'punycode/';
 
 import { api } from '../utils/api';
+import { isBlueskyInstance } from '../utils/bluesky';
 import { isSupported as collectionsSupported } from '../utils/collections';
 import i18nDuration from '../utils/i18n-duration';
 import isSearchEnabled from '../utils/is-search-enabled';
@@ -64,12 +65,23 @@ function RelatedActions({
 }) {
   if (!info) return null;
   const { _, t } = useLingui();
-  const {
+  let {
     masto: currentMasto,
     instance: currentInstance,
     authenticated: currentAuthenticated,
   } = api();
-  const sameInstance = instance === currentInstance;
+  let sameInstance = instance === currentInstance;
+  // Profiles on a logged-in Bluesky account's network act through that
+  // account's client (follow, mute, block, etc.)
+  if (!sameInstance && isBlueskyInstance(instance)) {
+    const bskyApi = api({ instance });
+    if (bskyApi.authenticated) {
+      currentMasto = bskyApi.masto;
+      currentInstance = bskyApi.instance;
+      currentAuthenticated = true;
+      sameInstance = true;
+    }
+  }
 
   const [relationshipUIState, setRelationshipUIState] = useState('default');
   const [relationship, setRelationship] = useState(null);

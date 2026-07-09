@@ -16,6 +16,7 @@ import NameText from '../components/name-text';
 import RelativeTime from '../components/relative-time';
 import { api } from '../utils/api';
 import { revokeAccessToken } from '../utils/auth';
+import { isBlueskyAccount, logoutBluesky } from '../utils/bluesky';
 import haptics from '../utils/haptics';
 import niceDateTime from '../utils/nice-date-time';
 import states from '../utils/states';
@@ -74,6 +75,11 @@ function Accounts({ onClose }) {
               };
 
               const logOutAccount = async () => {
+                if (isBlueskyAccount(account)) {
+                  delete account.blueskySession;
+                  logoutBluesky(account.info.id);
+                  return;
+                }
                 await revokeAccessToken({
                   instanceURL: account.instanceURL,
                   client_id: account.clientId,

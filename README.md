@@ -1,11 +1,13 @@
 <div align="center">
   <img src="design/logo-4.svg" width="128" height="128" alt="">
 
-Phanpy
+Phanpy+
 ===
 
-**Minimalistic opinionated Mastodon web client.**
+**Minimalistic opinionated Mastodon web client — with built-in Bluesky support.**
 </div>
+
+> **This fork ([phanpy-plus](https://github.com/tieguy/phanpy-plus)) adds Bluesky (AT Protocol) support to Phanpy.** See [Bluesky support](#bluesky-support) below. Everything else is stock Phanpy.
 
 ![Fancy screenshot](readme-assets/fancy-screenshot.jpg)
 
@@ -28,6 +30,69 @@ This is an alternative web client for [Mastodon](https://joinmastodon.org/).
 🐘 Follow [@phanpy on Mastodon](https://hachyderm.io/@phanpy) for updates ✨
 
 Everything is designed and engineered following my taste and vision. This is a personal side project for me to learn about Mastodon and experiment with new UI/UX ideas.
+
+## Bluesky support
+
+This fork lets you use Bluesky and Mastodon side by side in one app:
+
+- 🦋 **Log in with Bluesky** — on the Log in page, use your handle + an [app password](https://bsky.app/settings/app-passwords). Custom PDS hosts work too (type the full service URL as the handle's server later if needed).
+- 🐘🦋 **Merged home timeline** — when you're logged in to both a Mastodon account and a Bluesky account, the Home timeline interleaves both feeds chronologically. Toggle via *Settings → Merged timeline*.
+- ✍️ **Cross-posting** — the compose box grows an "Also post to @you.bsky.social" checkbox (for new public posts). Write once, post to both networks. Images are re-uploaded to Bluesky (auto-resized under its 1 MB limit); content warnings become a `CW:` prefix.
+- ❤️ **Full interactions** — like, repost, reply, quote-render, bookmark, follow/unfollow, mute, block, delete — on Bluesky posts from within phanpy, even while browsing as your Mastodon account.
+- 🧵 **Threads, profiles, notifications, search, likes, bookmarks** for Bluesky accounts all work through the same phanpy UI.
+
+How it works: a small adapter layer (`src/utils/bluesky/`) wraps [`@atproto/api`](https://github.com/bluesky-social/atproto/tree/main/packages/api) and converts Bluesky posts/profiles into Mastodon-shaped objects, exposing a masto.js-compatible facade. The rest of phanpy doesn't know the difference. `@atproto/api` is lazy-loaded, so Mastodon-only users don't pay the bundle cost.
+
+Current limitations:
+
+- No polls, editing, scheduled posts, or pinning on Bluesky (protocol/API limitations).
+- Video cross-posting to Bluesky is not supported yet (images only). Bluesky videos in the timeline show a poster; playback works best in Safari (HLS).
+- Bluesky notifications appear in the same Notifications page, but push notifications are Mastodon-only.
+- Trending/Lists/Filters pages are Mastodon-only.
+- Sessions use app passwords (not OAuth) for now — credentials are stored in your browser's localStorage, same as Mastodon tokens.
+
+### Hosting your own (e.g. Fly.io)
+
+Phanpy is a fully static site — any static host works (the compose pop-out and hash-based routing need no server logic):
+
+```sh
+npm install
+npm run build     # outputs to dist/
+```
+
+For [Fly.io](https://fly.io), the simplest setup is their static-site pattern:
+
+```sh
+fly launch --no-deploy   # pick a name/region, then:
+```
+
+```toml
+# fly.toml
+app = "your-phanpy-plus"
+
+[build]
+  [build.args]
+    NODE_VERSION = "22"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+```
+
+with a `Dockerfile` like:
+
+```Dockerfile
+FROM node:22-slim AS build
+WORKDIR /app
+COPY . .
+RUN npm ci && npm run build
+
+FROM pierrezemb/gostatic
+COPY --from=build /app/dist /srv/http
+CMD ["-port", "8080", "-https-promote", "-enable-logging"]
+```
+
+then `fly deploy`. Alternatively, GitHub Pages / Cloudflare Pages / Netlify serve `dist/` just as well with zero config — this repo already ships `wrangler.jsonc` for Cloudflare. Note that your Bluesky/Mastodon credentials never touch the server; everything runs client-side.
 
 ## Features
 
