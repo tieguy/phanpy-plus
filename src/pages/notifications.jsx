@@ -27,6 +27,7 @@ import NavMenu from '../components/nav-menu';
 import Notification from '../components/notification';
 import Status from '../components/status';
 import { api } from '../utils/api';
+import { getOtherNetworkAccounts } from '../utils/bluesky';
 import enhanceContent from '../utils/enhance-content';
 import FilterContext from '../utils/filter-context';
 import groupNotifications, {
@@ -36,6 +37,7 @@ import groupNotifications, {
 import handleContentLinks from '../utils/handle-content-links';
 import haptics from '../utils/haptics';
 import mem from '../utils/mem';
+import { createMergedTimelineIterator } from '../utils/merged-timeline';
 import niceDateTime from '../utils/nice-date-time';
 import { getRegistration } from '../utils/push-notifications';
 import shortenNumber from '../utils/shorten-number';
@@ -167,29 +169,79 @@ function Notifications({ columnMode }) {
 
   console.debug('RENDER Notifications');
 
+  // Other-network accounts' notifications merged in, same setting and
+  // pattern as the merged home timeline
+  const otherSources = useRef(null);
+  if (otherSources.current === null) {
+    otherSources.current = snapStates.settings.mergedTimeline
+      ? getOtherNetworkAccounts().map((account) => {
+          const { masto: otherMasto, instance: otherInstance } = api({
+            account,
+          });
+          return { masto: otherMasto, instance: otherInstance };
+        })
+      : [];
+  }
+
   const notificationsIterable = useRef();
   const notificationsIterator = useRef();
   async function fetchNotifications(firstLoad) {
+    const merged = otherSources.current?.length > 0;
     if (firstLoad || !notificationsIterator.current) {
       // Reset iterator
-      notificationsIterable.current = mastoFetchNotificationsIterable({
-        excludeTypes: ['follow_request'],
-      });
-      notificationsIterator.current = notificationsIterable.current.values();
+      if (merged) {
+        // Merged mode uses v1 notifications on every source so the shapes
+        // interleave; grouping happens client-side
+        notificationsIterable.current = null;
+        notificationsIterator.current = createMergedTimelineIterator([
+          {
+            instance,
+            makeIterator: () =>
+              masto.v1.notifications
+                .list({
+                  limit: NOTIFICATIONS_LIMIT,
+                  excludeTypes: ['follow_request'],
+                })
+                .values(),
+          },
+          ...otherSources.current.map(
+            ({ masto: otherMasto, instance: otherInstance }) => ({
+              instance: otherInstance,
+              makeIterator: () =>
+                otherMasto.v1.notifications
+                  .list({
+                    limit: NOTIFICATIONS_LIMIT,
+                    excludeTypes: ['follow_request'],
+                  })
+                  .values(),
+            }),
+          ),
+        ]);
+      } else {
+        notificationsIterable.current = mastoFetchNotificationsIterable({
+          excludeTypes: ['follow_request'],
+        });
+        notificationsIterator.current = notificationsIterable.current.values();
+      }
     }
-    if (/max_id=($|&)/i.test(notificationsIterator.current?.nextParams)) {
+    if (
+      !merged &&
+      /max_id=($|&)/i.test(notificationsIterator.current?.nextParams)
+    ) {
       // Pixelfed returns next paginationed link with empty max_id
       // I assume, it's done (end of list)
       return {
         done: true,
       };
     }
-    const allNotifications = await notificationsIterator.current.next();
+    const allNotifications = merged
+      ? await notificationsIterator.current.next(NOTIFICATIONS_LIMIT)
+      : await notificationsIterator.current.next();
     const notifications = massageNotifications2(allNotifications.value);
 
     if (notifications?.length) {
       notifications.forEach((notification) => {
-        saveStatus(notification.status, instance, {
+        saveStatus(notification.status, notification._instance || instance, {
           skipThreading: true,
         });
       });
@@ -220,20 +272,28 @@ function Notifications({ columnMode }) {
 
       // console.log({ notifications });
 
-      const groupedNotifications = getGroupedNotifications(notifications);
+      const groupedNotifications = merged
+        ? groupNotifications(notifications)
+        : getGroupedNotifications(notifications);
 
       if (firstLoad) {
         states.notificationsLast = groupedNotifications[0];
         states.notifications = groupedNotifications;
 
-        // Update last read marker
-        masto.v1.markers
-          .create({
-            notifications: {
-              lastReadId: groupedNotifications[0].id,
-            },
-          })
-          .catch(() => {});
+        // Update last read marker — must be an ID from the current
+        // account's own notifications, not another network's
+        const currentInstanceFirst = merged
+          ? notifications.find((n) => !n._instance || n._instance === instance)
+          : groupedNotifications[0];
+        if (currentInstanceFirst?.id) {
+          masto.v1.markers
+            .create({
+              notifications: {
+                lastReadId: currentInstanceFirst.id,
+              },
+            })
+            .catch(() => {});
+        }
 
         if (!columnMode) analyzeNotifications(groupedNotifications);
       } else {
@@ -1038,7 +1098,7 @@ function Notifications({ columnMode }) {
                       </h2>
                     )}
                     <Notification
-                      instance={instance}
+                      instance={notification._instance || instance}
                       notification={notification}
                       key={notification._ids || notification.id}
                     />

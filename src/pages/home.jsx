@@ -216,7 +216,7 @@ function NotificationsMenu({ anchorRef, state, onClose }) {
                 .map((notification) => (
                   <Notification
                     key={notification._ids || notification.id}
-                    instance={instance}
+                    instance={notification._instance || instance}
                     notification={notification}
                     disableContextMenu
                   />

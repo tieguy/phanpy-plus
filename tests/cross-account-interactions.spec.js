@@ -36,6 +36,44 @@ const ACCOUNT_B = {
   accessToken: 'token-b',
 };
 
+const BSKY_DID = 'did:plc:testcarol';
+
+// @atproto/api decodes JWTs locally to check expiry, so fake tokens must
+// be structurally valid with a far-future exp
+function fakeJwt(scope) {
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  return `${b64({ alg: 'none', typ: 'JWT' })}.${b64({
+    scope,
+    sub: BSKY_DID,
+    exp: 4102444800,
+    iat: 1,
+  })}.x`;
+}
+const BSKY_ACCESS_JWT = fakeJwt('com.atproto.access');
+const BSKY_REFRESH_JWT = fakeJwt('com.atproto.refresh');
+// A structurally valid CID — the lexicon validates the format
+const CID = 'bafyreidfayvfuwqa7qlnopdjiqrxzs6blmoeu4rujcjtnci5beludirz2a';
+const ACCOUNT_BSKY = {
+  info: {
+    id: BSKY_DID,
+    username: 'carol.bsky.social',
+    acct: 'carol.bsky.social',
+    displayName: 'Carol',
+    avatar: AVATAR,
+    avatarStatic: AVATAR,
+  },
+  instanceURL: 'bsky.social',
+  accountType: 'bluesky',
+  accessToken: BSKY_ACCESS_JWT,
+  blueskySession: {
+    did: BSKY_DID,
+    handle: 'carol.bsky.social',
+    accessJwt: BSKY_ACCESS_JWT,
+    refreshJwt: BSKY_REFRESH_JWT,
+    active: true,
+  },
+};
+
 function makeStatus(id, domain) {
   return {
     id,
@@ -76,8 +114,8 @@ test.beforeEach(async ({ page }) => {
   // Two logged-in Mastodon accounts; A is current. Instance A's other
   // startup calls are aborted — the app tolerates network failures
   await page.addInitScript(
-    ([a, b]) => {
-      localStorage.setItem('accounts', JSON.stringify([a, b]));
+    ([a, b, bsky]) => {
+      localStorage.setItem('accounts', JSON.stringify([a, b, bsky]));
       localStorage.setItem(
         'instances',
         JSON.stringify({
@@ -87,9 +125,10 @@ test.beforeEach(async ({ page }) => {
       );
       sessionStorage.setItem('currentAccount', a.info.id);
     },
-    [ACCOUNT_A, ACCOUNT_B],
+    [ACCOUNT_A, ACCOUNT_B, ACCOUNT_BSKY],
   );
   await page.route('https://instance-a.test/**', (route) => route.abort());
+  await page.route('https://bsky.social/**', (route) => route.abort());
 });
 
 test('post from another logged-in account’s instance is interactable', async ({
@@ -121,6 +160,107 @@ test('post from an instance with no account shows the banner', async ({
   await expect(
     page.getByText('This post is from another server'),
   ).toBeVisible();
+});
+
+test('notifications tab merges both accounts’ notifications', async ({
+  page,
+}) => {
+  function makeNotification(id, domain, text) {
+    return {
+      id,
+      type: 'mention',
+      created_at: `2026-01-0${id}T12:00:00.000Z`,
+      account: makeStatus(id, domain).account,
+      status: { ...makeStatus(id, domain), content: `<p>${text}</p>` },
+    };
+  }
+
+  // More-specific routes registered here take precedence over the
+  // beforeEach aborts of instance-a.test and bsky.social
+  await page.route('https://instance-a.test/api/v1/notifications*', (route) =>
+    route.fulfill({
+      json: [makeNotification('2', 'instance-a.test', 'Mentioned you on A')],
+    }),
+  );
+
+  const bskyAuthor = {
+    did: 'did:plc:someoneelse',
+    handle: 'dave.bsky.social',
+    displayName: 'Dave',
+    avatar: AVATAR,
+  };
+  const bskyPostUri = `at://${bskyAuthor.did}/app.bsky.feed.post/xyz`;
+  const bskyRecord = {
+    $type: 'app.bsky.feed.post',
+    text: 'Mentioned you on Bluesky',
+    createdAt: '2026-01-03T12:00:00.000Z',
+  };
+  await page.route(
+    'https://bsky.social/xrpc/com.atproto.server.getSession',
+    (route) =>
+      route.fulfill({
+        json: { did: BSKY_DID, handle: 'carol.bsky.social', active: true },
+      }),
+  );
+  await page.route(
+    'https://bsky.social/xrpc/com.atproto.server.refreshSession',
+    (route) =>
+      route.fulfill({
+        json: {
+          did: BSKY_DID,
+          handle: 'carol.bsky.social',
+          active: true,
+          accessJwt: BSKY_ACCESS_JWT,
+          refreshJwt: BSKY_REFRESH_JWT,
+        },
+      }),
+  );
+  await page.route(
+    'https://bsky.social/xrpc/app.bsky.notification.listNotifications*',
+    (route) =>
+      route.fulfill({
+        json: {
+          notifications: [
+            {
+              uri: bskyPostUri,
+              cid: CID,
+              author: bskyAuthor,
+              reason: 'mention',
+              record: bskyRecord,
+              isRead: false,
+              indexedAt: '2026-01-03T12:00:00.000Z',
+            },
+          ],
+        },
+      }),
+  );
+  await page.route(
+    'https://bsky.social/xrpc/app.bsky.feed.getPosts*',
+    (route) =>
+      route.fulfill({
+        json: {
+          posts: [
+            {
+              uri: bskyPostUri,
+              cid: CID,
+              author: bskyAuthor,
+              record: bskyRecord,
+              indexedAt: '2026-01-03T12:00:00.000Z',
+              replyCount: 0,
+              repostCount: 0,
+              likeCount: 0,
+            },
+          ],
+        },
+      }),
+  );
+
+  await page.goto('/#/notifications');
+
+  // Both networks' notifications interleave in the one tab; before the
+  // merge, only the current account's (Mastodon A) showed
+  await expect(page.getByText('Mentioned you on A')).toBeVisible();
+  await expect(page.getByText('Mentioned you on Bluesky')).toBeVisible();
 });
 
 test('reply is composed as and posted through the owning account', async ({

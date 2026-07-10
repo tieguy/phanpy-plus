@@ -263,7 +263,12 @@ export default function groupNotifications(notifications) {
     if (type === 'favourite' || type === 'reblog') {
       virtualType = 'favourite+reblog';
     }
-    const key = `${status?.id}-${virtualType}-${date}`;
+    // _instance separates networks in merged mode — without it, same-day
+    // status-less notifications (e.g. follows) from different networks
+    // would group together with mixed-instance accounts
+    const key = `${status?.id}-${virtualType}-${date}-${
+      notification._instance || ''
+    }`;
     const mappedNotification = notificationsMap[key];
     if (!groupable(type)) {
       cleanNotifications[j++] = notification;

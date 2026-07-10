@@ -827,6 +827,7 @@ function Notification({
                 >
                   <Status
                     status={status}
+                    instance={instance}
                     size="s"
                     previewMode
                     allowContextMenu
@@ -867,6 +868,7 @@ function Notification({
             {isStatic ? (
               <Status
                 status={actualStatus}
+                instance={instance}
                 size="s"
                 readOnly
                 allowContextMenu
@@ -875,6 +877,7 @@ function Notification({
             ) : (
               <Status
                 statusID={actualStatusID}
+                instance={instance}
                 size="s"
                 readOnly
                 allowContextMenu
