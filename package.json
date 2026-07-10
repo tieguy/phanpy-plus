@@ -26,7 +26,8 @@
     "formatting-check": "oxfmt --check",
     "git:po-filter": "git config --local diff.po-filter.textconv \"sed 's/:[0-9]*$//'\"",
     "postinstall": "node scripts/generate-icons.js && npx exifreader build",
-    "generate-icons": "node scripts/generate-icons.js"
+    "generate-icons": "node scripts/generate-icons.js",
+    "test:unit": "vitest run"
   },
   "dependencies": {
     "@atproto/api": "^0.20.27",
@@ -98,6 +99,7 @@
     "vite-plugin-pwa": "~1.3.0",
     "vite-plugin-remove-console": "~2.2.0",
     "vite-plugin-run": "~0.9.0",
+    "vitest": "^4.1.10",
     "workbox-cacheable-response": "~7.4.1",
     "workbox-expiration": "~7.4.1",
     "workbox-navigation-preload": "~7.4.1",

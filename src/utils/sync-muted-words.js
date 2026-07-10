@@ -1,22 +1,16 @@
 import { api } from './api';
 import { getOtherNetworkAccounts, isBlueskyAccount } from './bluesky';
+import { computeSyncActions, SYNCED_FILTER_TITLE } from './muted-words-diff';
 import { getCurrentAccount } from './store-utils';
 
 // Union-merge keyword mute lists between a Mastodon account and a Bluesky
 // account. Only ever adds words — never deletes — so re-running is a no-op
-// once both sides converge.
-//
-// Semantics chosen deliberately:
-// - Mastodon → Bluesky: only keywords from 'hide' filters are pushed, since
-//   Bluesky muted words always fully hide (pushing 'warn' keywords would
-//   silently escalate them)
-// - Bluesky → Mastodon: words land in a single 'hide' filter (all contexts,
-//   no expiry) so they don't clutter the filter list
-// - Expired entries on either side are ignored
-// - Duplicate detection compares against *all* Mastodon keywords (any
-//   action), so a word already warn-filtered isn't also added as hidden
+// once both sides converge. Diff semantics live in muted-words-diff.js;
+// this module handles account resolution and the actual API writes:
+// - Bluesky → Mastodon: words land in a single 'hide' filter (all
+//   contexts, no expiry) so they don't clutter the filter list
 
-export const SYNCED_FILTER_TITLE = 'Muted words (synced)';
+export { SYNCED_FILTER_TITLE };
 
 const FILTER_CONTEXTS = [
   'home',
@@ -25,14 +19,6 @@ const FILTER_CONTEXTS = [
   'thread',
   'account',
 ];
-
-function normalize(keyword) {
-  return keyword.trim().toLowerCase();
-}
-
-function isExpired(expiresAt) {
-  return !!expiresAt && Date.parse(expiresAt) <= Date.now();
-}
 
 // Resolve the { mastodonAccount, blueskyAccount } pair: the current account
 // plus the first logged-in account on the other network
@@ -58,46 +44,10 @@ export async function computeMutedWordsSyncPlan() {
     bskyAPI.v2.filters.list(),
   ]);
 
-  // Every keyword on Mastodon, regardless of action — for dedupe
-  const mastoAllKeywords = new Set();
-  // Keywords eligible to push to Bluesky: active 'hide' filters only
-  const mastoHideKeywords = new Map(); // normalized -> original
-  let syncedFilter = null;
-  for (const filter of mastoFilters) {
-    if (filter.title === SYNCED_FILTER_TITLE) syncedFilter = filter;
-    const expired = isExpired(filter.expiresAt);
-    for (const { keyword } of filter.keywords || []) {
-      const norm = normalize(keyword);
-      mastoAllKeywords.add(norm);
-      if (!expired && filter.filterAction === 'hide') {
-        if (!mastoHideKeywords.has(norm)) mastoHideKeywords.set(norm, keyword);
-      }
-    }
-  }
-
-  // The Bluesky facade maps one muted word to one single-keyword filter
-  const bskyWords = new Map(); // normalized -> original
-  for (const filter of bskyFilters) {
-    if (isExpired(filter.expiresAt)) continue;
-    const keyword = filter.keywords?.[0]?.keyword;
-    if (!keyword) continue;
-    const norm = normalize(keyword);
-    if (!bskyWords.has(norm)) bskyWords.set(norm, keyword);
-  }
-
-  const toBluesky = [...mastoHideKeywords]
-    .filter(([norm]) => !bskyWords.has(norm))
-    .map(([, keyword]) => keyword);
-  const toMastodon = [...bskyWords]
-    .filter(([norm]) => !mastoAllKeywords.has(norm))
-    .map(([, keyword]) => keyword);
-
   return {
     mastodonAccount,
     blueskyAccount,
-    toBluesky,
-    toMastodon,
-    syncedFilter,
+    ...computeSyncActions(mastoFilters, bskyFilters),
   };
 }
 
