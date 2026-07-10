@@ -22,7 +22,7 @@ import { useLongPress } from 'use-long-press';
 import { useSnapshot } from 'valtio';
 
 import { api, getPreferences } from '../utils/api';
-import { hasMultipleNetworks, isBlueskyInstance } from '../utils/bluesky';
+import { hasMultipleNetworks } from '../utils/bluesky';
 import { langDetector } from '../utils/browser-translator';
 import { useEditHistory } from '../utils/edit-history-context';
 import FilterContext from '../utils/filter-context';
@@ -49,7 +49,11 @@ import showToast from '../utils/show-toast';
 import { speak, supportsTTS } from '../utils/speech';
 import states, { getStatus, saveStatus, statusKey } from '../utils/states';
 import statusPeek from '../utils/status-peek';
-import { getAPIVersions, getCurrentAccID } from '../utils/store-utils';
+import {
+  getAPIVersions,
+  getCurrentAccID,
+  hasAccountInInstance,
+} from '../utils/store-utils';
 import supports from '../utils/supports';
 import useTruncated from '../utils/useTruncated';
 import visibilityIconsMap from '../utils/visibility-icons-map';
@@ -404,11 +408,12 @@ function Status({
   }
   const { masto, instance, authenticated } = api({ instance: propInstance });
   const { instance: currentInstance } = api();
-  // Logged-in Bluesky accounts can interact cross-network, so treat their
-  // instances as "same" (actions route through their own facade client)
+  // Posts from any logged-in account's instance (either network) are
+  // interactable — api({instance}) routes actions through that account's
+  // own authenticated client
   const sameInstance =
     instance === currentInstance ||
-    (authenticated && isBlueskyInstance(instance));
+    (authenticated && hasAccountInInstance(instance));
 
   let sKey = statusKey(statusID || status?.id, instance);
   const snapStates = useSnapshot(states);

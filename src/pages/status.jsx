@@ -32,7 +32,6 @@ import NameText from '../components/name-text';
 import RelativeTime from '../components/relative-time';
 import Status from '../components/status';
 import { api } from '../utils/api';
-import { isBlueskyInstance } from '../utils/bluesky';
 import {
   EditHistoryProvider,
   useEditHistory,
@@ -46,7 +45,7 @@ import states, {
   threadifyStatus,
 } from '../utils/states';
 import statusPeek from '../utils/status-peek';
-import { getCurrentAccount } from '../utils/store-utils';
+import { getCurrentAccount, hasAccountInInstance } from '../utils/store-utils';
 import useTitle from '../utils/useTitle';
 
 import getInstanceStatusURL from './../utils/get-instance-status-url';
@@ -340,11 +339,12 @@ function StatusThread({ id, closeLink = '/', instance: propInstance }) {
     instance: currentInstance,
     authenticated,
   } = api();
-  // Logged-in Bluesky accounts can interact cross-network, so treat their
-  // instances as "same" (actions route through their own facade client)
+  // Posts from any logged-in account's instance (either network) are
+  // interactable — api({instance}) routes actions through that account's
+  // own authenticated client
   const sameInstance =
     instance === currentInstance ||
-    (instanceAuthenticated && isBlueskyInstance(instance));
+    (instanceAuthenticated && hasAccountInInstance(instance));
   const snapStates = useSnapshot(states);
   const [statuses, setStatuses] = useState([]);
   const [uiState, setUIState] = useState('default');
