@@ -32,6 +32,7 @@ import NameText from '../components/name-text';
 import RelativeTime from '../components/relative-time';
 import Status from '../components/status';
 import { api } from '../utils/api';
+import { isBlueskyInstance } from '../utils/bluesky';
 import {
   EditHistoryProvider,
   useEditHistory,
@@ -329,13 +330,21 @@ function StatusThread({ id, closeLink = '/', instance: propInstance }) {
     searchParams.get('view') || firstLoad.current ? 'full' : null,
   );
   const translate = !!parseInt(searchParams.get('translate'));
-  const { masto, instance } = api({ instance: propInstance });
+  const {
+    masto,
+    instance,
+    authenticated: instanceAuthenticated,
+  } = api({ instance: propInstance });
   const {
     masto: currentMasto,
     instance: currentInstance,
     authenticated,
   } = api();
-  const sameInstance = instance === currentInstance;
+  // Logged-in Bluesky accounts can interact cross-network, so treat their
+  // instances as "same" (actions route through their own facade client)
+  const sameInstance =
+    instance === currentInstance ||
+    (instanceAuthenticated && isBlueskyInstance(instance));
   const snapStates = useSnapshot(states);
   const [statuses, setStatuses] = useState([]);
   const [uiState, setUIState] = useState('default');
