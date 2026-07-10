@@ -2,8 +2,9 @@ import './settings.css';
 
 import '../components/button-install';
 
+import { msg } from '@lingui/core/macro';
 import { Plural, Trans, useLingui } from '@lingui/react/macro';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useDebounce } from 'use-debounce';
 import { useSnapshot } from 'valtio';
 
@@ -15,6 +16,7 @@ import Link from '../components/link';
 import RelativeTime from '../components/relative-time';
 import languages from '../data/translang-languages';
 import { api, getPreferences, setPreferences } from '../utils/api';
+import { getBlueskyAccounts } from '../utils/bluesky';
 import getTranslateTargetLanguage from '../utils/get-translate-target-language';
 import localeCode2Text from '../utils/localeCode2Text';
 import prettyBytes from '../utils/pretty-bytes';
@@ -468,6 +470,7 @@ function Settings({ onClose }) {
                 </Trans>
               </label>
             </li>
+            <BlueskyFeedPrefs />
             {!!TRANSLANG_INSTANCES && (
               <li class="block">
                 <label>
@@ -1054,6 +1057,74 @@ function Settings({ onClose }) {
         )}
       </main>
     </div>
+  );
+}
+
+// The official Bluesky app's Following-feed preferences (Settings →
+// Content and media). Stored server-side in actor preferences and
+// enforced client-side, so this reads/writes the same setting the
+// official app uses
+const BSKY_FEED_PREFS = [
+  { key: 'hideReposts', label: msg`Show reposts` },
+  { key: 'hideQuotePosts', label: msg`Show quote posts` },
+  { key: 'hideReplies', label: msg`Show replies` },
+];
+function BlueskyFeedPrefs() {
+  const { _ } = useLingui();
+  const blueskyAccount = useMemo(() => getBlueskyAccounts()[0], []);
+  const client = blueskyAccount
+    ? api({ account: blueskyAccount }).client
+    : null;
+  const [prefs, setPrefs] = useState(null);
+  const [uiState, setUIState] = useState('default');
+  useEffect(() => {
+    if (!client) return;
+    (async () => {
+      try {
+        setPrefs(await client.getFeedViewPrefs());
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  if (!client) return null;
+
+  return (
+    <li class="block">
+      <Trans>Bluesky following feed</Trans>
+      <div class="sub-section">
+        <ul>
+          {BSKY_FEED_PREFS.map(({ key, label }) => (
+            <li key={key}>
+              <label>
+                <input
+                  type="checkbox"
+                  disabled={!prefs || uiState === 'loading'}
+                  checked={prefs ? !prefs[key] : true}
+                  onChange={(e) => {
+                    const hide = !e.target.checked;
+                    setUIState('loading');
+                    (async () => {
+                      try {
+                        await client.setFeedViewPrefs({ [key]: hide });
+                        setPrefs(await client.getFeedViewPrefs());
+                      } catch (err) {
+                        console.error(err);
+                        alert(_(msg`Unable to update settings`));
+                      } finally {
+                        setUIState('default');
+                      }
+                    })();
+                  }}
+                />{' '}
+                {_(label)}
+              </label>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </li>
   );
 }
 

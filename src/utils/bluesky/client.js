@@ -198,28 +198,40 @@ export function createBlueskyClient({
     }
   }
 
-  // ----- Muted words (mapped to Mastodon filters) -----
-  const MUTED_WORDS_TTL = 5 * 60 * 1000;
-  let mutedWordsCache = null; // { words, fetchedAt }
-  async function getMutedWords(force) {
-    if (
-      !force &&
-      mutedWordsCache &&
-      Date.now() - mutedWordsCache.fetchedAt < MUTED_WORDS_TTL
-    ) {
-      return mutedWordsCache.words;
+  // ----- Preferences (muted words, feed view prefs) -----
+  const PREFS_TTL = 5 * 60 * 1000;
+  let prefsCache = null; // { prefs, fetchedAt }
+  async function getPrefs(force) {
+    if (!force && prefsCache && Date.now() - prefsCache.fetchedAt < PREFS_TTL) {
+      return prefsCache.prefs;
     }
     try {
       const prefs = await agent.getPreferences();
-      mutedWordsCache = {
-        words: prefs.moderationPrefs?.mutedWords || [],
-        fetchedAt: Date.now(),
-      };
+      prefsCache = { prefs, fetchedAt: Date.now() };
     } catch (e) {
       console.error(e);
-      mutedWordsCache = { words: [], fetchedAt: Date.now() };
+      prefsCache = { prefs: null, fetchedAt: Date.now() };
     }
-    return mutedWordsCache.words;
+    return prefsCache.prefs;
+  }
+
+  async function getMutedWords(force) {
+    const prefs = await getPrefs(force);
+    return prefs?.moderationPrefs?.mutedWords || [];
+  }
+
+  // Following-feed preferences, same ones the official app sets under
+  // Settings → Content and media (enforced client-side by every client)
+  async function getFeedViewPrefs(force) {
+    await ready();
+    const prefs = await getPrefs(force);
+    return prefs?.feedViewPrefs?.home || {};
+  }
+
+  async function setFeedViewPrefs(pref) {
+    await ready();
+    await agent.setFeedViewPrefs('home', pref);
+    await getPrefs(true);
   }
 
   const FILTER_CONTEXTS = [
@@ -1111,10 +1123,28 @@ export function createBlueskyClient({
           list: ({ limit = 20 } = {}) =>
             paginator(async (cursor) => {
               await ready();
-              const res = await agent.getTimeline({ limit, cursor });
-              res.data.feed.forEach(trackFeedItem);
+              const [res, fvp] = await Promise.all([
+                agent.getTimeline({ limit, cursor }),
+                getFeedViewPrefs().catch(() => ({})),
+              ]);
+              // Honor the official app's Following-feed preferences.
+              // (hideRepliesByUnfollowed/ByLikeCount are deliberately not
+              // applied — they default to on and would silently change
+              // the timeline for users who never opted in)
+              const feed = res.data.feed.filter((item) => {
+                if (fvp.hideReposts && item.reason) return false;
+                if (fvp.hideReplies && item.reply) return false;
+                if (
+                  fvp.hideQuotePosts &&
+                  /^app\.bsky\.embed\.record/.test(item.post?.embed?.$type)
+                ) {
+                  return false;
+                }
+                return true;
+              });
+              feed.forEach(trackFeedItem);
               const items = await withMutedWords(
-                res.data.feed.map(toFeedStatus).filter(Boolean),
+                feed.map(toFeedStatus).filter(Boolean),
               );
               return { items, cursor: res.data.cursor };
             }),
@@ -1451,6 +1481,8 @@ export function createBlueskyClient({
     instance,
     accessToken: session?.accessJwt,
     bluesky: true,
+    getFeedViewPrefs,
+    setFeedViewPrefs,
     onStreamingReady() {
       // No streaming support for Bluesky (yet)
     },
