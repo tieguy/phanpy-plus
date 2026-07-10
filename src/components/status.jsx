@@ -778,7 +778,7 @@ function Status({
   let quoteText = t`Quote`;
   let quoteMetaText;
 
-  if (supportsNativeQuote()) {
+  if (supportsNativeQuote(instance)) {
     const isMine = isSelf;
     const isMineAndPrivate = isMine && visibility === 'private';
     const isQuoteAutomaticallyAccepted =
@@ -804,7 +804,7 @@ function Status({
         : _(quoteMessages.quoteCannot);
     }
   }
-  const canQuote = supportsNativeQuote() && !quoteDisabled;
+  const canQuote = supportsNativeQuote(instance) && !quoteDisabled;
 
   const postQuoteApprovalPolicy = getPostQuoteApprovalPolicy(quoteApproval);
 
@@ -1218,7 +1218,7 @@ function Status({
               className={`menu-reblog ${reblogged ? 'checked' : ''}`}
               menuExtras={
                 <>
-                  {supportsNativeQuote() && (
+                  {supportsNativeQuote(instance) && (
                     <MenuItem
                       disabled={quoteDisabled}
                       onClick={() => {
@@ -1239,7 +1239,7 @@ function Status({
                       )}
                     </MenuItem>
                   )}
-                  {(DEV || !supportsNativeQuote()) && (
+                  {(DEV || !supportsNativeQuote(instance)) && (
                     <MenuItem
                       onClick={() => {
                         showCompose({
@@ -1253,7 +1253,7 @@ function Status({
                       <span>
                         <Trans>Quote with link</Trans>
                       </span>
-                      {supportsNativeQuote() && DEV && (
+                      {supportsNativeQuote(instance) && DEV && (
                         <small class="tag collapsed">DEV</small>
                       )}
                     </MenuItem>
@@ -1342,7 +1342,7 @@ function Status({
               <Trans>Boosted/Liked by…</Trans>
             </span>
           </MenuItem>
-          {supportsNativeQuote() && (
+          {supportsNativeQuote(instance) && (
             <MenuItem
               onClick={() => {
                 setShowQuotes(true);
@@ -1400,7 +1400,7 @@ function Status({
               onClick={() => {
                 try {
                   const postText = getPostText(status, {
-                    hideInlineQuote: supportsNativeQuote(),
+                    hideInlineQuote: supportsNativeQuote(instance),
                   });
                   if (postText) {
                     speak(postText, language);
@@ -1423,7 +1423,7 @@ function Status({
           onClick={() => {
             try {
               const postText = getPostText(status, {
-                hideInlineQuote: supportsNativeQuote(),
+                hideInlineQuote: supportsNativeQuote(instance),
                 htmlTextOpts: {
                   truncateLinks: false,
                 },
@@ -1634,7 +1634,7 @@ function Status({
           )}
           {isSelf && (
             <>
-              {supportsNativeQuote() &&
+              {supportsNativeQuote(instance) &&
                 !['private', 'direct'].includes(visibility) && (
                   <MenuItem onClick={() => setShowQuoteSettings(true)}>
                     <Icon icon="quote2" />
@@ -1917,7 +1917,7 @@ function Status({
         return alert(unauthInteractionErrorMessage);
       }
 
-      if (supportsNativeQuote()) {
+      if (supportsNativeQuote(instance)) {
         if (quoteDisabled) {
           showToast(quoteMetaText);
         } else {
@@ -3068,7 +3068,7 @@ function Status({
                     }
                     menuExtras={
                       <>
-                        {supportsNativeQuote() && (
+                        {supportsNativeQuote(instance) && (
                           <MenuItem
                             disabled={quoteDisabled}
                             onClick={() => {
@@ -3094,7 +3094,7 @@ function Status({
                             )}
                           </MenuItem>
                         )}
-                        {(DEV || !supportsNativeQuote()) && (
+                        {(DEV || !supportsNativeQuote(instance)) && (
                           <MenuItem
                             onClick={() => {
                               showCompose({
@@ -3108,7 +3108,7 @@ function Status({
                             <span>
                               <Trans>Quote with link</Trans>
                             </span>
-                            {supportsNativeQuote() && DEV && (
+                            {supportsNativeQuote(instance) && DEV && (
                               <small class="tag collapsed">DEV</small>
                             )}
                           </MenuItem>

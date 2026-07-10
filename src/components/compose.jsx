@@ -282,7 +282,7 @@ function Compose({
 
   // Quote eligibility logic duplicated from status.jsx
   const checkQuoteEligibility = (status) => {
-    if (!supportsNativeQuote()) return false;
+    if (!supportsNativeQuote(instance)) return false;
 
     const { visibility, quoteApproval, account } = status;
     const isSelf = currentAccountInfo && currentAccountInfo.id === account.id;
@@ -361,7 +361,7 @@ function Compose({
 
   const handlePastedLink = async (url) => {
     // Handle QP links
-    if (supportsNativeQuote()) {
+    if (supportsNativeQuote(instance)) {
       // Quotes cannot coexist with media attachments or polls
       if (mediaAttachments.length > 0 || poll) {
         return;
@@ -583,7 +583,7 @@ function Compose({
               prefs['posting:default:language']?.toLowerCase() ||
               DEFAULT_LANG,
           );
-          if (supportsNativeQuote()) {
+          if (supportsNativeQuote(instance)) {
             const postQuoteApprovalPolicy =
               getPostQuoteApprovalPolicy(quoteApproval);
             setQuoteApprovalPolicy(postQuoteApprovalPolicy);
@@ -1459,7 +1459,7 @@ function Compose({
                   ),
                 };
                 if (editStatus) {
-                  if (supportsNativeQuote()) {
+                  if (supportsNativeQuote(instance)) {
                     params.quote_approval_policy = quoteApprovalPolicy;
                   }
                   if (
@@ -1478,7 +1478,7 @@ function Compose({
                     );
                   }
                 } else {
-                  if (supportsNativeQuote()) {
+                  if (supportsNativeQuote(instance)) {
                     params.quote_approval_policy = quoteApprovalPolicy;
                     if (currentQuoteStatus?.id) {
                       params.quoted_status_id = currentQuoteStatus.id;
@@ -2073,7 +2073,7 @@ function Compose({
                 hidden={uiState === 'loading'}
               />
             )}
-            {supportsNativeQuote() && (
+            {supportsNativeQuote(instance) && (
               <label
                 class={`toolbar-button ${highlightQuoteApprovalPolicyField ? 'highlight' : ''}`}
               >
