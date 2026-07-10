@@ -152,6 +152,19 @@ function AccountInfo({
   useEffect(() => {
     if (!isString) {
       setInfo(account);
+      // Bluesky post authors are partial profiles without counts —
+      // upgrade to the detailed profile
+      if (account?._partial && account?.id) {
+        (async () => {
+          try {
+            const full = await masto.v1.accounts.$select(account.id).fetch();
+            states.accounts[`${full.id}@${instance}`] = full;
+            setInfo(full);
+          } catch (e) {
+            console.error(e);
+          }
+        })();
+      }
       return;
     }
     setUIState('loading');

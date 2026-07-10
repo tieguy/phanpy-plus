@@ -116,6 +116,9 @@ export function profileToAccount(profile, instance) {
     emojis: [],
     _bluesky: true,
     _instance: instance,
+    // profileViewBasic (e.g. post authors) carries no counts — flag it so
+    // profile views know to fetch the detailed profile before trusting 0s
+    _partial: profile.followersCount === undefined ? true : undefined,
     _viewer: viewer
       ? {
           following: viewer.following,
