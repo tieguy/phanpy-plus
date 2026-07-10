@@ -261,3 +261,17 @@ export function getOtherNetworkAccounts() {
     (a) => isBlueskyLoggedIn(a) && a.info.id !== currentID,
   );
 }
+
+// The home-feed view preferences (hide reposts/replies/quote posts) from
+// the first logged-in Bluesky account — one preference set governs the
+// whole home timeline, both networks
+export async function getHomeFeedViewPrefs() {
+  const account = getBlueskyAccounts()[0];
+  if (!account) return {};
+  try {
+    return await blueskyApi(account).client.getFeedViewPrefs();
+  } catch (e) {
+    console.error(e);
+    return {};
+  }
+}

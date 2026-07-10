@@ -1128,12 +1128,30 @@ export function createBlueskyClient({
                 getFeedViewPrefs().catch(() => ({})),
               ]);
               // Honor the official app's Following-feed preferences.
-              // (hideRepliesByUnfollowed/ByLikeCount are deliberately not
-              // applied — they default to on and would silently change
-              // the timeline for users who never opted in)
+              // Self-threads are never treated as replies (matching the
+              // official app), and reposted replies count as reposts
               const feed = res.data.feed.filter((item) => {
                 if (fvp.hideReposts && item.reason) return false;
-                if (fvp.hideReplies && item.reply) return false;
+                if (item.reply && !item.reason) {
+                  const parentAuthor = item.reply.parent?.author;
+                  const selfThread =
+                    parentAuthor?.did === item.post?.author?.did;
+                  if (!selfThread) {
+                    if (fvp.hideReplies) return false;
+                    if (
+                      fvp.hideRepliesByUnfollowed &&
+                      !parentAuthor?.viewer?.following
+                    ) {
+                      return false;
+                    }
+                    if (
+                      fvp.hideRepliesByLikeCount > 0 &&
+                      (item.post?.likeCount || 0) < fvp.hideRepliesByLikeCount
+                    ) {
+                      return false;
+                    }
+                  }
+                }
                 if (
                   fvp.hideQuotePosts &&
                   /^app\.bsky\.embed\.record/.test(item.post?.embed?.$type)

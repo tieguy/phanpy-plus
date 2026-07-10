@@ -1068,6 +1068,10 @@ const BSKY_FEED_PREFS = [
   { key: 'hideReposts', label: msg`Show reposts` },
   { key: 'hideQuotePosts', label: msg`Show quote posts` },
   { key: 'hideReplies', label: msg`Show replies` },
+  {
+    key: 'hideRepliesByUnfollowed',
+    label: msg`Show replies to people you don't follow (Bluesky only)`,
+  },
 ];
 function BlueskyFeedPrefs() {
   const { _ } = useLingui();

@@ -4,7 +4,11 @@ import { useSnapshot } from 'valtio';
 
 import Timeline from '../components/timeline';
 import { api } from '../utils/api';
-import { getOtherNetworkAccounts } from '../utils/bluesky';
+import {
+  getHomeFeedViewPrefs,
+  getOtherNetworkAccounts,
+} from '../utils/bluesky';
+import { filterStatusesByFeedViewPrefs } from '../utils/feed-view-prefs-filter';
 import { filteredItems } from '../utils/filters';
 import { createMergedTimelineIterator } from '../utils/merged-timeline';
 import states, { getStatus, saveStatus } from '../utils/states';
@@ -121,6 +125,13 @@ function Following({ title, path, id, ...props }) {
       }
 
       // value = filteredItems(value, 'home');
+      // One preference set (Bluesky's feedViewPref for 'home') filters
+      // both networks: the Bluesky facade already filters its own feed
+      // with real follow data, this pass covers the Mastodon statuses
+      value = filterStatusesByFeedViewPrefs(
+        value,
+        await getHomeFeedViewPrefs(),
+      );
       value.forEach((item) => {
         saveStatus(item, item._instance || instance);
       });
