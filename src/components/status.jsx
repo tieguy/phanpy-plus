@@ -2820,7 +2820,10 @@ function Status({
                         />
                       ))}
                     </div>
-                  ) : !!card && /^https/i.test(card?.url) ? (
+                  ) : /* scheme check guards against junk; plain http matters
+                  on Bluesky, where the link card is often the only copy of
+                  the link (e.g. http:// shorteners) */
+                  !!card && /^https?:/i.test(card?.url) ? (
                     <StatusCard
                       card={card}
                       selfReferential={
