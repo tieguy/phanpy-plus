@@ -205,6 +205,17 @@ export function getCurrentInstanceConfiguration() {
   return getInstanceConfiguration(instance);
 }
 
+export function getInstanceConfigurationByDomain(domain) {
+  try {
+    const instances = store.local.getJSON('instances');
+    const instance = instances?.[domain.toLowerCase().trim()];
+    return instance ? getInstanceConfiguration(instance) : {};
+  } catch (e) {
+    console.error(e);
+    return {};
+  }
+}
+
 export function getAPIVersions() {
   const instance = getCurrentInstance();
   return instance?.apiVersions || {};

@@ -808,6 +808,12 @@ function Status({
 
   const postQuoteApprovalPolicy = getPostQuoteApprovalPolicy(quoteApproval);
 
+  // Compose routes posts through the status's _instance client; native
+  // Mastodon statuses don't carry it, so stamp it before handing off —
+  // otherwise replies/quotes cross-account go through the wrong client
+  const composeStatus = (s = status) =>
+    s && instance && !s._instance ? { ...s, _instance: instance } : s;
+
   const replyStatus = (e, replyMode = 'all') => {
     if (!sameInstance || !authenticated) {
       return alert(unauthInteractionErrorMessage);
@@ -815,13 +821,13 @@ function Status({
     // syntheticEvent comes from MenuItem
     if (e?.shiftKey || e?.syntheticEvent?.shiftKey) {
       const newWin = openCompose({
-        replyToStatus: status,
+        replyToStatus: composeStatus(),
         replyMode,
       });
       if (newWin) return;
     }
     showCompose({
-      replyToStatus: status,
+      replyToStatus: composeStatus(),
       replyMode,
     });
   };
@@ -1217,7 +1223,7 @@ function Status({
                       disabled={quoteDisabled}
                       onClick={() => {
                         showCompose({
-                          quoteStatus: status,
+                          quoteStatus: composeStatus(),
                         });
                       }}
                     >
@@ -1648,8 +1654,8 @@ function Status({
                   <MenuItem
                     onClick={() => {
                       showCompose({
-                        editStatus: status,
-                        quoteStatus: status.quote?.quotedStatus,
+                        editStatus: composeStatus(),
+                        quoteStatus: composeStatus(status.quote?.quotedStatus),
                       });
                     }}
                   >
@@ -1916,7 +1922,7 @@ function Status({
           showToast(quoteMetaText);
         } else {
           showCompose({
-            quoteStatus: status,
+            quoteStatus: composeStatus(),
           });
         }
         // Don't fallback to non-native if quoteDisabled
@@ -3067,7 +3073,7 @@ function Status({
                             disabled={quoteDisabled}
                             onClick={() => {
                               showCompose({
-                                quoteStatus: status,
+                                quoteStatus: composeStatus(),
                               });
                             }}
                           >

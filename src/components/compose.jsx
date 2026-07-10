@@ -36,9 +36,11 @@ import states, { saveStatus } from '../utils/states';
 import store from '../utils/store';
 import {
   getAPIVersions,
+  getAccountByInstance,
   getCurrentAccount,
   getCurrentAccountNS,
   getCurrentInstanceConfiguration,
+  getInstanceConfigurationByDomain,
 } from '../utils/store-utils';
 import stringLength from '../utils/string-length';
 import supports from '../utils/supports';
@@ -198,12 +200,21 @@ function Compose({
   const UID = useRef(draftStatus?.uid || uid());
   console.log('Compose UID', UID.current);
 
-  const currentAccount = useMemo(getCurrentAccount, []);
+  // The account that will actually post: the one owning targetInstance
+  // when set (cross-account replies/quotes/edits), else the current one
+  const currentAccount = useMemo(
+    () =>
+      (targetInstance && getAccountByInstance(targetInstance)) ||
+      getCurrentAccount(),
+    [],
+  );
   const currentAccountInfo = currentAccount.info;
 
   const configuration = isBlueskyTarget
     ? blueskyInstanceInfo(instance).configuration
-    : getCurrentInstanceConfiguration();
+    : targetInstance
+      ? getInstanceConfigurationByDomain(instance)
+      : getCurrentInstanceConfiguration();
   console.log('⚙️ Configuration', configuration);
 
   // Cross-posting: other-network accounts this post can also go to
