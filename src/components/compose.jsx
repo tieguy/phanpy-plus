@@ -781,7 +781,10 @@ function Compose({
   const getCharCount = () => {
     const { value } = textareaRef.current;
     const { value: spoilerText } = spoilerTextRef.current;
-    return stringLength(countableText(value)) + stringLength(spoilerText);
+    // Mastodon shortens URLs to a fixed length for counting purposes;
+    // Bluesky counts the literal text, so don't collapse URLs there.
+    const text = isBlueskyTarget ? value : countableText(value);
+    return stringLength(text) + stringLength(spoilerText);
   };
   const updateCharCount = () => {
     const count = getCharCount();
