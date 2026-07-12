@@ -251,6 +251,49 @@ export default defineConfig(({ command }) => {
         name: 'generate-headers',
         writeBundle(_, bundle) {
           const blocks = [];
+
+          // Content-Security-Policy. `script-src 'self'` is the key line: all
+          // JS is bundled and served same-origin (no inline scripts once the
+          // SW register is external, no eval/wasm), so an injected <script> or
+          // inline handler can't run — which is what would otherwise steal the
+          // client-side tokens. Everything else stays permissive because the
+          // app legitimately talks to arbitrary instances and embeds media:
+          //   img/media/connect https: — any Mastodon/Bluesky server + CDNs
+          //   connect wss:            — Mastodon streaming
+          //   frame-src https:        — third-party media embeds (embed-modal)
+          //   style 'unsafe-inline'   — component inline styles (low risk)
+          const csp = [
+            "default-src 'self'",
+            "script-src 'self'",
+            "style-src 'self' 'unsafe-inline'",
+            "img-src 'self' https: data: blob:",
+            "media-src 'self' https: blob: data:",
+            "font-src 'self' data:",
+            "connect-src 'self' https: wss: blob: data:",
+            "frame-src 'self' https:",
+            "worker-src 'self'",
+            "manifest-src 'self'",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self' https:",
+            "frame-ancestors 'none'",
+          ].join('; ');
+          blocks.push(
+            [
+              '/*',
+              '  X-Content-Type-Options: nosniff',
+              '  Referrer-Policy: strict-origin-when-cross-origin',
+              '  X-Frame-Options: DENY',
+              `  Content-Security-Policy: ${csp}`,
+            ].join('\n'),
+          );
+
+          // Fingerprinted assets never change under a given name — cache them
+          // hard so returning visitors don't even re-validate.
+          blocks.push(
+            '/assets/*\n  Cache-Control: public, max-age=31536000, immutable',
+          );
+
           const cssFiles = Object.keys(bundle).filter((file) =>
             file.endsWith('.css'),
           );
@@ -326,7 +369,10 @@ export default defineConfig(({ command }) => {
           },
         },
         strategies: 'injectManifest',
-        injectRegister: 'inline',
+        // 'script' (external registerSW.js) instead of 'inline' so the
+        // service-worker registration is same-origin and covered by the
+        // strict `script-src 'self'` CSP (an inline script would be blocked).
+        injectRegister: 'script',
         injectManifest: {
           // Prevent "Unable to find a place to inject the manifest" error
           injectionPoint: undefined,
