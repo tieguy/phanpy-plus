@@ -1,6 +1,7 @@
 import emojifyText from './emojify-text';
 import escapeHTML from './escape-html';
 import mem from './mem';
+import sanitizeHTML from './sanitize-html';
 
 const fauxDiv = document.createElement('div');
 const whitelistLinkClasses = ['u-url', 'mention', 'hashtag'];
@@ -34,7 +35,9 @@ function createDOM(html, isDocumentFragment) {
 function _enhanceContent(content, opts = {}) {
   if (!content) return '';
   const { emojis, returnDOM, postEnhanceDOM = () => {} } = opts;
-  let enhancedContent = content;
+  // Sanitize remote HTML before parsing/enhancing it (see ./sanitize-html).
+  let enhancedContent = sanitizeHTML(content);
+  if (!enhancedContent) return returnDOM ? createDOM('', true) : '';
   // const dom = document.createElement('div');
   // dom.innerHTML = enhancedContent;
   const dom = createDOM(enhancedContent, returnDOM);

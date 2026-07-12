@@ -13,6 +13,7 @@ import {
   getCachedConversation,
   getDMClientForInstance,
 } from '../utils/dm';
+import sanitizeHTML from '../utils/sanitize-html';
 import useTitle from '../utils/useTitle';
 
 function DMThread() {
@@ -154,7 +155,7 @@ function DMThread() {
               <div class="bubble">
                 <div
                   class="message-body"
-                  dangerouslySetInnerHTML={{ __html: message.html }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(message.html) }}
                 />
                 <RelativeTime
                   datetime={message.createdAt}
