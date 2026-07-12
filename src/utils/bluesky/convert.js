@@ -304,13 +304,23 @@ function baseStatus({
   const account = profileToAccount(author, instance);
   const mentions = [];
   const tags = [];
+  // The mention handle isn't in the facet — it lives in the post text bytes at
+  // the facet's byte range. Decode it so mentions carry the handle (not the DID)
+  // as acct/username; the DID is only kept as id for mention-click matching.
+  const textBytes = record?.text ? encoder.encode(record.text) : null;
   for (const facet of record?.facets || []) {
     const feature = facet.features?.[0];
     if (feature?.$type === 'app.bsky.richtext.facet#mention') {
+      const { byteStart, byteEnd } = facet.index || {};
+      const segment =
+        textBytes && byteStart >= 0 && byteEnd >= byteStart
+          ? decoder.decode(textBytes.slice(byteStart, byteEnd))
+          : '';
+      const handle = segment.replace(/^@/, '') || feature.did;
       mentions.push({
         id: feature.did,
-        username: feature.did,
-        acct: feature.did,
+        username: handle,
+        acct: handle,
         url: `${BSKY_WEB}/profile/${feature.did}`,
       });
     } else if (feature?.$type === 'app.bsky.richtext.facet#tag') {
