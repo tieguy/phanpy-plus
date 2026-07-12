@@ -1,17 +1,8 @@
 import './welcome.css';
 
-import { Trans, useLingui } from '@lingui/react/macro';
+import { Trans } from '@lingui/react/macro';
 
-import boostsCarouselUrl from '../assets/features/boosts-carousel.jpg';
-import catchupUrl from '../assets/features/catch-up.png';
-import multiColumnUrl from '../assets/features/multi-column.jpg';
-import multiHashtagTimelineUrl from '../assets/features/multi-hashtag-timeline.jpg';
-import nestedCommentsThreadUrl from '../assets/features/nested-comments-thread.jpg';
 import logo from '../assets/logo.svg';
-import homeMobileDark from '../assets/screenshots/home-mobile-dark@2x.png';
-import homeMobileLight from '../assets/screenshots/home-mobile-light@2x.png';
-import homeTabletDark from '../assets/screenshots/home-tablet-dark@2x.png';
-import homeTabletLight from '../assets/screenshots/home-tablet-light@2x.png';
 
 import Icon from '../components/icon';
 import LangSelector from '../components/lang-selector';
@@ -38,7 +29,6 @@ const appVersion = __COMMIT_TIME__
   : null;
 
 function Welcome() {
-  const { t } = useLingui();
   useTitle(null, ['/', '/welcome']);
   return (
     <main id="welcome">
@@ -80,163 +70,43 @@ function Welcome() {
           )}
           <p class="insignificant">
             <small>
-              <Trans>
-                Connect your existing Mastodon or Bluesky account.
-                <br />
-                Your credentials are not stored on this server.
-              </Trans>
+              <Trans>Your credentials are not stored on this server.</Trans>
             </small>
           </p>
         </div>
       </div>
-      <div id="device-showcase">
-        <div class="device mobile">
-          <div class="device-frame">
-            <picture>
-              <source
-                srcSet={homeMobileDark}
-                media="(prefers-color-scheme: dark)"
-              />
-              <img
-                src={homeMobileLight}
-                alt={t`Screenshot of Fleeting home timeline on mobile device`}
-                width="375"
-                height="812"
-                loading="lazy"
-              />
-            </picture>
-          </div>
-        </div>
-        <div class="device tablet">
-          <div class="device-frame">
-            <picture>
-              <source
-                srcSet={homeTabletDark}
-                media="(prefers-color-scheme: dark)"
-              />
-              <img
-                src={homeTabletLight}
-                alt={t`Screenshot of Fleeting home timeline on tablet device`}
-                width="768"
-                height="1024"
-                loading="lazy"
-              />
-            </picture>
-          </div>
-        </div>
-      </div>
-      <div id="why-container">
-        <div class="sections">
-          <section>
-            <img
-              src={boostsCarouselUrl}
-              alt={t`Screenshot of Boosts Carousel`}
-              width="400"
-              height="303"
-              loading="lazy"
-            />
-            <div>
-              <h4>
-                <Trans>Boosts Carousel</Trans>
-              </h4>
-              <p>
-                <Trans>
-                  Visually separate original posts and re-shared posts (boosted
-                  posts).
-                </Trans>
-              </p>
-            </div>
-          </section>
-          <section>
-            <img
-              src={catchupUrl}
-              alt={t`Screenshot of Catch-up`}
-              width="600"
-              height="450"
-              loading="lazy"
-            />
-            <div>
-              <h4>
-                <Trans>Catch-up</Trans>
-              </h4>
-              <p>
-                <Trans>
-                  A separate timeline for followings. Email-inspired interface
-                  to sort and filter posts.
-                </Trans>
-              </p>
-            </div>
-          </section>
-          <section>
-            <img
-              src={nestedCommentsThreadUrl}
-              alt={t`Screenshot of nested comments thread`}
-              width="400"
-              height="474"
-              loading="lazy"
-            />
-            <div>
-              <h4>
-                <Trans>Nested comments thread</Trans>
-              </h4>
-              <p>
-                <Trans>
-                  Effortlessly follow conversations. Semi-collapsible replies.
-                </Trans>
-              </p>
-            </div>
-          </section>
-          <section>
-            <img
-              src={multiColumnUrl}
-              alt={t`Screenshot of multi-column UI`}
-              width="400"
-              height="209"
-              loading="lazy"
-            />
-            <div>
-              <h4>
-                <Trans>Single or multi-column</Trans>
-              </h4>
-              <p>
-                <Trans>
-                  By default, single column for zen-mode seekers. Configurable
-                  multi-column for power users.
-                </Trans>
-              </p>
-            </div>
-          </section>
-          <section>
-            <img
-              src={multiHashtagTimelineUrl}
-              alt={t`Screenshot of multi-hashtag timeline with a form to add more hashtags`}
-              width="400"
-              height="196"
-              loading="lazy"
-            />
-            <div>
-              <h4>
-                <Trans>Multi-hashtag timeline</Trans>
-              </h4>
-              <p>
-                <Trans>Up to 5 hashtags combined into a single timeline.</Trans>
-              </p>
-            </div>
-          </section>
-        </div>
+      <div class="interweave">
+        <ul>
+          <li>
+            <Trans>
+              <b>One timeline.</b> Your Mastodon and Bluesky home feeds, merged
+              in time order.
+            </Trans>
+          </li>
+          <li>
+            <Trans>
+              <b>One bell.</b> Notifications from both networks gather in the
+              same inbox.
+            </Trans>
+          </li>
+          <li>
+            <Trans>
+              <b>One app.</b> Read, reply, and boost as either account — no
+              separate tabs.
+            </Trans>
+          </li>
+        </ul>
       </div>
       <footer>
-        {(appSite || appVersion) && (
-          <p class="app-site-version">
-            <small>
-              {sameSite ? appSite : ''} {appVersion}
-            </small>
-          </p>
-        )}
         <p>
           <Trans>
-            <a href="https://github.com/cheeaun/phanpy" target="_blank">
-              Built
+            A personal fork of{' '}
+            <a
+              href="https://github.com/cheeaun/phanpy"
+              target="_blank"
+              rel="noopener"
+            >
+              Phanpy
             </a>{' '}
             by{' '}
             <a
@@ -249,16 +119,20 @@ function Welcome() {
             >
               @cheeaun
             </a>
-            .{' '}
-            <a href={PRIVACY_POLICY_URL} target="_blank">
-              Privacy Policy
-            </a>
             .
-          </Trans>
+          </Trans>{' '}
+          <a href={PRIVACY_POLICY_URL} target="_blank" rel="noopener">
+            <Trans>Privacy</Trans>
+          </a>
         </p>
-        <div>
-          <LangSelector />
-        </div>
+        {(appSite || appVersion) && (
+          <p class="app-site-version">
+            <small>
+              {sameSite ? appSite : ''} {appVersion}
+            </small>
+          </p>
+        )}
+        <LangSelector />
       </footer>
     </main>
   );
