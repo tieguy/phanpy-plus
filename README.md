@@ -1,50 +1,49 @@
 <div align="center">
   <img src="design/logo-4.svg" width="128" height="128" alt="">
 
-Phanpy+
+fleeting-social
 ===
 
-**Minimalistic opinionated Mastodon web client — with built-in Bluesky support.**
+**One home for Mastodon *and* Bluesky — two accounts, constantly interwoven.**
+
+<sub>formerly <code>phanpy-plus</code></sub>
 </div>
 
-> **This fork ([phanpy-plus](https://github.com/tieguy/phanpy-plus)) adds Bluesky (AT Protocol) support to Phanpy.** See [Bluesky support](#bluesky-support) below. Everything else is stock Phanpy.
+> **fleeting-social is built around a single goal: let one person hold a Mastodon account and a Bluesky account as *first-class, constantly interwoven peers* — one merged timeline, one notifications view, one compose box — rather than two separate accounts you flip between.** Internally, Bluesky is implemented as "just another Mastodon account," but that's an implementation detail; the intended experience is a single, unified home across both networks. See [The goal](#the-goal) and [What works today](#what-works-today) below.
+>
+> 💜 **Built on [Phanpy](https://github.com/cheeaun/phanpy) by [Chee Aun](https://github.com/cheeaun).** fleeting-social is a fork of Phanpy — a beautiful, meticulously-crafted Mastodon client — and inherits its design, its polish, and the overwhelming majority of its code. Essentially all of the Mastodon craft here is Phanpy's; fleeting-social adds a Bluesky half and weaves the two together. Enormous thanks to Chee Aun and every Phanpy contributor. Everything not described under [The goal](#the-goal) / [What works today](#what-works-today) is Phanpy's work, lightly adapted.
 
 ![Fancy screenshot](readme-assets/fancy-screenshot.jpg)
 
-**🗣️ Pronunciation**: `/fænpi/` ([`FAN-pee`](https://www.smogon.com/forums/threads/the-official-name-pronunciation-guide.3474941/)) [🔊 Listen](https://www.youtube.com/watch?v=DIUbWe-ysJI)
+This is a web client for people who use **both [Mastodon](https://joinmastodon.org/) and [Bluesky](https://bsky.app/)** — and want them interwoven rather than siloed.
 
-This is an alternative web client for [Mastodon](https://joinmastodon.org/).
+> ℹ️ **There's no public instance.** This is a personal project with no plans to host it publicly right now. If you'd like to use it, [build and run it yourself](#hosting-your-own-eg-flyio) — it's a static site and takes a couple of minutes. Your Mastodon and Bluesky credentials stay on your device; everything runs client-side.
 
-- 🏢 **Production**: https://phanpy.social [![Uptime Robot status](https://img.shields.io/uptimerobot/status/m795572454-df4518f96a3784401b550a6c)](https://stats.uptimerobot.com/rVO1RkbwMB)
-  - ![GitHub Release](https://img.shields.io/github/v/release/cheeaun/phanpy)
-  - `production` branch
-  - break less often
-  - slower fixes unless critical
-- 🏗️ **Development**: https://dev.phanpy.social [![Uptime Robot status](https://img.shields.io/uptimerobot/status/m801824077-77302887dc81a5ac4a45e231)](https://stats.uptimerobot.com/rVO1RkbwMB)
-  - ![GitHub last commit (branch)](https://img.shields.io/github/last-commit/cheeaun/phanpy/main)
-  - `main` branch
-  - may see new cool stuff sooner
-  - may break more often
-  - may be fixed much faster too
+## The goal
 
-🐘 Follow [@phanpy on Mastodon](https://hachyderm.io/@phanpy) for updates ✨
+Most clients that speak more than one network treat them as separate inboxes: you pick an account, you see that account's world, and you switch when you want the other one. **fleeting-social is built for the opposite experience.** It assumes you have *one* Mastodon account and *one* Bluesky account and that you think of them as a single social life that happens to be split across two protocols. So, by default, it interweaves them:
 
-Everything is designed and engineered following my taste and vision. This is a personal side project for me to learn about Mastodon and experiment with new UI/UX ideas.
+- one **Home timeline** that merges both feeds in chronological order,
+- one **Notifications** view that merges likes, replies, follows, and more from both networks,
+- one **compose box** that can post to both at once,
+- and interactions — reply, like, repost, quote, follow, mute, block — that work on posts from either network no matter which account you happen to be "in".
 
-## Bluesky support
+The fact that Bluesky is implemented internally as a Mastodon-shaped account (a compatibility facade over AT Protocol) is deliberately invisible. The point is **not** multi-account account-switching where some accounts happen to be Bluesky; the point is treating your Mastodon and Bluesky presences as equal, interwoven peers.
 
-This fork lets you use Bluesky and Mastodon side by side in one app:
+You can still turn the merging off (*Settings → Merged timeline*) if you'd rather keep the two networks apart — but interwoven is the default, because it's the whole idea.
+
+## What works today
 
 - 🦋 **Log in with Bluesky** — on the Log in page, enter your handle and you'll be sent to your PDS to authorize via **AT Protocol OAuth** (custom PDS hosts work automatically). An [app password](https://bsky.app/settings/app-passwords) fallback is also available.
 - 🐘🦋 **Merged home timeline** — when you're logged in to both a Mastodon account and a Bluesky account, the Home timeline interleaves both feeds chronologically. Toggle via *Settings → Merged timeline*.
 - ✍️ **Cross-posting** — the compose box grows an "Also post to @you.bsky.social" checkbox (for new public posts). Write once, post to both networks. Images are re-uploaded to Bluesky (auto-resized under its 1 MB limit); content warnings become a `CW:` prefix.
-- ❤️ **Full interactions** — like, repost, reply, quote-render, bookmark, follow/unfollow, mute, block, delete — on Bluesky posts from within phanpy, even while browsing as your Mastodon account.
-- 🧵 **Threads, profiles, notifications, search, likes, bookmarks** for Bluesky accounts all work through the same phanpy UI.
-- 🔥 **Trending** — Bluesky's trending topics and the Discover ("What's Hot") feed show up in phanpy's Trending page.
+- ❤️ **Full interactions** — like, repost, reply, quote-render, bookmark, follow/unfollow, mute, block, delete — on Bluesky posts from within fleeting-social, even while browsing as your Mastodon account.
+- 🧵 **Threads, profiles, notifications, search, likes, bookmarks** for Bluesky accounts all work through the same UI.
+- 🔥 **Trending** — Bluesky's trending topics and the Discover ("What's Hot") feed show up in the Trending page.
 - 📋 **Lists** — view, create, rename, delete Bluesky lists; add/remove members; browse list timelines.
-- 🙈 **Filters** — phanpy's Filters page manages your Bluesky **muted words** (add/edit/remove), and muted words are applied to Bluesky timelines client-side, just like the official app.
+- 🙈 **Filters** — the Filters page manages your Bluesky **muted words** (add/edit/remove), and muted words are applied to Bluesky timelines client-side, just like the official app.
 
-How it works: a small adapter layer (`src/utils/bluesky/`) wraps [`@atproto/api`](https://github.com/bluesky-social/atproto/tree/main/packages/api) and converts Bluesky posts/profiles into Mastodon-shaped objects, exposing a masto.js-compatible facade. The rest of phanpy doesn't know the difference. `@atproto/api` is lazy-loaded, so Mastodon-only users don't pay the bundle cost.
+<sub>💻 How the Bluesky adapter works under the hood is developer documentation — see [`CLAUDE.md`](CLAUDE.md#bluesky-support-architecture).</sub>
 
 Current limitations:
 
@@ -73,7 +72,7 @@ fly launch --no-deploy   # pick a name/region, then:
 
 ```toml
 # fly.toml
-app = "your-phanpy-plus"
+app = "your-fleeting-social"
 
 [build]
   [build.args]
@@ -91,7 +90,7 @@ FROM node:22-slim AS build
 WORKDIR /app
 COPY . .
 # Set to your app's public URL — required for Bluesky OAuth login
-ARG PHANPY_WEBSITE=https://your-phanpy-plus.fly.dev
+ARG PHANPY_WEBSITE=https://your-fleeting-social.fly.dev
 ENV PHANPY_WEBSITE=$PHANPY_WEBSITE
 RUN npm ci && npm run build
 
@@ -115,6 +114,17 @@ then `fly deploy`. Alternatively, GitHub Pages / Cloudflare Pages / Netlify serv
 - #️⃣ Multi-hashtag timeline
 
 ## Design decisions
+
+fleeting-social inherits Phanpy's design sensibility wholesale — the *Inherited from Phanpy* decisions below are Chee Aun's, and they're a big part of why this fork started from Phanpy in the first place. The *fleeting-social's own* decisions are what this fork adds on top.
+
+### fleeting-social's own
+
+- **Interwoven by default, not account-switching**.<br>With a Mastodon and a Bluesky account both logged in, Home and Notifications merge into one chronological stream. You *can* switch it off (*Settings → Merged timeline*), but the default assumes you want one home, not two inboxes.
+- **Bluesky is an equal peer, not a bolted-on mode**.<br>Bluesky lives behind a Mastodon-shaped facade, so existing features — threads, filters, lists, search, interactions — work on it without a parallel "Bluesky screen". No second-class network.
+- **Cross-posting is explicit and per-post**.<br>Posting to both networks is an opt-in checkbox you tick per compose, never an automatic mirror. Your two presences stay distinct unless you deliberately say "also post this over there".
+- **Merging content doesn't merge identity**.<br>Even in a merged view, the *current* account still governs preferences, read markers, and who you're acting as. The streams interleave; the accounts don't blur.
+
+### Inherited from Phanpy
 
 - **Status actions (reply, boost, favourite, bookmark, etc) are hidden by default**.<br>They only appear in individual status page. This is to reduce clutter and distraction. It may result in lower engagement, but we're not chasing numbers here.
 - **Boost is represented with the rocket icon**.<br>The green double arrow icon (retweet for Twitter) doesn't look right for the term "boost". Green rocket looks weird, so I use purple.
