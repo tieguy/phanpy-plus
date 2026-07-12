@@ -946,6 +946,17 @@ export function createBlueskyClient({
         fetch: async () => ({}),
         create: async () => ({}),
       },
+      // Bluesky has no Mastodon-style Web Push. Stub the endpoint so the
+      // Settings push form reads "no subscription" instead of crashing on
+      // `masto.v1.push.subscription` being undefined.
+      push: {
+        subscription: {
+          fetch: async () => null,
+          create: async () => null,
+          update: async () => null,
+          remove: async () => ({}),
+        },
+      },
       followedTags: {
         list: () => paginator(async () => ({ items: [], cursor: null })),
       },
