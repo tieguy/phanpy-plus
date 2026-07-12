@@ -316,6 +316,16 @@
     }
   }
 
+  h1 .wordmark {
+    font-family: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    font-size: 3.4em;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--text-color);
+    vertical-align: middle;
+    margin-inline-start: 8px;
+  }
+
   .login-options {
     display: flex;
     flex-wrap: wrap;

@@ -276,7 +276,8 @@ export default defineConfig(({ command }) => {
           scope: './',
           name: CLIENT_NAME,
           short_name: CLIENT_NAME,
-          description: 'Minimalistic opinionated Mastodon web client',
+          description:
+            'One home for Mastodon and Bluesky — two accounts, interwoven.',
           // https://github.com/cheeaun/phanpy/issues/231
           theme_color: undefined,
           background_color: '#b7cdf9', // background for splash
