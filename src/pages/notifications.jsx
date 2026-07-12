@@ -277,14 +277,18 @@ function Notifications({ columnMode }) {
         : getGroupedNotifications(notifications);
 
       if (firstLoad) {
-        states.notificationsLast = groupedNotifications[0];
-        states.notifications = groupedNotifications;
-
-        // Update last read marker — must be an ID from the current
-        // account's own notifications, not another network's
+        // Must be an ID from the current account's own notifications, not
+        // another network's — used both for the read marker below and for
+        // notificationsLast, which the background badge check polls the current
+        // account with as `sinceId`. A foreign id there makes that poll misfire
+        // and light the bell with nothing new to show.
         const currentInstanceFirst = merged
           ? notifications.find((n) => !n._instance || n._instance === instance)
           : groupedNotifications[0];
+
+        states.notificationsLast = currentInstanceFirst || groupedNotifications[0];
+        states.notifications = groupedNotifications;
+
         if (currentInstanceFirst?.id) {
           masto.v1.markers
             .create({
