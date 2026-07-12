@@ -248,6 +248,7 @@ export default defineConfig(({ command }) => {
         // https://developers.cloudflare.com/pages/configuration/early-hints/
         name: 'generate-headers',
         writeBundle(_, bundle) {
+          const blocks = [];
           const cssFiles = Object.keys(bundle).filter((file) =>
             file.endsWith('.css'),
           );
@@ -255,11 +256,17 @@ export default defineConfig(({ command }) => {
             const links = cssFiles
               .map((file) => `  Link: <${file}>; rel=preload; as=style`)
               .join('\n');
-            fs.writeFileSync(
-              resolve(__dirname, 'dist/_headers'),
-              `/\n${links}`,
-            );
+            blocks.push(`/\n${links}`);
           }
+          // Correct MIME for the web app manifest — some browsers (incl. iOS
+          // Safari) are strict about the manifest content-type.
+          blocks.push(
+            '/manifest.webmanifest\n  Content-Type: application/manifest+json; charset=utf-8',
+          );
+          fs.writeFileSync(
+            resolve(__dirname, 'dist/_headers'),
+            blocks.join('\n\n') + '\n',
+          );
         },
       },
       VitePWA({

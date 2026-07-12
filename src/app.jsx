@@ -25,6 +25,7 @@ import './utils/toast-alert';
 import BackgroundService from './components/background-service';
 import ComposeButton from './components/compose-button';
 import { ICONS } from './components/ICONS';
+import IOSInstallHint from './components/ios-install-hint';
 import KeyboardShortcutsHelp from './components/keyboard-shortcuts-help';
 import Loader from './components/loader';
 import Modals from './components/modals';
@@ -693,6 +694,7 @@ function App() {
       {isLoggedIn && <NavigationCommand />}
       <SearchCommand onClose={focusDeck} />
       <KeyboardShortcutsHelp />
+      <IOSInstallHint />
     </AuthProvider>
   );
 }
