@@ -302,6 +302,12 @@ function NotificationsMenu({ anchorRef, state, onClose }) {
             <Trans>Mentions</Trans>
           </span>
         </Link>
+        <Link to="/messages" class="button plain">
+          <Icon icon="message" />{' '}
+          <span>
+            <Trans>Messages</Trans>
+          </span>
+        </Link>
         <Link to="/notifications" class="button plain2">
           {hasFollowRequests ? (
             <Trans>

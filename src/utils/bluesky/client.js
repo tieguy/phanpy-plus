@@ -4,6 +4,12 @@
 // @atproto/api is loaded lazily (all facade methods are async) so it stays
 // out of the main bundle for Mastodon-only users.
 import {
+  CHAT_PROXY_SERVICE,
+  CHAT_PROXY_TYPE,
+  convoToConversation,
+  messageToMessage,
+} from './chat';
+import {
   atUriToId,
   blueskyInstanceInfo,
   BSKY_WEB,
@@ -1491,8 +1497,87 @@ export function createBlueskyClient({
     },
   };
 
+  // Fork-specific direct-message surface. Bluesky chat is a separate service
+  // reached through the `bsky_chat` proxy; every call routes through a proxied
+  // clone of the agent. Consumed via the unified DM client (src/utils/dm.js).
+  function chatAgent() {
+    return agent.withProxy(CHAT_PROXY_TYPE, CHAT_PROXY_SERVICE);
+  }
+  async function buildMessageInput(text) {
+    const { RichText } = await loadAtproto();
+    const rt = new RichText({ text });
+    try {
+      await rt.detectFacets(agent); // resolves mentions + links to facets
+    } catch (e) {}
+    return { text: rt.text, facets: rt.facets };
+  }
+  const chat = {
+    listConversations: ({ limit = 40 } = {}) =>
+      paginator(async (cursor) => {
+        await ready();
+        const res = await chatAgent().chat.bsky.convo.listConvos({
+          limit,
+          cursor,
+        });
+        const items = (res.data.convos || []).map((c) =>
+          convoToConversation(c, agentDid(), instance),
+        );
+        return { items, cursor: res.data.cursor };
+      }),
+    getMessages: (convoId, { limit = 50 } = {}) =>
+      paginator(async (cursor) => {
+        await ready();
+        const res = await chatAgent().chat.bsky.convo.getMessages({
+          convoId,
+          limit,
+          cursor,
+        });
+        // getMessages returns newest-first; the thread UI reverses for display.
+        const items = (res.data.messages || []).map((m) =>
+          messageToMessage(m, agentDid(), instance),
+        );
+        return { items, cursor: res.data.cursor };
+      }),
+    getConvo: async (convoId) => {
+      await ready();
+      const res = await chatAgent().chat.bsky.convo.getConvo({ convoId });
+      return convoToConversation(res.data.convo, agentDid(), instance);
+    },
+    getConvoForMembers: async (memberIds) => {
+      await ready();
+      const members = Array.isArray(memberIds) ? memberIds : [memberIds];
+      const res = await chatAgent().chat.bsky.convo.getConvoForMembers({
+        members,
+      });
+      return convoToConversation(res.data.convo, agentDid(), instance);
+    },
+    sendMessage: async (convoId, text) => {
+      await ready();
+      const message = await buildMessageInput(text);
+      const res = await chatAgent().chat.bsky.convo.sendMessage({
+        convoId,
+        message,
+      });
+      return messageToMessage(res.data, agentDid(), instance);
+    },
+    markRead: async (convoId, messageId) => {
+      await ready();
+      await chatAgent().chat.bsky.convo.updateRead({
+        convoId,
+        ...(messageId ? { messageId } : {}),
+      });
+      return {};
+    },
+    getUnreadCount: async () => {
+      await ready();
+      const res = await chatAgent().chat.bsky.convo.getUnreadCounts();
+      return res.data.count || 0;
+    },
+  };
+
   const client = {
     masto,
+    chat,
     get agent() {
       return agent;
     },

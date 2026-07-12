@@ -1,0 +1,138 @@
+#dm-thread-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+
+  > .deck {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  header .header-grid {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .thread-peer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: inherit;
+    text-decoration: none;
+    min-width: 0;
+
+    b {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .icon {
+      opacity: 0.6;
+      flex-shrink: 0;
+    }
+  }
+
+  .messages {
+    list-style: none;
+    margin: 0;
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .messages > li {
+    display: flex;
+    max-width: 78%;
+  }
+
+  .messages > li.from-self {
+    align-self: flex-end;
+    justify-content: flex-end;
+  }
+
+  .messages > li.from-peer {
+    align-self: flex-start;
+  }
+
+  .scroll-anchor {
+    align-self: stretch;
+    max-width: none;
+    height: 1px;
+  }
+
+  .bubble {
+    padding: 8px 12px;
+    border-radius: 18px;
+    background-color: var(--bg-faded-color);
+    line-height: 1.35;
+
+    .message-body {
+      overflow-wrap: anywhere;
+
+      p {
+        margin: 0;
+      }
+      p + p {
+        margin-top: 0.5em;
+      }
+      a {
+        color: inherit;
+        text-decoration: underline;
+      }
+    }
+
+    time {
+      display: block;
+      margin-top: 3px;
+      font-size: 0.72em;
+      opacity: 0.6;
+      text-align: end;
+    }
+  }
+
+  .from-self .bubble {
+    background-color: var(--link-color);
+    color: var(--link-text-color, #fff);
+
+    .message-body a {
+      color: inherit;
+    }
+  }
+
+  .thread-footer {
+    text-align: center;
+
+    .ui-state {
+      padding: 8px 16px;
+      color: var(--text-insignificant-color);
+    }
+  }
+
+  .compose-bar {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--outline-color);
+    background-color: var(--bg-color);
+
+    textarea {
+      flex: 1;
+      resize: none;
+      max-height: 40vh;
+      border-radius: 18px;
+      padding: 8px 12px;
+      line-height: 1.35;
+    }
+
+    button {
+      flex-shrink: 0;
+    }
+  }
+}

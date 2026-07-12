@@ -51,7 +51,9 @@ import HttpRoute from './pages/http-route';
 import List from './pages/list';
 import Lists from './pages/lists';
 import Login from './pages/login';
+import DMThread from './pages/dm-thread';
 import Mentions from './pages/mentions';
+import Messages from './pages/messages';
 import Notifications from './pages/notifications';
 import Public from './pages/public';
 import ScheduledPosts from './pages/scheduled-posts';
@@ -821,6 +823,22 @@ function SecondaryRoutes() {
         element={
           <AuthRoute>
             <Mentions />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/messages"
+        element={
+          <AuthRoute>
+            <Messages />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/messages/:instance/:id"
+        element={
+          <AuthRoute>
+            <DMThread />
           </AuthRoute>
         }
       />

@@ -9,7 +9,11 @@
 // (IndexedDB), so unlike app-password sessions nothing secret is kept in
 // the accounts store — only the DID.
 
-export const BLUESKY_OAUTH_SCOPE = 'atproto transition:generic';
+// `transition:chat.bsky` grants access to the Bluesky chat (DM) service.
+// Changing this scope changes the hosted client metadata, so existing OAuth
+// sessions must re-consent before DMs work.
+export const BLUESKY_OAUTH_SCOPE =
+  'atproto transition:generic transition:chat.bsky';
 
 export function buildClientMetadata(origin) {
   return {

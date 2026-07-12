@@ -224,7 +224,9 @@ export default defineConfig(({ command }) => {
                   client_name: 'Fleeting',
                   client_uri: WEBSITE.replace(/\/+$/, ''),
                   redirect_uris: [`${WEBSITE.replace(/\/+$/, '')}/`],
-                  scope: 'atproto transition:generic',
+                  // Keep in sync with BLUESKY_OAUTH_SCOPE in
+                  // src/utils/bluesky/oauth.js. transition:chat.bsky enables DMs.
+                  scope: 'atproto transition:generic transition:chat.bsky',
                   grant_types: ['authorization_code', 'refresh_token'],
                   response_types: ['code'],
                   token_endpoint_auth_method: 'none',
