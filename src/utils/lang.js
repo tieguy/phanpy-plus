@@ -11,7 +11,7 @@ import { ALL_LOCALES, DEFAULT_LANG } from '../locales';
 import { messages } from '../locales/en.po';
 import localeMatch from '../utils/locale-match';
 
-const { PHANPY_DEFAULT_LANG } = import.meta.env;
+const { FLEETING_DEFAULT_LANG } = import.meta.env;
 
 const langFileMaps = {
   // kab: 'kab-KAB',
@@ -59,7 +59,7 @@ export function initActivateLang() {
     fromUrl('lang'),
     fromStorage('lang'),
     fromNavigator(),
-    PHANPY_DEFAULT_LANG,
+    FLEETING_DEFAULT_LANG,
     DEFAULT_LANG,
   );
   const matchedLang =

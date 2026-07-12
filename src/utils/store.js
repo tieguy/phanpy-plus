@@ -8,7 +8,7 @@ const canSetSecureCookie =
   navigator.cookieEnabled &&
   (() => {
     try {
-      const key = '__phanpy_can_set_secure_cookie__';
+      const key = '__fleeting_can_set_secure_cookie__';
       const value = '1';
       cookies.set(key, value);
       const result = cookies.get(key) === value;

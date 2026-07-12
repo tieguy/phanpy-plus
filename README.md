@@ -51,7 +51,7 @@ Current limitations:
 - Video cross-posting to Bluesky is not supported yet (images only). Bluesky videos in the timeline show a poster; playback works best in Safari (HLS).
 - Bluesky notifications appear in the same Notifications page, but push notifications are Mastodon-only.
 - Mastodon filters have titles and multiple keywords; Bluesky muted words are flat. A multi-keyword filter becomes multiple muted words (one "filter" per word).
-- OAuth on a deployed domain requires building with `PHANPY_WEBSITE` set to that origin (see below) so `/oauth/client-metadata.json` is generated — the AT Protocol authorization server fetches it. On `localhost` dev, a loopback OAuth client is used and no file is needed. App-password sessions are stored in localStorage (like Mastodon tokens); OAuth tokens are managed by the OAuth client in IndexedDB with auto-refresh.
+- OAuth on a deployed domain requires building with `FLEETING_WEBSITE` set to that origin (see below) so `/oauth/client-metadata.json` is generated — the AT Protocol authorization server fetches it. On `localhost` dev, a loopback OAuth client is used and no file is needed. App-password sessions are stored in localStorage (like Mastodon tokens); OAuth tokens are managed by the OAuth client in IndexedDB with auto-refresh.
 
 ### Hosting your own (e.g. Fly.io)
 
@@ -59,10 +59,10 @@ Phanpy is a fully static site — any static host works (the compose pop-out and
 
 ```sh
 npm install
-PHANPY_WEBSITE=https://your-domain.example npm run build   # outputs to dist/
+FLEETING_WEBSITE=https://your-domain.example npm run build   # outputs to dist/
 ```
 
-Setting `PHANPY_WEBSITE` to your deployed origin is required for Bluesky OAuth login (it generates `dist/oauth/client-metadata.json`, which Bluesky's authorization servers fetch to verify this app). Without it, the app-password login still works.
+Setting `FLEETING_WEBSITE` to your deployed origin is required for Bluesky OAuth login (it generates `dist/oauth/client-metadata.json`, which Bluesky's authorization servers fetch to verify this app). Without it, the app-password login still works.
 
 For [Fly.io](https://fly.io), the simplest setup is their static-site pattern:
 
@@ -90,8 +90,8 @@ FROM node:22-slim AS build
 WORKDIR /app
 COPY . .
 # Set to your app's public URL — required for Bluesky OAuth login
-ARG PHANPY_WEBSITE=https://your-fleeting-social.fly.dev
-ENV PHANPY_WEBSITE=$PHANPY_WEBSITE
+ARG FLEETING_WEBSITE=https://your-fleeting-social.fly.dev
+ENV FLEETING_WEBSITE=$FLEETING_WEBSITE
 RUN npm ci && npm run build
 
 FROM pierrezemb/gostatic
@@ -313,15 +313,15 @@ Download or `git clone` this repository. Use `production` branch for *stable* re
 Customization can be done by passing environment variables to the build command. Examples:
 
 ```bash
-PHANPY_CLIENT_NAME="Phanpy Dev" \
-    PHANPY_WEBSITE="https://dev.phanpy.social" \
+FLEETING_CLIENT_NAME="Phanpy Dev" \
+    FLEETING_WEBSITE="https://dev.phanpy.social" \
     npm run build
 ```
 
 ```bash
-PHANPY_DEFAULT_INSTANCE=hachyderm.io \
-    PHANPY_DEFAULT_INSTANCE_REGISTRATION_URL=https://hachyderm.io/auth/sign_up \
-    PHANPY_PRIVACY_POLICY_URL=https://hachyderm.io/privacy-policy \
+FLEETING_DEFAULT_INSTANCE=hachyderm.io \
+    FLEETING_DEFAULT_INSTANCE_REGISTRATION_URL=https://hachyderm.io/auth/sign_up \
+    FLEETING_PRIVACY_POLICY_URL=https://hachyderm.io/privacy-policy \
     npm run build
 ```
 
@@ -329,51 +329,51 @@ It's also possible to set them in the `.env` file.
 
 Available variables:
 
-- `PHANPY_CLIENT_NAME` (optional, default: `Phanpy`) affects:
+- `FLEETING_CLIENT_NAME` (optional, default: `Phanpy`) affects:
   - Web page title, shown in the browser window or tab title
   - App title, when installed as PWA, shown in the Home screen, macOS dock, Windows taskbar, etc
   - OpenGraph card title, when shared on social networks
   - Client name, when [registering the app for authentication](https://docs.joinmastodon.org/client/token/#app) and shown as client used on posts in some apps/clients
-- `PHANPY_WEBSITE` (optional but recommended, no defaults) affects:
+- `FLEETING_WEBSITE` (optional but recommended, no defaults) affects:
   - Canonical URL of the website
   - OpenGraph card URL, when shared on social networks
   - Root path for the OpenGraph card image
   - Client URL, when [registering the app for authentication](https://docs.joinmastodon.org/client/token/#app) and shown as client used on posts in some apps/clients
-- `PHANPY_DEFAULT_INSTANCE` (optional, no defaults):
+- `FLEETING_DEFAULT_INSTANCE` (optional, no defaults):
   - e.g. 'mastodon.social', without `https://`
   - Default instance for log-in
   - When logging in, the user will be redirected instantly to the instance's authentication page instead of having to manually type the instance URL and submit
-- `PHANPY_DEFAULT_INSTANCE_REGISTRATION_URL` (optional, no defaults):
+- `FLEETING_DEFAULT_INSTANCE_REGISTRATION_URL` (optional, no defaults):
   - URL of the instance registration page
   - E.g. `https://mastodon.social/auth/sign_up`
-- `PHANPY_PRIVACY_POLICY_URL` (optional, default to official instance's privacy policy):
+- `FLEETING_PRIVACY_POLICY_URL` (optional, default to official instance's privacy policy):
   - URL of the privacy policy page
   - May specify the instance's own privacy policy
-- `PHANPY_DEFAULT_LANG` (optional):
+- `FLEETING_DEFAULT_LANG` (optional):
   - Default language is English (`en`) if not specified.
   - Fallback language after multiple detection methods (`lang` query parameter, `lang` key in `localStorage` and `navigator.language`)
-- `PHANPY_REFERRER_POLICY` (optional, default: `origin`):
+- `FLEETING_REFERRER_POLICY` (optional, default: `origin`):
   - Referrer policy for the site. See [MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy).
   - This is applied with the `<meta>` tag on the client-side.
   - The policy can also be set with `Referrer-Policy` header configured on the server-side (not this variable).
   - Note that since Phanpy uses hash-based URLs, the referrer does not include the hash part.
-- `PHANPY_LINGVA_INSTANCES` (**DEPRECATED**, optional, space-separated list, default: `lingva.phanpy.social [...hard-coded list of fallback instances]`):
+- `FLEETING_LINGVA_INSTANCES` (**DEPRECATED**, optional, space-separated list, default: `lingva.phanpy.social [...hard-coded list of fallback instances]`):
   - Specify a space-separated list of instances. First will be used as default before falling back to the subsequent instances. If there's only 1 instance, means no fallback.
   - May specify a self-hosted Lingva instance, powered by either [lingva-translate](https://github.com/thedaviddelta/lingva-translate) or [lingva-api](https://github.com/cheeaun/lingva-api)
   - List of fallback instances hard-coded in `/.env`
   - [↗️ List of lingva-translate instances](https://github.com/thedaviddelta/lingva-translate?tab=readme-ov-file#instances)
-- `PHANPY_TRANSLANG_INSTANCES` (optional, space-separated list, default: `translang.phanpy.social`):
+- `FLEETING_TRANSLANG_INSTANCES` (optional, space-separated list, default: `translang.phanpy.social`):
   - Specify a space-separated list of instances. First will be used as default before falling back to the subsequent instances. If there's only 1 instance, means no fallback.
   - May specify a self-hosted Translating instance, powered by [translang-api](https://github.com/cheeaun/translang-api).
   - List of instances hard-coded in `/.env`
-- `PHANPY_IMG_ALT_API_URL` (optional, no defaults):
+- `FLEETING_IMG_ALT_API_URL` (optional, no defaults):
   - API endpoint for self-hosted instance of [img-alt-api](https://github.com/cheeaun/img-alt-api).
   - If provided, a setting will appear for users to enable the image description generator in the composer. Disabled by default.
-- `PHANPY_GIPHY_API_KEY` (optional, no defaults):
+- `FLEETING_GIPHY_API_KEY` (optional, no defaults):
   - API key for [GIPHY](https://developers.giphy.com/). See [API docs](https://developers.giphy.com/docs/api/).
   - If provided, a setting will appear for users to enable the GIF picker in the composer. Disabled by default.
   - This is not self-hosted.
-- `PHANPY_DISALLOW_ROBOTS` (optional, default: not set):
+- `FLEETING_DISALLOW_ROBOTS` (optional, default: not set):
   - Set to any value (`true`, `1`, etc) to override the robots.txt file and disallow all web crawlers from indexing the site
 
 ### Static site hosting

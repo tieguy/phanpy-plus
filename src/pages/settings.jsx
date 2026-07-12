@@ -37,12 +37,12 @@ const TEXT_SIZES = [14, 15, 16, 17, 18, 19, 20];
 const SMALLEST_TEXT_SIZE = TEXT_SIZES[0];
 const LARGEST_TEXT_SIZE = TEXT_SIZES[TEXT_SIZES.length - 1];
 const {
-  PHANPY_WEBSITE: WEBSITE,
-  PHANPY_PRIVACY_POLICY_URL: PRIVACY_POLICY_URL,
-  PHANPY_TRANSLANG_INSTANCES: TRANSLANG_INSTANCES,
-  PHANPY_IMG_ALT_API_URL: IMG_ALT_API_URL,
-  PHANPY_GIPHY_API_KEY: GIPHY_API_KEY,
-  PHANPY_CLIENT_NAME: CLIENT_NAME,
+  FLEETING_WEBSITE: WEBSITE,
+  FLEETING_PRIVACY_POLICY_URL: PRIVACY_POLICY_URL,
+  FLEETING_TRANSLANG_INSTANCES: TRANSLANG_INSTANCES,
+  FLEETING_IMG_ALT_API_URL: IMG_ALT_API_URL,
+  FLEETING_GIPHY_API_KEY: GIPHY_API_KEY,
+  FLEETING_CLIENT_NAME: CLIENT_NAME,
 } = import.meta.env;
 
 const targetLanguages = Object.entries(languages.tl).map(([code, name]) => ({
@@ -965,7 +965,7 @@ function Settings({ onClose }) {
             </p>
           )}
         </section>
-        {(import.meta.env.DEV || import.meta.env.PHANPY_DEV) && (
+        {(import.meta.env.DEV || import.meta.env.FLEETING_DEV) && (
           <details class="debug-info">
             <summary></summary>
             <p class="side">

@@ -10,7 +10,7 @@ var _rollbarConfig = {
     client: {
       javascript: {
         source_map_enabled: true,
-        code_version: __PHANPY_COMMIT_HASH__,
+        code_version: __FLEETING_COMMIT_HASH__,
       },
     },
   },

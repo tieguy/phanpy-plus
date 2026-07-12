@@ -22,7 +22,7 @@ import Media from './media';
 import MenuLink from './menu-link';
 import Menu2 from './menu2';
 
-const { PHANPY_IMG_ALT_API_URL: IMG_ALT_API_URL } = import.meta.env;
+const { FLEETING_IMG_ALT_API_URL: IMG_ALT_API_URL } = import.meta.env;
 
 function MediaModal({
   mediaAttachments,

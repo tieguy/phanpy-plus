@@ -23,9 +23,9 @@ const sourceLanguages = Object.entries(languages.sl).map(([code, name]) => ({
   name,
 }));
 
-const { PHANPY_TRANSLANG_INSTANCES } = import.meta.env;
-const TRANSLANG_INSTANCES = PHANPY_TRANSLANG_INSTANCES
-  ? PHANPY_TRANSLANG_INSTANCES.split(/\s+/)
+const { FLEETING_TRANSLANG_INSTANCES } = import.meta.env;
+const TRANSLANG_INSTANCES = FLEETING_TRANSLANG_INSTANCES
+  ? FLEETING_TRANSLANG_INSTANCES.split(/\s+/)
   : [];
 
 const translationQueue = new PQueue({

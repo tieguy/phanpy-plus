@@ -82,7 +82,7 @@ export default function LangSelector() {
             </option>
           );
         })}
-        {(import.meta.env.DEV || import.meta.env.PHANPY_SHOW_DEV_LOCALES) && (
+        {(import.meta.env.DEV || import.meta.env.FLEETING_SHOW_DEV_LOCALES) && (
           <optgroup label="🚧 Development (<50% translated)">
             {DEV_LOCALES.map((code) => {
               if (code === 'pseudo-LOCALE') {

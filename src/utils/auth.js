@@ -2,18 +2,18 @@ import { generateCodeChallenge, verifier } from './oauth-pkce';
 
 const {
   DEV,
-  PHANPY_CLIENT_NAME: CLIENT_NAME,
-  PHANPY_WEBSITE: WEBSITE,
+  FLEETING_CLIENT_NAME: CLIENT_NAME,
+  FLEETING_WEBSITE: WEBSITE,
 } = import.meta.env;
 
 const SCOPES = 'read write follow push';
 
 /*
-  PHANPY_WEBSITE is set to the default official site.
+  FLEETING_WEBSITE is set to the default official site.
   It's used in pre-built releases, so there's no way to change it dynamically
   without rebuilding.
   Therefore, we can't use it as redirect_uri.
-  We only use PHANPY_WEBSITE if it's "same" as current location URL.
+  We only use FLEETING_WEBSITE if it's "same" as current location URL.
   
   Very basic check based on location.hostname for now
 */

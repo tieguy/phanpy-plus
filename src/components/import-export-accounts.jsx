@@ -43,7 +43,7 @@ export default function ImportExportAccounts({ onClose }) {
       )}-${String(now.getDate()).padStart(2, '0')}_${String(
         now.getHours(),
       ).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-      a.download = `accounts-${date}.phanpy.json`;
+      a.download = `accounts-${date}.fleeting.json`;
       a.click();
       URL.revokeObjectURL(url);
       onClose();

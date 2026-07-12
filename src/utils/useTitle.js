@@ -4,7 +4,7 @@ import { subscribeKey } from 'valtio/utils';
 
 import states from './states';
 
-const { PHANPY_CLIENT_NAME: CLIENT_NAME } = import.meta.env;
+const { FLEETING_CLIENT_NAME: CLIENT_NAME } = import.meta.env;
 
 export default function useTitle(title, path) {
   function setTitle() {

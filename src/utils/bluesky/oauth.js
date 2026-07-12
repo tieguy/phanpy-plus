@@ -14,7 +14,7 @@ export const BLUESKY_OAUTH_SCOPE = 'atproto transition:generic';
 export function buildClientMetadata(origin) {
   return {
     client_id: `${origin}/oauth/client-metadata.json`,
-    client_name: 'Phanpy+',
+    client_name: 'Fleeting',
     client_uri: origin,
     redirect_uris: [`${origin}/`],
     scope: BLUESKY_OAUTH_SCOPE,

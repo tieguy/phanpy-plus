@@ -20,10 +20,10 @@ import states from '../utils/states';
 import useTitle from '../utils/useTitle';
 
 const {
-  PHANPY_DEFAULT_INSTANCE: DEFAULT_INSTANCE,
-  PHANPY_WEBSITE: WEBSITE,
-  PHANPY_PRIVACY_POLICY_URL: PRIVACY_POLICY_URL,
-  PHANPY_DEFAULT_INSTANCE_REGISTRATION_URL: DEFAULT_INSTANCE_REGISTRATION_URL,
+  FLEETING_DEFAULT_INSTANCE: DEFAULT_INSTANCE,
+  FLEETING_WEBSITE: WEBSITE,
+  FLEETING_PRIVACY_POLICY_URL: PRIVACY_POLICY_URL,
+  FLEETING_DEFAULT_INSTANCE_REGISTRATION_URL: DEFAULT_INSTANCE_REGISTRATION_URL,
 } = import.meta.env;
 const appSite = WEBSITE
   ? WEBSITE.replace(/https?:\/\//g, '').replace(/\/$/, '')
@@ -46,7 +46,7 @@ function Welcome() {
         <div class="hero-content">
           <h1>
             <img src={logo} alt="" width="100" height="100" />
-            <img src={logoText} alt="Phanpy" width="180" height="52" />
+            <img src={logoText} alt="Fleeting" width="180" height="52" />
           </h1>
           <p class="desc">
             <Trans>A minimalistic opinionated Mastodon web client.</Trans>
@@ -93,7 +93,7 @@ function Welcome() {
               />
               <img
                 src={homeMobileLight}
-                alt={t`Screenshot of Phanpy home timeline on mobile device`}
+                alt={t`Screenshot of Fleeting home timeline on mobile device`}
                 width="375"
                 height="812"
                 loading="lazy"
@@ -110,7 +110,7 @@ function Welcome() {
               />
               <img
                 src={homeTabletLight}
-                alt={t`Screenshot of Phanpy home timeline on tablet device`}
+                alt={t`Screenshot of Fleeting home timeline on tablet device`}
                 width="768"
                 height="1024"
                 loading="lazy"

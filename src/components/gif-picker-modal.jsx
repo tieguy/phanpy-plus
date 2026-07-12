@@ -7,7 +7,7 @@ import poweredByGiphyURL from '../assets/powered-by-giphy.svg';
 import Icon from './icon';
 import Loader from './loader';
 
-const { PHANPY_GIPHY_API_KEY: GIPHY_API_KEY } = import.meta.env;
+const { FLEETING_GIPHY_API_KEY: GIPHY_API_KEY } = import.meta.env;
 
 const GIFS_PER_PAGE = 20;
 

@@ -15,18 +15,18 @@ import { run } from 'vite-plugin-run';
 
 import { ALL_LOCALES } from './src/locales';
 
-const allowedEnvPrefixes = ['VITE_', 'PHANPY_'];
+const allowedEnvPrefixes = ['VITE_', 'FLEETING_'];
 const { NODE_ENV } = process.env;
 const {
-  PHANPY_WEBSITE: WEBSITE,
-  PHANPY_CLIENT_NAME: CLIENT_NAME,
-  PHANPY_APP_ERROR_LOGGING: ERROR_LOGGING,
-  PHANPY_REFERRER_POLICY: REFERRER_POLICY,
-  PHANPY_DISALLOW_ROBOTS: DISALLOW_ROBOTS,
-  PHANPY_COMMIT_HASH: COMMIT_HASH,
-  PHANPY_COMMIT_TIME: COMMIT_TIME,
-  PHANPY_BUILD_TIME: BUILD_TIME,
-  PHANPY_DEV,
+  FLEETING_WEBSITE: WEBSITE,
+  FLEETING_CLIENT_NAME: CLIENT_NAME,
+  FLEETING_APP_ERROR_LOGGING: ERROR_LOGGING,
+  FLEETING_REFERRER_POLICY: REFERRER_POLICY,
+  FLEETING_DISALLOW_ROBOTS: DISALLOW_ROBOTS,
+  FLEETING_COMMIT_HASH: COMMIT_HASH,
+  FLEETING_COMMIT_TIME: COMMIT_TIME,
+  FLEETING_BUILD_TIME: BUILD_TIME,
+  FLEETING_DEV,
 } = loadEnv('production', process.cwd(), allowedEnvPrefixes);
 
 const now = new Date();
@@ -64,7 +64,7 @@ console.log(`commit time: ${commitTime.toISOString()}`);
 console.log(`build time:  ${buildTime.toISOString()}`);
 
 let rollbarCode = fs.readFileSync(resolve(__dirname, './rollbar.js'), 'utf-8');
-rollbarCode = rollbarCode.replace('__PHANPY_COMMIT_HASH__', `'${commitHash}'`);
+rollbarCode = rollbarCode.replace('__FLEETING_COMMIT_HASH__', `'${commitHash}'`);
 
 // https://github.com/vitejs/vite/issues/9597#issuecomment-1209305107
 const excludedPostCSSWarnings = [
@@ -211,7 +211,7 @@ export default defineConfig(({ command }) => {
         // AT Protocol (Bluesky) OAuth client metadata — the authorization
         // server fetches this document from the deployed origin. Must
         // stay in sync with buildClientMetadata() in
-        // src/utils/bluesky/oauth.js. Requires PHANPY_WEBSITE to be set
+        // src/utils/bluesky/oauth.js. Requires FLEETING_WEBSITE to be set
         // to the deployed origin; localhost dev uses a loopback client
         // and doesn't need this file.
         ...(WEBSITE && /^https:/.test(WEBSITE)
@@ -221,7 +221,7 @@ export default defineConfig(({ command }) => {
                 output: './oauth/client-metadata.json',
                 data: {
                   client_id: `${WEBSITE.replace(/\/+$/, '')}/oauth/client-metadata.json`,
-                  client_name: 'Phanpy+',
+                  client_name: 'Fleeting',
                   client_uri: WEBSITE.replace(/\/+$/, ''),
                   redirect_uris: [`${WEBSITE.replace(/\/+$/, '')}/`],
                   scope: 'atproto transition:generic',
@@ -411,7 +411,7 @@ export default defineConfig(({ command }) => {
           {
             name: 'exclude-sandbox',
             generateBundle(_, bundle) {
-              if (!PHANPY_DEV) {
+              if (!FLEETING_DEV) {
                 Object.entries(bundle).forEach(([name, chunk]) => {
                   if (name.includes('sandbox')) {
                     delete bundle[name];

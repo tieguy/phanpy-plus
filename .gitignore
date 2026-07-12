@@ -44,3 +44,6 @@ src/locales/*.js
 
 # Generated iconify icons
 src/iconify-icons/
+
+# Local Netlify folder
+.netlify

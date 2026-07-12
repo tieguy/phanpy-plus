@@ -16,7 +16,7 @@ import Icon from './icon';
 import Menu2 from './menu2';
 import Modal from './modal';
 
-const { PHANPY_IMG_ALT_API_URL: IMG_ALT_API_URL } = import.meta.env;
+const { FLEETING_IMG_ALT_API_URL: IMG_ALT_API_URL } = import.meta.env;
 
 function scaleDimension(matrix, matrixLimit, width, height) {
   // matrix = number of pixels

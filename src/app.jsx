@@ -82,11 +82,11 @@ import {
 
 // Lazy load Sandbox component only in development
 const Sandbox =
-  import.meta.env.DEV || import.meta.env.PHANPY_DEV
+  import.meta.env.DEV || import.meta.env.FLEETING_DEV
     ? lazy(() => import('./pages/sandbox'))
     : () => null;
 
-// Lazy load MockHome component only in development (not PHANPY_DEV)
+// Lazy load MockHome component only in development (not FLEETING_DEV)
 const MockHome = lazy(() => import('./pages/mock-home'));
 
 // Lazy load YearInPosts component
@@ -365,14 +365,14 @@ const BENCHES = new Map();
 window.__BENCH_RESULTS = new Map();
 window.__BENCHMARK = {
   start(name) {
-    if (!import.meta.env.DEV && !import.meta.env.PHANPY_DEV) return;
+    if (!import.meta.env.DEV && !import.meta.env.FLEETING_DEV) return;
     // If already started, ignore
     if (BENCHES.has(name)) return;
     const start = performance.now();
     BENCHES.set(name, start);
   },
   end(name) {
-    if (!import.meta.env.DEV && !import.meta.env.PHANPY_DEV) return;
+    if (!import.meta.env.DEV && !import.meta.env.FLEETING_DEV) return;
     const start = BENCHES.get(name);
     if (start) {
       const end = performance.now();
@@ -729,7 +729,7 @@ const PrimaryRoutes = memo(() => {
           </Suspense>
         }
       />
-      {(import.meta.env.DEV || import.meta.env.PHANPY_DEV) && (
+      {(import.meta.env.DEV || import.meta.env.FLEETING_DEV) && (
         <>
           <Route
             path="/_sandbox"

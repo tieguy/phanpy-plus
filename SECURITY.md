@@ -1,7 +1,7 @@
 # Security Policy
 
 ## Supported Versions
-Only the **latest production release** of Phanpy receives security updates. Always update to the newest production version for the best protection.
+Only the **latest production release** of Fleeting receives security updates. Always update to the newest production version for the best protection.
 
 ## Reporting a Vulnerability
 
@@ -14,12 +14,12 @@ Only the **latest production release** of Phanpy receives security updates. Alwa
 
 **Include**:
 - Steps to reproduce the issue
-- Which parts of Phanpy are affected
+- Which parts of Fleeting are affected
 - How severe you think the impact could be
 
 ## Disclosure Policy
 
-**Heads up:** I’m a solo maintainer working on Phanpy in my free time. While I take security seriously, I can’t promise enterprise-grade response times. Here’s how I’ll handle reports:
+**Heads up:** I’m a solo maintainer working on Fleeting in my free time. While I take security seriously, I can’t promise enterprise-grade response times. Here’s how I’ll handle reports:
 
 1. **Confirmation**: I’ll acknowledge reports when possible, but this might take weeks due to limited availability.
 2. **Fixing**: Critical bugs will be prioritized, but fixes may take significant time. If it’s urgent, feel free to follow up.
@@ -29,7 +29,7 @@ Only the **latest production release** of Phanpy receives security updates. Alwa
 
 ### For Users
 
-- Use Phanpy with a Mastodon instance that enforces **HTTPS**.
+- Use Fleeting with a Mastodon instance that enforces **HTTPS**.
 - Treat OAuth tokens like passwords – don’t share them!
 
 ### For Developers
