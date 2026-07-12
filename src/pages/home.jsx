@@ -13,9 +13,13 @@ import Link from '../components/link';
 import Loader from '../components/loader';
 import Notification from '../components/notification';
 import { api } from '../utils/api';
+import { getOtherNetworkAccounts } from '../utils/bluesky';
 import db from '../utils/db';
 import FilterContext from '../utils/filter-context';
-import { massageNotifications2 } from '../utils/group-notifications';
+import groupNotifications, {
+  massageNotifications2,
+} from '../utils/group-notifications';
+import { createMergedTimelineIterator } from '../utils/merged-timeline';
 import states, { saveStatus } from '../utils/states';
 import { getCurrentAccountNS } from '../utils/store-utils';
 
@@ -104,37 +108,86 @@ function NotificationsLink() {
 }
 
 const NOTIFICATIONS_DISPLAY_LIMIT = 5;
+const NOTIFICATIONS_MENU_LIMIT = 80;
 function NotificationsMenu({ anchorRef, state, onClose }) {
   const { masto, instance } = api();
   const snapStates = useSnapshot(states);
   const [uiState, setUIState] = useState('default');
 
-  const notificationsIterator = mastoFetchNotifications();
+  // Other-network accounts' notifications merged in, same setting and pattern
+  // as the notifications page and merged home timeline
+  const otherSources = useRef(null);
+  if (otherSources.current === null) {
+    otherSources.current = snapStates.settings.mergedTimeline
+      ? getOtherNetworkAccounts().map((account) => {
+          const { masto: otherMasto, instance: otherInstance } = api({
+            account,
+          });
+          return { masto: otherMasto, instance: otherInstance };
+        })
+      : [];
+  }
 
   async function fetchNotifications() {
-    const allNotifications = await notificationsIterator.next();
+    const merged = otherSources.current?.length > 0;
+    let allNotifications;
+    if (merged) {
+      // Merged mode uses v1 notifications on every source so the shapes
+      // interleave; grouping happens client-side
+      const notificationsIterator = createMergedTimelineIterator([
+        {
+          instance,
+          makeIterator: () =>
+            masto.v1.notifications
+              .list({ limit: NOTIFICATIONS_MENU_LIMIT })
+              .values(),
+        },
+        ...otherSources.current.map(
+          ({ masto: otherMasto, instance: otherInstance }) => ({
+            instance: otherInstance,
+            makeIterator: () =>
+              otherMasto.v1.notifications
+                .list({ limit: NOTIFICATIONS_MENU_LIMIT })
+                .values(),
+          }),
+        ),
+      ]);
+      allNotifications = await notificationsIterator.next(
+        NOTIFICATIONS_MENU_LIMIT,
+      );
+    } else {
+      allNotifications = await mastoFetchNotifications().next();
+    }
     const notifications = massageNotifications2(allNotifications.value);
 
     if (notifications?.length) {
       notifications.forEach((notification) => {
-        saveStatus(notification.status, instance, {
+        saveStatus(notification.status, notification._instance || instance, {
           skipThreading: true,
         });
       });
 
-      const groupedNotifications = getGroupedNotifications(notifications);
+      const groupedNotifications = merged
+        ? groupNotifications(notifications)
+        : getGroupedNotifications(notifications);
 
       states.notificationsLast = groupedNotifications[0];
       states.notifications = groupedNotifications;
 
-      // Update last read marker
-      masto.v1.markers
-        .create({
-          notifications: {
-            lastReadId: groupedNotifications[0].id,
-          },
-        })
-        .catch(() => {});
+      // Update last read marker — must be an ID from the current account's
+      // own notifications, not another network's
+      const currentInstanceFirst = merged
+        ? notifications.find((n) => !n._instance || n._instance === instance)
+        : groupedNotifications[0];
+      if (currentInstanceFirst?.id) {
+        masto.v1.markers
+          .create({
+            notifications: {
+              lastReadId: currentInstanceFirst.id,
+            },
+          })
+          .catch(() => {});
+      }
     }
 
     states.notificationsShowNew = false;
