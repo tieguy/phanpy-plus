@@ -14,6 +14,7 @@ import homeMobileLight from '../assets/screenshots/home-mobile-light@2x.png';
 import homeTabletDark from '../assets/screenshots/home-tablet-dark@2x.png';
 import homeTabletLight from '../assets/screenshots/home-tablet-light@2x.png';
 
+import Icon from '../components/icon';
 import LangSelector from '../components/lang-selector';
 import Link from '../components/link';
 import states from '../utils/states';
@@ -49,9 +50,12 @@ function Welcome() {
             <img src={logoText} alt="Fleeting" width="180" height="52" />
           </h1>
           <p class="desc">
-            <Trans>A minimalistic opinionated Mastodon web client.</Trans>
+            <Trans>
+              One home for Mastodon <em>and</em> Bluesky — two accounts,
+              interwoven.
+            </Trans>
           </p>
-          <p>
+          <div class="login-options">
             <Link
               to={
                 DEFAULT_INSTANCE
@@ -60,9 +64,14 @@ function Welcome() {
               }
               class="button plain6"
             >
-              {DEFAULT_INSTANCE ? t`Log in` : t`Log in with Mastodon`}
+              <Icon icon="mastodon" alt="" />
+              <Trans>Log in with Mastodon</Trans>
             </Link>
-          </p>
+            <Link to="/login?network=bluesky" class="button plain6">
+              <Icon icon="bluesky" alt="" />
+              <Trans>Log in with Bluesky</Trans>
+            </Link>
+          </div>
           {DEFAULT_INSTANCE && DEFAULT_INSTANCE_REGISTRATION_URL && (
             <p>
               <a href={DEFAULT_INSTANCE_REGISTRATION_URL} class="button plain5">
@@ -70,17 +79,15 @@ function Welcome() {
               </a>
             </p>
           )}
-          {!DEFAULT_INSTANCE && (
-            <p class="insignificant">
-              <small>
-                <Trans>
-                  Connect your existing Mastodon/Fediverse account.
-                  <br />
-                  Your credentials are not stored on this server.
-                </Trans>
-              </small>
-            </p>
-          )}
+          <p class="insignificant">
+            <small>
+              <Trans>
+                Connect your existing Mastodon or Bluesky account.
+                <br />
+                Your credentials are not stored on this server.
+              </Trans>
+            </small>
+          </p>
         </div>
       </div>
       <div id="device-showcase">

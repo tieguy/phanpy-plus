@@ -44,9 +44,20 @@ function Login() {
     instance || cachedInstanceURL?.toLowerCase() || '',
   );
 
-  const [showBluesky, setShowBluesky] = useState(false);
+  const [showBluesky, setShowBluesky] = useState(
+    searchParams.get('network') === 'bluesky',
+  );
   const [bskyUIState, setBskyUIState] = useState('default');
   const [bskyError, setBskyError] = useState(null);
+
+  // Deep-linked from the landing page's "Log in with Bluesky" peer.
+  useEffect(() => {
+    if (searchParams.get('network') === 'bluesky') {
+      document
+        .getElementById('bluesky-login')
+        ?.scrollIntoView({ block: 'center' });
+    }
+  }, []);
 
   const [instancesList, setInstancesList] = useState([]);
   const searcher = useRef();
