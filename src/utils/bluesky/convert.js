@@ -373,6 +373,15 @@ function baseStatus({
     bookmarked: !!viewer?.bookmarked,
     muted: !!viewer?.threadMuted,
     pinned: !!viewer?.pinned,
+    // Bluesky quote-post permission (postgate). `embeddingDisabled === true`
+    // means the author turned quotes off for this post; otherwise quotes are
+    // allowed. Mapped to Mastodon's quoteApproval shape so the shared quote UI
+    // reads it correctly — without this, every Bluesky post looked un-quotable
+    // (supportsNativeQuote is true for Bluesky, but quoteApproval was missing,
+    // so the UI fell through to "not allowed to quote").
+    quoteApproval: viewer?.embeddingDisabled
+      ? { currentUser: 'denied', automatic: [], manual: [] }
+      : { currentUser: 'automatic', automatic: ['public'], manual: [] },
     inReplyToId: inReplyToUri ? atUriToId(inReplyToUri) : null,
     inReplyToAccountId: inReplyToUri ? didFromAtUri(inReplyToUri) : null,
     language: record?.langs?.[0]?.split('-')?.[0] || null,
