@@ -407,6 +407,10 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
   --indent-large-end: calc(var(--indent-large-start) + var(--line-width));
   --indent-small-end: calc(var(--indent-small-start) + var(--line-width));
   --line-margin-end: 16px;
+  /* Cap on how deep the reply indentation keeps growing. Effectively no cap on
+     wide screens (horizontal scroll handles depth); narrow screens override
+     this low so deep threads flatten and wrap instead of running off-screen. */
+  --max-comments-level: 999;
   --line-radius: 10px;
   --line-diameter: calc(var(--line-radius) * 2);
   --avatar-size: 50px;
@@ -563,6 +567,27 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
   .status {
   min-width: min(20em, 80vw);
 }
+
+/* On narrow screens, deep replies can't afford the horizontal-scroll approach
+   (content runs off the right edge). Instead, stop the indentation from growing
+   past a few levels and let deep replies wrap in the remaining width. Depth is
+   still legible from the reply lines and collapse summaries. */
+@media (max-width: 40em) {
+  .timeline.contextual {
+    --max-comments-level: 4;
+  }
+  .timeline.contextual .replies[data-comments-level='4'],
+  .timeline.contextual .replies[data-comments-level='4']:has(.replies) {
+    overflow-x: visible;
+    mask-image: none;
+  }
+  .timeline.contextual
+    .replies[data-comments-level='4']
+    .replies[data-comments-level-overflow='true']
+    .status {
+    min-width: 0;
+  }
+}
 .timeline.contextual
   > li.descendant.thread
   > :is(.status-link, .status-focus)
@@ -570,7 +595,8 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
   .replies-summary {
   margin-inline-start: calc(
     var(--avatar-size) + var(--avatar-margin-start) + var(--avatar-margin-end) +
-      (var(--line-margin-end) * (var(--comments-level) - 1))
+      (var(--line-margin-end) *
+        (min(var(--comments-level), var(--max-comments-level)) - 1))
   );
 }
 .timeline.contextual
@@ -580,7 +606,8 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
   :is(.status-link, .status-focus) {
   padding-inline-start: calc(
     var(--avatar-size) + var(--avatar-margin-start) + var(--avatar-margin-end) +
-      (var(--line-margin-end) * (var(--comments-level) - 1))
+      (var(--line-margin-end) *
+        (min(var(--comments-level), var(--max-comments-level)) - 1))
   );
 }
 .timeline.contextual
@@ -589,7 +616,8 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
   + .replies
   .replies-summary {
   margin-inline-start: calc(
-    var(--thread-start) + var(--line-margin-end) * var(--comments-level)
+    var(--thread-start) + var(--line-margin-end) *
+      min(var(--comments-level), var(--max-comments-level))
   );
 }
 .timeline.contextual
@@ -598,7 +626,8 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
   + .replies
   :is(.status-link, .status-focus) {
   padding-inline-start: calc(
-    var(--thread-start) + var(--line-margin-end) * var(--comments-level)
+    var(--thread-start) + var(--line-margin-end) *
+      min(var(--comments-level), var(--max-comments-level))
   );
 }
 .timeline.contextual > li.descendant:not(.thread):before {
@@ -794,7 +823,8 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
 }
 .timeline.contextual > li .replies li:not(.content li) {
   --line-start: calc(
-    var(--thread-start) + var(--line-margin-end) * var(--comments-level)
+    var(--thread-start) + var(--line-margin-end) *
+      min(var(--comments-level), var(--max-comments-level))
   );
   --line-end: calc(var(--line-start) + var(--line-width));
   background-image: linear-gradient(
@@ -817,7 +847,8 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
 .timeline.contextual > li.thread .replies li:not(.content li) {
   --line-start: calc(
     var(--avatar-size) + var(--avatar-margin-start) + var(--avatar-margin-end) +
-      (var(--line-margin-end) * (var(--comments-level) - 1))
+      (var(--line-margin-end) *
+        (min(var(--comments-level), var(--max-comments-level)) - 1))
   );
 }
 /* .timeline.contextual > li.thread .replies .replies li {
@@ -861,7 +892,8 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
 .timeline.contextual > li.thread .replies li:not(.content li):before {
   --line-start: calc(
     var(--avatar-size) + var(--avatar-margin-start) + var(--avatar-margin-end) +
-      (var(--line-margin-end) * (var(--comments-level) - 1))
+      (var(--line-margin-end) *
+        (min(var(--comments-level), var(--max-comments-level)) - 1))
   );
 }
 /* .timeline.contextual > li.thread .replies .replies li:before {
