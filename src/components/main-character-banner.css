@@ -1,0 +1,51 @@
+.main-character-banner {
+  margin: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--outline-color);
+  border-radius: 12px;
+  background-color: var(--bg-faded-color);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  @media (min-width: 40em) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.main-character-banner .mc-text {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.main-character-banner .mc-icon {
+  color: var(--orange-color, var(--link-color));
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.main-character-banner .mc-count {
+  color: var(--text-insignificant-color);
+  white-space: nowrap;
+}
+
+.main-character-banner .mc-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.main-character-banner .mc-actions .button,
+.main-character-banner .mc-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}

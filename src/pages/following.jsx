@@ -2,6 +2,7 @@ import { useLingui } from '@lingui/react/macro';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { useSnapshot } from 'valtio';
 
+import MainCharacterBanner from '../components/main-character-banner';
 import Timeline from '../components/timeline';
 import { api } from '../utils/api';
 import {
@@ -243,6 +244,7 @@ function Following({ title, path, id, ...props }) {
       checkForUpdates={checkForUpdates}
       useItemID
       boostsCarousel={snapStates.settings.boostsCarousel}
+      timelineStart={<MainCharacterBanner />}
       {...props}
       // allowFilters
       filterContext="home"
