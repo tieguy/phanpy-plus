@@ -102,7 +102,9 @@ export function profileToAccount(profile, instance) {
     avatarStatic: avatar || '',
     header: banner || '',
     headerStatic: banner || '',
-    url: `${BSKY_WEB}/profile/${did}`,
+    // Use the handle (falls back to DID when unresolved) so shareable profile
+    // URLs read like Bluesky's own, not the raw DID.
+    url: `${BSKY_WEB}/profile/${acct}`,
     note: description ? `<p>${nl2br(escapeHTML(description))}</p>` : '',
     followersCount: profile.followersCount ?? 0,
     followingCount: profile.followsCount ?? 0,
@@ -344,10 +346,18 @@ function baseStatus({
 
   const inReplyToUri = record?.reply?.parent?.uri;
 
+  // Prefer the author's handle in the shareable post URL (matching Bluesky's
+  // own web app) instead of the raw DID; fall back to the DID when the handle
+  // is missing or unresolved.
+  const authorHandle =
+    author?.handle && author.handle !== 'handle.invalid'
+      ? author.handle
+      : author?.did;
+
   return {
     id,
     uri,
-    url: `${BSKY_WEB}/profile/${author?.did}/post/${rkeyFromAtUri(uri)}`,
+    url: `${BSKY_WEB}/profile/${authorHandle}/post/${rkeyFromAtUri(uri)}`,
     createdAt,
     editedAt: null,
     account,
