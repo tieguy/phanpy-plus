@@ -2,7 +2,7 @@ import './lists.css';
 
 import { Trans, useLingui } from '@lingui/react/macro';
 import { Menu, MenuDivider, MenuHeader, MenuItem } from '@szhsin/react-menu';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { InView } from 'react-intersection-observer';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useSnapshot } from 'valtio';
@@ -18,8 +18,9 @@ import Modal from '../components/modal';
 import Timeline from '../components/timeline';
 import { api } from '../utils/api';
 import { filteredItems } from '../utils/filters';
-import { getList, getLists } from '../utils/lists';
+import { getList, getListAccountId, getLists } from '../utils/lists';
 import states, { saveStatus } from '../utils/states';
+import { getAccount } from '../utils/store-utils';
 import useTitle from '../utils/useTitle';
 
 const LIMIT = 20;
@@ -27,8 +28,15 @@ const LIMIT = 20;
 function List(props) {
   const { t } = useLingui();
   const snapStates = useSnapshot(states);
-  const { masto, instance } = api();
   const id = props?.id || useParams()?.id;
+  // A list belongs to one account, which may be on the other network — route
+  // this view's client to the list's owner (from the merged Lists index),
+  // falling back to the current account for deep links before it has loaded.
+  const listAccount = useMemo(() => {
+    const accountId = getListAccountId(id);
+    return accountId ? getAccount(accountId) : null;
+  }, [id]);
+  const { masto, instance } = api(listAccount ? { account: listAccount } : {});
   // const navigate = useNavigate();
   const latestItem = useRef();
   // const [reloadCount, reload] = useReducer((c) => c + 1, 0);
