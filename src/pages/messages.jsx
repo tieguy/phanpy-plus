@@ -8,6 +8,7 @@ import Avatar from '../components/avatar';
 import Icon from '../components/icon';
 import Link from '../components/link';
 import Loader from '../components/loader';
+import NavMenu from '../components/nav-menu';
 import RelativeTime from '../components/relative-time';
 import { cacheConversation, getDMSources } from '../utils/dm';
 import { createMergedTimelineIterator } from '../utils/merged-timeline';
@@ -35,14 +36,17 @@ function Messages() {
   useTitle(t`Messages`, '/messages');
 
   const iteratorRef = useRef(null);
+  const sourcesRef = useRef([]);
   const [conversations, setConversations] = useState([]);
   const [uiState, setUIState] = useState('default'); // default | loading | end | error
+  const [failedNetworks, setFailedNetworks] = useState([]);
   const seenRef = useRef(new Set());
 
   function makeIterator() {
     const sources = getDMSources({
       merged: snapStates.settings.mergedTimeline !== false,
     });
+    sourcesRef.current = sources;
     return createMergedTimelineIterator(
       sources.map((source) => ({
         instance: source.instance,
@@ -50,6 +54,19 @@ function Messages() {
           source.listConversations({ limit: LIMIT }).values(),
       })),
     );
+  }
+
+  // Surface a source that couldn't load (e.g. a Bluesky account whose chat
+  // scope hasn't been granted yet) instead of silently dropping its network.
+  function updateFailedNetworks() {
+    const streams = iteratorRef.current?.streams || [];
+    const failed = streams
+      .filter((s) => s.failed)
+      .map(
+        (s) => sourcesRef.current.find((src) => src.instance === s.instance)?.network,
+      )
+      .filter(Boolean);
+    setFailedNetworks([...new Set(failed)]);
   }
 
   async function loadMore(firstLoad) {
@@ -69,6 +86,7 @@ function Messages() {
         return true;
       });
       setConversations((prev) => (firstLoad ? fresh : [...prev, ...fresh]));
+      updateFailedNetworks();
       setUIState(done ? 'end' : 'default');
     } catch (e) {
       console.error('Failed to load conversations', e);
@@ -85,12 +103,27 @@ function Messages() {
       <div class="timeline-deck deck">
         <header>
           <div class="header-grid">
+            <div class="header-side">
+              <NavMenu />
+              <Link to="/" class="button plain">
+                <Icon icon="home" size="l" alt={t`Home`} />
+              </Link>
+            </div>
             <h1>
-              <Icon icon="message" size="l" alt="" />{' '}
               <Trans>Messages</Trans>
             </h1>
+            <div class="header-side" />
           </div>
         </header>
+        {failedNetworks.includes('bluesky') && (
+          <p class="messages-notice">
+            <Icon icon="bluesky" size="s" alt="" />{' '}
+            <Trans>
+              Bluesky messages couldn’t load. Log in to your Bluesky account
+              again to grant direct-message access.
+            </Trans>
+          </p>
+        )}
         {conversations.length > 0 && (
           <ul class="conversations">
             {conversations.map((convo) => {
