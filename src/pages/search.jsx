@@ -24,8 +24,10 @@ import RecentSearches from '../components/recent-searches';
 import SearchForm from '../components/search-form';
 import Status from '../components/status';
 import { api } from '../utils/api';
+import { getOtherNetworkAccounts } from '../utils/bluesky';
 import { fetchRelationships } from '../utils/relationships';
 import shortenNumber from '../utils/shorten-number';
+import { getCurrentAccount } from '../utils/store-utils';
 import usePageVisibility from '../utils/usePageVisibility';
 import useTitle from '../utils/useTitle';
 
@@ -45,6 +47,9 @@ function Search({ columnMode, ...props }) {
   const { masto, instance, authenticated } = api({
     instance: params.instance,
   });
+  // Only the default search (no explicit instance in the URL) merges across
+  // networks; an instance-scoped search stays on that instance.
+  const searchInstance = params.instance;
   const [uiState, setUIState] = useState('default');
   const [searchParams] = columnMode ? [emptySearchParams] : useSearchParams();
   const searchFormRef = useRef();
@@ -130,7 +135,7 @@ function Search({ columnMode, ...props }) {
           <li key={item.id}>
             <AccountBlock
               account={item}
-              instance={instance}
+              instance={item._instance || instance}
               showStats
               relationship={relationshipsMap[item.id]}
             />
@@ -146,10 +151,13 @@ function Search({ columnMode, ...props }) {
         results: hashtagResults,
         renderItem: (item) => {
           const { name, history } = item;
+          const itemInstance = item._instance || instance;
           const total = history?.reduce?.((acc, cur) => acc + +cur.uses, 0);
           return (
             <li key={name}>
-              <Link to={instance ? `/${instance}/t/${name}` : `/t/${name}`}>
+              <Link
+                to={itemInstance ? `/${itemInstance}/t/${name}` : `/t/${name}`}
+              >
                 <Icon icon="hashtag" alt="#" />
                 <span>{name}</span>
                 {!!total && <span class="count">{shortenNumber(total)}</span>}
@@ -166,7 +174,11 @@ function Search({ columnMode, ...props }) {
         results: collectionResults,
         renderItem: (item) => (
           <li key={item.id}>
-            <CollectionCard collection={item} instance={instance} size="l" />
+            <CollectionCard
+              collection={item}
+              instance={item._instance || instance}
+              size="l"
+            />
           </li>
         ),
       },
@@ -177,16 +189,21 @@ function Search({ columnMode, ...props }) {
         emptyLabel: t`No posts found.`,
         listClass: 'timeline',
         results: statusResults,
-        renderItem: (item) => (
-          <li key={item.id}>
-            <Link
-              class="status-link"
-              to={instance ? `/${instance}/s/${item.id}` : `/s/${item.id}`}
-            >
-              <Status status={item} />
-            </Link>
-          </li>
-        ),
+        renderItem: (item) => {
+          const itemInstance = item._instance || instance;
+          return (
+            <li key={item.id}>
+              <Link
+                class="status-link"
+                to={
+                  itemInstance ? `/${itemInstance}/s/${item.id}` : `/s/${item.id}`
+                }
+              >
+                <Status status={item} instance={itemInstance} />
+              </Link>
+            </li>
+          );
+        },
       },
     ];
 
@@ -208,6 +225,66 @@ function Search({ columnMode, ...props }) {
     instance,
     relationshipsMap,
   ]);
+
+  // Merge the combined search view across the current + other-network
+  // accounts, tagging each result with its source instance so it routes to the
+  // right network. Round-robin interleave preserves each network's own ranking
+  // while giving both visibility near the top.
+  async function fetchMergedSearch(searchParams) {
+    const accounts = [getCurrentAccount(), ...getOtherNetworkAccounts()]
+      .filter(Boolean)
+      .filter(
+        (a, i, arr) => arr.findIndex((b) => b.info?.id === a.info?.id) === i,
+      );
+    const per = await Promise.all(
+      accounts.map(async (account) => {
+        try {
+          const { masto: m, instance: inst } = api({ account });
+          const res = await m.v2.search.list(searchParams);
+          const stamp = (arr) =>
+            (arr || []).map((it) => ({ ...it, _instance: it._instance || inst }));
+          return {
+            accounts: stamp(res.accounts),
+            statuses: stamp(res.statuses),
+            hashtags: stamp(res.hashtags),
+            collections: res.collections || [],
+          };
+        } catch (e) {
+          console.error('Search failed for account', account?.info?.id, e);
+          return { accounts: [], statuses: [], hashtags: [], collections: [] };
+        }
+      }),
+    );
+    const interleave = (lists) => {
+      const out = [];
+      const max = Math.max(0, ...lists.map((l) => l.length));
+      for (let i = 0; i < max; i++) {
+        for (const l of lists) if (l[i]) out.push(l[i]);
+      }
+      return out;
+    };
+    const dedupe = (arr, keyFn) => {
+      const seen = new Set();
+      return arr.filter((x) => {
+        const k = keyFn(x);
+        if (seen.has(k)) return false;
+        seen.add(k);
+        return true;
+      });
+    };
+    return {
+      accounts: dedupe(
+        interleave(per.map((r) => r.accounts)),
+        (a) => `${a._instance}:${a.id}`,
+      ),
+      statuses: dedupe(
+        interleave(per.map((r) => r.statuses)),
+        (s) => `${s._instance}:${s.id}`,
+      ),
+      hashtags: dedupe(interleave(per.map((r) => r.hashtags)), (h) => h.name),
+      collections: per.flatMap((r) => r.collections),
+    };
+  }
 
   function loadResults(firstLoad) {
     if (firstLoad) {
@@ -242,7 +319,13 @@ function Search({ columnMode, ...props }) {
       }
 
       try {
-        const results = await masto.v2.search.list(params);
+        // Combined view (no type filter) on the default search merges both
+        // networks; the per-type "See more" paging stays on the current account
+        // because cross-network offsets don't combine reliably.
+        const merged = !type && !searchInstance;
+        const results = merged
+          ? await fetchMergedSearch(params)
+          : await masto.v2.search.list(params);
 
         if (searchIdRef.current !== searchId) return;
 
