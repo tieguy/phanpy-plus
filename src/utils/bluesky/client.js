@@ -338,6 +338,45 @@ export function createBlueskyClient({
     };
   }
 
+  // Bluesky custom feeds (feed generators) have no Mastodon equivalent, so we
+  // surface the ones the user has subscribed to as list-shaped entries (marked
+  // `_feed`) — they render on the Lists page and their timeline is fetched with
+  // getFeed instead of getListFeed.
+  const FEED_GEN_COLLECTION = 'app.bsky.feed.generator';
+  function isFeedGenId(id) {
+    return idToAtUri(id).includes(`/${FEED_GEN_COLLECTION}/`);
+  }
+  function feedGenViewToMasto(view) {
+    return {
+      id: atUriToId(view.uri),
+      title: view.displayName || 'Feed',
+      repliesPolicy: 'list',
+      exclusive: false,
+      _bluesky: true,
+      _feed: true,
+    };
+  }
+  async function getSavedFeedGenerators() {
+    try {
+      const prefs = await getPrefs();
+      const saved = (prefs?.savedFeeds || []).filter((f) => f.type === 'feed');
+      if (!saved.length) return [];
+      const res = await agent.app.bsky.feed.getFeedGenerators({
+        feeds: saved.map((f) => f.value),
+      });
+      const byUri = new Map((res.data.feeds || []).map((v) => [v.uri, v]));
+      // Preserve the user's saved order, pinned feeds first (stable sort).
+      const items = saved
+        .map((f) => ({ f, view: byUri.get(f.value) }))
+        .filter((x) => x.view);
+      items.sort((a, b) => (b.f.pinned ? 1 : 0) - (a.f.pinned ? 1 : 0));
+      return items.map((x) => feedGenViewToMasto(x.view));
+    } catch (e) {
+      console.error('Failed to fetch saved Bluesky feeds', e);
+      return [];
+    }
+  }
+
   async function findListItemUri(listUri, memberDid) {
     const key = `${listUri}|${memberDid}`;
     if (listItemUris.has(key)) return listItemUris.get(key);
@@ -973,9 +1012,12 @@ export function createBlueskyClient({
             actor: agentDid(),
             limit: 100,
           });
-          return (res.data.lists || [])
+          const curated = (res.data.lists || [])
             .filter((l) => /curatelist/.test(l.purpose || ''))
             .map(listViewToMasto);
+          // Subscribed custom feeds show up alongside lists.
+          const feeds = await getSavedFeedGenerators();
+          return [...feeds, ...curated];
         },
         create: async ({ title }) => {
           await ready();
@@ -1001,6 +1043,12 @@ export function createBlueskyClient({
           return {
             fetch: async () => {
               await ready();
+              if (isFeedGenId(id)) {
+                const res = await agent.app.bsky.feed.getFeedGenerator({
+                  feed: listUri,
+                });
+                return feedGenViewToMasto(res.data.view);
+              }
               const res = await agent.app.bsky.graph.getList({
                 list: listUri,
                 limit: 1,
@@ -1212,11 +1260,19 @@ export function createBlueskyClient({
               list: ({ limit = 20 } = {}) =>
                 paginator(async (cursor) => {
                   await ready();
-                  const res = await agent.app.bsky.feed.getListFeed({
-                    list: listUri,
-                    limit,
-                    cursor,
-                  });
+                  // A subscribed custom feed uses getFeed; a curated user list
+                  // uses getListFeed. Both return `data.feed` of feed items.
+                  const res = isFeedGenId(id)
+                    ? await agent.app.bsky.feed.getFeed({
+                        feed: listUri,
+                        limit,
+                        cursor,
+                      })
+                    : await agent.app.bsky.feed.getListFeed({
+                        list: listUri,
+                        limit,
+                        cursor,
+                      });
                   res.data.feed.forEach(trackFeedItem);
                   const items = await withMutedWords(
                     res.data.feed.map(toFeedStatus).filter(Boolean),

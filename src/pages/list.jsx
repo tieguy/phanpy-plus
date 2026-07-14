@@ -168,6 +168,8 @@ function List(props) {
           </Menu2>
         }
         headerEnd={
+          // A subscribed Bluesky feed isn't ours to edit — no Edit/members menu.
+          list._feed ? null : (
           <Menu2
             portal
             setDownOverflow
@@ -210,6 +212,7 @@ function List(props) {
               </span>
             </MenuItem>
           </Menu2>
+          )
         }
       />
       {showListAddEditModal && (
