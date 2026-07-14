@@ -118,6 +118,10 @@ function MainCharacterBanner() {
       rememberDismissed(mc.key);
       invalidateAnalysis();
       setHidden(true);
+      // The mute filters posts as they're (re)fetched, so posts already on
+      // screen still show the keyword. Refetch the feed now so it visibly
+      // takes effect instead of only applying to future scrolling.
+      states.reloadFollowing++;
       showToast(
         instances.length > 1
           ? t`Muted “${mc.keyword}” on ${instances.length} accounts`
