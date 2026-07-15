@@ -37,7 +37,6 @@ const states = proxy({
   notificationsShowNew: false,
   notificationsLastFetchTime: null,
   reloadStatusPage: 0,
-  reloadFollowing: 0,
   reloadGenericAccounts: {
     id: null,
     counter: 0,

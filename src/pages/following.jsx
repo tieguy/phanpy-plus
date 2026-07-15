@@ -244,7 +244,6 @@ function Following({ title, path, id, ...props }) {
       checkForUpdates={checkForUpdates}
       useItemID
       boostsCarousel={snapStates.settings.boostsCarousel}
-      refresh={snapStates.reloadFollowing}
       timelineStart={<MainCharacterBanner />}
       {...props}
       // allowFilters
