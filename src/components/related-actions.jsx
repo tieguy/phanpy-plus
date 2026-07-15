@@ -5,7 +5,12 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import punycode from 'punycode/';
 
 import { api } from '../utils/api';
-import { isBlueskyInstance } from '../utils/bluesky';
+import {
+  getBlueskyAccountForInstance,
+  getBlueskyAccounts,
+  isBlueskyAccount,
+  isBlueskyInstance,
+} from '../utils/bluesky';
 import { isSupported as collectionsSupported } from '../utils/collections';
 import i18nDuration from '../utils/i18n-duration';
 import isSearchEnabled from '../utils/is-search-enabled';
@@ -13,7 +18,11 @@ import niceDateTime from '../utils/nice-date-time';
 import showCompose from '../utils/show-compose';
 import showToast from '../utils/show-toast';
 import states from '../utils/states';
-import { getCurrentAccountID, updateAccount } from '../utils/store-utils';
+import {
+  getAccounts,
+  getCurrentAccountID,
+  updateAccount,
+} from '../utils/store-utils';
 import supports from '../utils/supports';
 
 import { handleScannerClick } from './account-info';
@@ -71,15 +80,43 @@ function RelatedActions({
     authenticated: currentAuthenticated,
   } = api();
   let sameInstance = instance === currentInstance;
-  // Profiles on a logged-in Bluesky account's network act through that
-  // account's client (follow, mute, block, etc.)
-  if (!sameInstance && isBlueskyInstance(instance)) {
-    const bskyApi = api({ instance });
-    if (bskyApi.authenticated) {
-      currentMasto = bskyApi.masto;
-      currentInstance = bskyApi.instance;
+  // This fork is logged into both networks at once, so the account that can
+  // act on a profile (follow, mute, block) may not be the currently-active
+  // one — it must be on the SAME network as the profile. Resolve that acting
+  // client here and talk to it with the profile's native id, instead of
+  // depending on instance strings lining up.
+  if (!sameInstance) {
+    const targetIsBluesky = info._bluesky || isBlueskyInstance(instance);
+    let actingApi;
+    if (targetIsBluesky) {
+      // A Bluesky profile → act through my Bluesky account, using its DID.
+      const bskyAccount =
+        getBlueskyAccountForInstance(instance) || getBlueskyAccounts()[0];
+      if (bskyAccount) actingApi = api({ account: bskyAccount });
+    } else {
+      // A Mastodon profile. Prefer an account on its own instance (native
+      // id, no search); otherwise, if my active account is Bluesky, fall
+      // back to any Mastodon account so the cross-instance lookup below can
+      // run on a same-network client.
+      const instApi = api({ instance });
+      if (instApi.authenticated) {
+        actingApi = instApi;
+      } else if (isBlueskyInstance(currentInstance)) {
+        const mastoAccount = getAccounts().find(
+          (a) => !isBlueskyAccount(a) && a.accessToken,
+        );
+        if (mastoAccount) actingApi = api({ account: mastoAccount });
+      }
+    }
+    if (actingApi?.authenticated) {
+      currentMasto = actingApi.masto;
+      currentInstance = actingApi.instance;
       currentAuthenticated = true;
-      sameInstance = true;
+      // Bluesky targets and Mastodon targets on an instance I'm logged into
+      // can be acted on with their native id — no cross-instance search.
+      if (targetIsBluesky || actingApi.instance === instance) {
+        sameInstance = true;
+      }
     }
   }
 
@@ -120,7 +157,7 @@ function RelatedActions({
       const currentAccount = getCurrentAccountID();
       let currentID;
       (async () => {
-        if (sameInstance && authenticated) {
+        if (sameInstance && currentAuthenticated) {
           currentID = id;
         } else if (!sameInstance && currentAuthenticated) {
           // Grab this account from my logged-in instance
@@ -183,7 +220,7 @@ function RelatedActions({
         }
       })();
     }
-  }, [info, authenticated]);
+  }, [info, authenticated, currentAuthenticated, sameInstance]);
 
   useEffect(() => {
     if (info && isSelf) {

@@ -813,6 +813,19 @@ export function createBlueskyClient({
 
   function accountEndpoints(id) {
     // id is a DID (or handle via lookup flows)
+    // Return a FULL relationship object after each action (the UI replaces its
+    // whole relationship state with what we return, so a partial object would
+    // wipe the other flags). Re-read the profile, then apply the change we just
+    // made on top in case the read is momentarily stale.
+    async function relationshipAfter(overrides) {
+      try {
+        const res = await agent.getProfile({ actor: id });
+        trackProfile(res.data);
+        return { ...profileToRelationship(res.data), ...overrides };
+      } catch (e) {
+        return { id, ...overrides };
+      }
+    }
     return {
       async fetch() {
         await ready();
@@ -863,7 +876,7 @@ export function createBlueskyClient({
         await ready();
         const res = await agent.follow(id);
         followUris.set(id, res.uri);
-        return { id, following: true, followedBy: false, requested: false };
+        return relationshipAfter({ following: true, requested: false });
       },
       async unfollow() {
         await ready();
@@ -874,17 +887,17 @@ export function createBlueskyClient({
         }
         if (followUri) await agent.deleteFollow(followUri);
         followUris.delete(id);
-        return { id, following: false, requested: false };
+        return relationshipAfter({ following: false, requested: false });
       },
       async mute() {
         await ready();
         await agent.mute(id);
-        return { id, muting: true };
+        return relationshipAfter({ muting: true });
       },
       async unmute() {
         await ready();
         await agent.unmute(id);
-        return { id, muting: false };
+        return relationshipAfter({ muting: false });
       },
       async block() {
         await ready();
@@ -895,7 +908,7 @@ export function createBlueskyClient({
             createdAt: new Date().toISOString(),
           },
         );
-        return { id, blocking: true };
+        return relationshipAfter({ blocking: true });
       },
       async unblock() {
         await ready();
@@ -908,7 +921,11 @@ export function createBlueskyClient({
             rkey,
           });
         }
-        return { id, blocking: false };
+        return relationshipAfter({ blocking: false });
+      },
+      async removeFromFollowers() {
+        // Bluesky has no "remove follower" primitive.
+        throw new Error('Removing followers is not supported on Bluesky');
       },
       followers: {
         list: ({ limit = 40 } = {}) =>
