@@ -71,7 +71,7 @@ function Lists() {
                 {lists.map((list) => (
                   <li>
                     <Link to={`/l/${list.id}`}>
-                      <Icon icon={list._feed ? 'bluesky' : 'list'} />{' '}
+                      <Icon icon="list" />{' '}
                       <span>
                         {list.title}
                         {list.exclusive && (
