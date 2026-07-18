@@ -42,8 +42,13 @@ function stripHTML(html) {
     .trim();
 }
 
+function normalizeApostrophes(s) {
+  // Normalize curly/smart quotes to straight apostrophes
+  return s.replace(/[\u2018\u2019\u2032\u0060\u00b4]/g, "'");
+}
+
 function isStopword(word) {
-  return STOPWORDS.has(word.toLowerCase().replace(/[’']s$/, ''));
+  return STOPWORDS.has(normalizeApostrophes(word.toLowerCase()).replace(/'s$/, ''));
 }
 
 // Capitalized 1–3 word phrases that look like proper nouns.
@@ -53,7 +58,7 @@ export function properNounPhrases(text) {
   const re = /\b([A-Z][a-zA-Z’'-]+(?:\s+[A-Z][a-zA-Z’'-]+){0,2})\b/g;
   let m;
   while ((m = re.exec(text))) {
-    const phrase = m[1].replace(/[’']s\b/g, '').trim();
+    const phrase = normalizeApostrophes(m[1]).replace(/'s\b/g, '').trim();
     const words = phrase.split(/\s+/).filter(Boolean);
     if (!words.length) continue;
     // Drop phrases that are entirely stopwords, or a lone short/common word.

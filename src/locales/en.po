@@ -1424,39 +1424,39 @@ msgstr "Posts on this list are hidden from Home/Following"
 
 #. placeholder {0}: mc.keyword
 #. placeholder {1}: instances.length
-#: src/components/main-character-banner.jsx:127
+#: src/components/main-character-banner.jsx:135
 msgid "Muted “{0}” on {1} accounts"
 msgstr "Muted “{0}” on {1} accounts"
 
 #. placeholder {0}: mc.keyword
-#: src/components/main-character-banner.jsx:128
+#: src/components/main-character-banner.jsx:136
 msgid "Muted “{0}”"
 msgstr "Muted “{0}”"
 
-#: src/components/main-character-banner.jsx:131
+#: src/components/main-character-banner.jsx:139
 msgid "Couldn’t mute. Try again."
 msgstr "Couldn’t mute. Try again."
 
-#: src/components/main-character-banner.jsx:147
+#: src/components/main-character-banner.jsx:155
 msgid "is all over your feed today"
 msgstr "is all over your feed today"
 
 #. placeholder {0}: mc.postCount
 #. placeholder {1}: mc.total
-#: src/components/main-character-banner.jsx:149
+#: src/components/main-character-banner.jsx:157
 msgid "— {0} of {1} recent posts"
 msgstr "— {0} of {1} recent posts"
 
-#: src/components/main-character-banner.jsx:162
+#: src/components/main-character-banner.jsx:170
 msgid "Mute for a day"
 msgstr "Mute for a day"
 
-#: src/components/main-character-banner.jsx:170
+#: src/components/main-character-banner.jsx:178
 #: src/components/related-actions.jsx:53
 msgid "Forever"
 msgstr ""
 
-#: src/components/main-character-banner.jsx:178
+#: src/components/main-character-banner.jsx:186
 msgid "Not now"
 msgstr "Not now"
 
