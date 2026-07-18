@@ -93,6 +93,9 @@ export function getBlueskyClient(account) {
     did,
     authType: account.blueskyAuth || 'password',
     onSessionChange: (session) => persistSessionForAccount(did, session),
+    onSessionDeleted: () => {
+      delete blueskyClients[did];
+    },
   });
   blueskyClients[did] = client;
   return client;
