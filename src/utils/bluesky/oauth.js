@@ -39,6 +39,12 @@ function isLoopbackHost(hostname) {
   );
 }
 
+const sessionDeletedCallbacks = new Set();
+export function onOAuthSessionDeleted(cb) {
+  sessionDeletedCallbacks.add(cb);
+  return () => sessionDeletedCallbacks.delete(cb);
+}
+
 let clientPromise;
 export function getOAuthClient() {
   return (clientPromise ||= (async () => {
@@ -48,11 +54,18 @@ export function getOAuthClient() {
     return new BrowserOAuthClient({
       handleResolver: 'https://bsky.social',
       responseMode: 'query',
-      // undefined → loopback client (dev only); real domains use the
-      // hosted client metadata document
       clientMetadata: loopback
         ? undefined
         : buildClientMetadata(location.origin),
+      onDelete: (sub, cause) => {
+        for (const cb of sessionDeletedCallbacks) {
+          try {
+            cb(sub, cause);
+          } catch (e) {
+            console.error(e);
+          }
+        }
+      },
     });
   })());
 }

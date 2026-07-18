@@ -1581,7 +1581,14 @@ function Compose({
                 states.composerState.publishing = false;
                 states.composerState.publishingError = true;
                 console.error(e);
-                alert(e?.reason || e);
+                const msg = e?.reason || e?.message || `${e}`;
+                if (/session.*(deleted|expired|revoked)/i.test(msg)) {
+                  alert(
+                    'Your session has expired. Please log out and log back in.',
+                  );
+                } else {
+                  alert(msg);
+                }
                 setUIState('error');
               }
             })();

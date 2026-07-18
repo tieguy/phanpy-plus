@@ -113,23 +113,36 @@ export function createBlueskyClient({
   did,
   authType, // 'password' (default) | 'oauth'
   onSessionChange,
+  onSessionDeleted,
 }) {
   let agent = null;
+  let sessionDeleted = false;
 
   let resumePromise = null;
   async function ready() {
+    if (sessionDeleted) {
+      throw new Error(
+        'Your Bluesky session has expired. Please log out and log back in.',
+      );
+    }
     if (authType === 'oauth') {
       // OAuth sessions are restored via @atproto/oauth-client-browser;
       // tokens live in its own IndexedDB store and auto-refresh
       if (agent) return;
       if (!resumePromise) {
         resumePromise = (async () => {
-          const [{ Agent }, { restoreOAuthSession }] = await Promise.all([
-            loadAtproto(),
-            import('./oauth'),
-          ]);
+          const [{ Agent }, { restoreOAuthSession, onOAuthSessionDeleted }] =
+            await Promise.all([loadAtproto(), import('./oauth')]);
           const oauthSession = await restoreOAuthSession(did);
           agent = new Agent(oauthSession);
+          onOAuthSessionDeleted((sub) => {
+            if (sub === did) {
+              sessionDeleted = true;
+              agent = null;
+              resumePromise = null;
+              onSessionDeleted?.();
+            }
+          });
         })().catch((e) => {
           resumePromise = null;
           throw e;
@@ -147,6 +160,8 @@ export function createBlueskyClient({
             onSessionChange?.(sess);
           } else if (evt === 'expired' || evt === 'create-failed') {
             console.warn('Bluesky session', evt);
+            sessionDeleted = true;
+            onSessionDeleted?.();
           }
         },
       });
