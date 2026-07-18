@@ -8,6 +8,7 @@ import { api } from '../utils/api';
 import { getOtherNetworkAccounts } from '../utils/bluesky';
 import { findMainCharacter } from '../utils/main-character';
 import { createMergedTimelineIterator } from '../utils/merged-timeline';
+import { isAlreadyMuted } from '../utils/mute-word';
 import { muteWordEverywhere } from '../utils/mute-word';
 import showToast from '../utils/show-toast';
 import states from '../utils/states';
@@ -99,10 +100,17 @@ function MainCharacterBanner() {
 
   useEffect(() => {
     let cancelled = false;
-    getAnalysis(snapStates.settings.mergedTimeline !== false).then((result) => {
-      if (cancelled || !result) return;
-      if (!isDismissed(result.key)) setMC(result);
-    });
+    getAnalysis(snapStates.settings.mergedTimeline !== false).then(
+      async (result) => {
+        if (cancelled || !result) return;
+        if (isDismissed(result.key)) return;
+        if (await isAlreadyMuted(result.keyword)) {
+          rememberDismissed(result.key);
+          return;
+        }
+        setMC(result);
+      },
+    );
     return () => {
       cancelled = true;
     };

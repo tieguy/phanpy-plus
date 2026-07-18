@@ -16,6 +16,32 @@ export const MUTE_DURATIONS = {
   forever: 0,
 };
 
+// Check if `keyword` is already muted on any logged-in account.
+export async function isAlreadyMuted(keyword) {
+  const word = (keyword || '').trim().toLowerCase();
+  if (!word) return false;
+  const accounts = [getCurrentAccount(), ...getOtherNetworkAccounts()]
+    .filter(Boolean)
+    .filter(
+      (a, i, arr) => arr.findIndex((b) => b.info?.id === a.info?.id) === i,
+    );
+  for (const account of accounts) {
+    try {
+      const { masto } = api({ account });
+      const filters = await masto.v2.filters.list();
+      for (const filter of filters) {
+        for (const kw of filter.keywords || []) {
+          if ((kw.keyword || '').toLowerCase() === word) return true;
+        }
+        if ((filter.title || '').toLowerCase() === word) return true;
+      }
+    } catch (e) {
+      // ignore — account may be unreachable
+    }
+  }
+  return false;
+}
+
 // Mute `keyword` on the current account and every other-network account.
 // `expiresIn` is seconds (0/falsy = permanent). Returns the instances it
 // succeeded on so the caller can report what happened.
