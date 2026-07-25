@@ -350,11 +350,11 @@ msgstr ""
 msgid "New list"
 msgstr ""
 
-#: src/components/background-service.jsx:184
+#: src/components/background-service.jsx:201
 msgid "Cloak mode disabled"
 msgstr ""
 
-#: src/components/background-service.jsx:184
+#: src/components/background-service.jsx:201
 msgid "Cloak mode enabled"
 msgstr ""
 
