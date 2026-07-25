@@ -5,7 +5,10 @@ import { useHotkeys } from 'react-hotkeys-hook';
 
 import { api } from '../utils/api';
 import { useAuth } from '../utils/auth-context';
-import { isDirectResponse } from '../utils/notification-filter';
+import {
+  hasNewDirectResponse,
+  isDirectResponse,
+} from '../utils/notification-filter';
 import showToast from '../utils/show-toast';
 import states, { saveStatus } from '../utils/states';
 import useInterval from '../utils/useInterval';
@@ -38,36 +41,50 @@ export default memo(function BackgroundService() {
   });
 
   const checkLatestNotification = async (masto, instance, skipCheckMarkers) => {
-    if (states.notificationsLast) {
-      // With "only direct responses" on, likes/reposts/follows must not light
-      // the bell — fetch a batch and consider only the replies/mentions in it.
-      const responsesOnly = states.settings.notificationsResponsesOnly;
+    if (!states.notificationsLast) return;
+
+    // "Only direct responses" path: the bell must light only for a reply/mention
+    // that is genuinely newer than what the user last saw. We can't rely on a
+    // server sinceId cursor here — the Bluesky facade ignores it — so fetch a
+    // batch and compare createdAt against states.notificationsLast client-side.
+    // (A per-subtype timestamp check, not a whole-stream read marker, so
+    // likes/reposts/follows never light the bell.)
+    if (states.settings.notificationsResponsesOnly) {
       const notificationsIterator = masto.v1.notifications
-        .list({
-          limit: responsesOnly ? NOTIFICATIONS_BADGE_LIMIT : 1,
-          sinceId: states.notificationsLast.id,
-        })
+        .list({ limit: NOTIFICATIONS_BADGE_LIMIT })
         .values();
       const { value: notifications } = await notificationsIterator.next();
-      const relevant = responsesOnly
-        ? notifications?.filter(isDirectResponse)
-        : notifications;
-      if (relevant?.length) {
-        if (skipCheckMarkers) {
-          states.notificationsShowNew = true;
+      if (
+        hasNewDirectResponse(notifications, states.notificationsLast.createdAt)
+      ) {
+        states.notificationsShowNew = true;
+      }
+      return;
+    }
+
+    // Default path (all notification types): unchanged — rely on server sinceId.
+    const notificationsIterator = masto.v1.notifications
+      .list({
+        limit: 1,
+        sinceId: states.notificationsLast.id,
+      })
+      .values();
+    const { value: notifications } = await notificationsIterator.next();
+    if (notifications?.length) {
+      if (skipCheckMarkers) {
+        states.notificationsShowNew = true;
+      } else {
+        let lastReadId;
+        try {
+          const markers = await masto.v1.markers.fetch({
+            timeline: 'notifications',
+          });
+          lastReadId = markers?.notifications?.lastReadId;
+        } catch (e) {}
+        if (lastReadId) {
+          states.notificationsShowNew = notifications[0].id !== lastReadId;
         } else {
-          let lastReadId;
-          try {
-            const markers = await masto.v1.markers.fetch({
-              timeline: 'notifications',
-            });
-            lastReadId = markers?.notifications?.lastReadId;
-          } catch (e) {}
-          if (lastReadId) {
-            states.notificationsShowNew = relevant[0].id !== lastReadId;
-          } else {
-            states.notificationsShowNew = true;
-          }
+          states.notificationsShowNew = true;
         }
       }
     }

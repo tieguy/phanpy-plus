@@ -14,3 +14,21 @@
 export function isDirectResponse(notification) {
   return notification?.type === 'mention';
 }
+
+// Whether a notification batch contains a direct response NEWER than the last
+// notification the user saw (lastSeenCreatedAt, an ISO string or epoch ms).
+//
+// The bell badge uses this instead of a server `sinceId` cursor: the Bluesky
+// facade's notifications.list ignores sinceId, so "is there anything new?" must
+// be decided client-side by comparing timestamps against the last-seen marker.
+// Comparing against a per-subtype timestamp (not a whole-stream read marker)
+// avoids lighting the bell for likes/reposts/follows.
+export function hasNewDirectResponse(notifications, lastSeenCreatedAt) {
+  if (!Array.isArray(notifications)) return false;
+  const lastSeen = lastSeenCreatedAt
+    ? new Date(lastSeenCreatedAt).getTime()
+    : 0;
+  return notifications.some(
+    (n) => isDirectResponse(n) && new Date(n.createdAt).getTime() > lastSeen,
+  );
+}
