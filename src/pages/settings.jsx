@@ -470,6 +470,21 @@ function Settings({ onClose }) {
                 </Trans>
               </label>
             </li>
+            <li class="block">
+              <label>
+                <input
+                  type="checkbox"
+                  checked={snapStates.settings.notificationsResponsesOnly}
+                  onChange={(e) => {
+                    states.settings.notificationsResponsesOnly =
+                      e.target.checked;
+                  }}
+                />{' '}
+                <Trans>
+                  Only notify me for direct responses (replies &amp; mentions)
+                </Trans>
+              </label>
+            </li>
             <BlueskyFeedPrefs />
             {!!TRANSLANG_INSTANCES && (
               <li class="block">

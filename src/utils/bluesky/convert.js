@@ -476,7 +476,10 @@ export function notificationToMasto(notif, instance, subjectStatus) {
     follow: 'follow',
     mention: 'mention',
     reply: 'mention',
-    quote: 'mention',
+    // Map to the native Mastodon `quote` type (not `mention`) so quote-posts are
+    // distinguishable from replies/mentions — the notifications "only direct
+    // responses" filter and the quote-notification UI both rely on this.
+    quote: 'quote',
   };
   const type = typeMap[reason];
   if (!type) return null;

@@ -5,6 +5,7 @@ import { useHotkeys } from 'react-hotkeys-hook';
 
 import { api } from '../utils/api';
 import { useAuth } from '../utils/auth-context';
+import { isDirectResponse } from '../utils/notification-filter';
 import showToast from '../utils/show-toast';
 import states, { saveStatus } from '../utils/states';
 import useInterval from '../utils/useInterval';
@@ -12,6 +13,10 @@ import usePageVisibility from '../utils/usePageVisibility';
 
 const STREAMING_TIMEOUT = 1000 * 3; // 3 seconds
 const POLL_INTERVAL = 20_000; // 20 seconds
+// When "only direct responses" is on we must look past non-response
+// notifications (likes/reposts/follows) that may sit atop the list, so fetch a
+// batch instead of just the latest one before deciding whether to light the bell.
+const NOTIFICATIONS_BADGE_LIMIT = 30;
 
 export default memo(function BackgroundService() {
   const isLoggedIn = useAuth();
@@ -34,14 +39,20 @@ export default memo(function BackgroundService() {
 
   const checkLatestNotification = async (masto, instance, skipCheckMarkers) => {
     if (states.notificationsLast) {
+      // With "only direct responses" on, likes/reposts/follows must not light
+      // the bell — fetch a batch and consider only the replies/mentions in it.
+      const responsesOnly = states.settings.notificationsResponsesOnly;
       const notificationsIterator = masto.v1.notifications
         .list({
-          limit: 1,
+          limit: responsesOnly ? NOTIFICATIONS_BADGE_LIMIT : 1,
           sinceId: states.notificationsLast.id,
         })
         .values();
       const { value: notifications } = await notificationsIterator.next();
-      if (notifications?.length) {
+      const relevant = responsesOnly
+        ? notifications?.filter(isDirectResponse)
+        : notifications;
+      if (relevant?.length) {
         if (skipCheckMarkers) {
           states.notificationsShowNew = true;
         } else {
@@ -53,7 +64,7 @@ export default memo(function BackgroundService() {
             lastReadId = markers?.notifications?.lastReadId;
           } catch (e) {}
           if (lastReadId) {
-            states.notificationsShowNew = notifications[0].id !== lastReadId;
+            states.notificationsShowNew = relevant[0].id !== lastReadId;
           } else {
             states.notificationsShowNew = true;
           }
@@ -96,8 +107,17 @@ export default memo(function BackgroundService() {
                     saveStatus(entry.payload, instance, {
                       skipThreading: true,
                     });
+                    // Only replies/mentions light the bell when "only direct
+                    // responses" is on.
+                    if (
+                      !states.settings.notificationsResponsesOnly ||
+                      isDirectResponse(entry.payload)
+                    ) {
+                      states.notificationsShowNew = true;
+                    }
+                  } else {
+                    states.notificationsShowNew = true;
                   }
-                  states.notificationsShowNew = true;
                 }
                 console.log('💥 Streaming notification loop STOPPED');
               } catch (e) {

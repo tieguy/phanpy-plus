@@ -20,6 +20,7 @@ import groupNotifications, {
   massageNotifications2,
 } from '../utils/group-notifications';
 import { createMergedTimelineIterator } from '../utils/merged-timeline';
+import { isDirectResponse } from '../utils/notification-filter';
 import states, { saveStatus } from '../utils/states';
 import { getCurrentAccountNS } from '../utils/store-utils';
 
@@ -269,6 +270,13 @@ function NotificationsMenu({ anchorRef, state, onClose }) {
           {snapStates.notifications.length ? (
             <>
               {snapStates.notifications
+                // "Only direct responses" preference: keep replies/mentions,
+                // drop quotes/reposts/likes/follows (both networks).
+                .filter(
+                  (n) =>
+                    !snapStates.settings.notificationsResponsesOnly ||
+                    isDirectResponse(n),
+                )
                 .slice(0, NOTIFICATIONS_DISPLAY_LIMIT)
                 .map((notification) => (
                   <Notification

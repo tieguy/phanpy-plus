@@ -38,6 +38,7 @@ import handleContentLinks from '../utils/handle-content-links';
 import haptics from '../utils/haptics';
 import mem from '../utils/mem';
 import { createMergedTimelineIterator } from '../utils/merged-timeline';
+import { isDirectResponse } from '../utils/notification-filter';
 import niceDateTime from '../utils/nice-date-time';
 import { getRegistration } from '../utils/push-notifications';
 import shortenNumber from '../utils/shorten-number';
@@ -152,6 +153,7 @@ function Notifications({ columnMode }) {
   const notificationID = searchParams.get('id');
   const notificationAccessToken = searchParams.get('access_token');
   const [showMore, setShowMore] = useState(false);
+  const responsesOnly = snapStates.settings.notificationsResponsesOnly;
   const [onlyMentions, setOnlyMentions] = useState(false);
   const [showMentionsLink, setShowMentionsLink] = useState(false);
   const [hasAnalyzedFirstLoad, setHasAnalyzedFirstLoad] = useState(false);
@@ -1063,6 +1065,9 @@ function Notifications({ columnMode }) {
             {snapStates.notifications
               // This is leaked from Notifications popover
               .filter((n) => n.type !== 'follow_request')
+              // "Only direct responses" preference: keep replies/mentions,
+              // drop quotes/reposts/likes/follows across both networks.
+              .filter((n) => !responsesOnly || isDirectResponse(n))
               .map((notification) => {
                 if (
                   onlyMentions &&

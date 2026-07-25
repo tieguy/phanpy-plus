@@ -93,6 +93,7 @@ const states = proxy({
     paginatedTimeline: false,
     autoHideBars: true,
     mergedTimeline: true,
+    notificationsResponsesOnly: true,
   },
 });
 
@@ -139,6 +140,8 @@ export function initStates() {
     store.account.get('settings-autoHideBars') ?? true;
   states.settings.mergedTimeline =
     store.account.get('settings-mergedTimeline') ?? true;
+  states.settings.notificationsResponsesOnly =
+    store.account.get('settings-notificationsResponsesOnly') ?? true;
 }
 
 subscribeKey(states, 'notificationsLast', (v) => {
@@ -205,6 +208,9 @@ subscribe(states, (changes) => {
     }
     if (path.join('.') === 'settings.mergedTimeline') {
       store.account.set('settings-mergedTimeline', !!value);
+    }
+    if (path.join('.') === 'settings.notificationsResponsesOnly') {
+      store.account.set('settings-notificationsResponsesOnly', !!value);
     }
   }
 });
