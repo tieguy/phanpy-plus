@@ -13,6 +13,7 @@ import {
 } from '../utils/bluesky';
 import { isSupported as collectionsSupported } from '../utils/collections';
 import i18nDuration from '../utils/i18n-duration';
+import { getMentionInstance } from '../utils/mention-network';
 import isSearchEnabled from '../utils/is-search-enabled';
 import niceDateTime from '../utils/nice-date-time';
 import showCompose from '../utils/show-compose';
@@ -79,6 +80,8 @@ function RelatedActions({
     instance: currentInstance,
     authenticated: currentAuthenticated,
   } = api();
+  // Captured before the cross-network block below may reassign currentInstance.
+  const activeInstance = currentInstance;
   let sameInstance = instance === currentInstance;
   // This fork is logged into both networks at once, so the account that can
   // act on a profile (follow, mute, block) may not be the currently-active
@@ -119,6 +122,18 @@ function RelatedActions({
       }
     }
   }
+
+  // A mention only links/notifies when posted from an account on the mentioned
+  // profile's own network. Resolve which account (if any) can do that; null
+  // means we have none on that network, so the Mention action is hidden.
+  const mentionInstance = getMentionInstance({
+    targetIsBluesky: info._bluesky || isBlueskyInstance(instance),
+    active: {
+      instance: activeInstance,
+      isBluesky: isBlueskyInstance(activeInstance),
+    },
+    accounts: getAccounts(),
+  });
 
   const [relationshipUIState, setRelationshipUIState] = useState('default');
   const [relationship, setRelationship] = useState(null);
@@ -335,22 +350,25 @@ function RelatedActions({
           >
             {currentAuthenticated && !isSelf ? (
               <>
-                <MenuItem
-                  onClick={() => {
-                    showCompose({
-                      draftStatus: {
-                        status: `@${currentInfo?.acct || acct} `,
-                      },
-                    });
-                  }}
-                >
-                  <Icon icon="at" />
-                  <span>
-                    <Trans>
-                      Mention <span class="bidi-isolate">@{username}</span>
-                    </Trans>
-                  </span>
-                </MenuItem>
+                {mentionInstance && (
+                  <MenuItem
+                    onClick={() => {
+                      showCompose({
+                        draftStatus: {
+                          status: `@${currentInfo?.acct || acct} `,
+                          _instance: mentionInstance,
+                        },
+                      });
+                    }}
+                  >
+                    <Icon icon="at" />
+                    <span>
+                      <Trans>
+                        Mention <span class="bidi-isolate">@{username}</span>
+                      </Trans>
+                    </span>
+                  </MenuItem>
+                )}
                 {searchEnabled && (
                   <MenuItem
                     onClick={() => {

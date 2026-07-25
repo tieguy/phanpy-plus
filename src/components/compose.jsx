@@ -186,11 +186,14 @@ function Compose({
   console.warn('RENDER COMPOSER');
   // Replies/edits/quotes of a post from another network/instance (e.g. a
   // Bluesky post in the merged timeline) must be posted through that
-  // network's client
+  // network's client. A plain mention carries the target's network via
+  // draftStatus._instance so the handle is posted from an account on that
+  // network (otherwise a cross-network mention is inert — see mention-network).
   const targetInstance =
     replyToStatus?._instance ||
     editStatus?._instance ||
     quoteStatus?._instance ||
+    draftStatus?._instance ||
     null;
   const { masto, instance } = targetInstance
     ? api({ instance: targetInstance })

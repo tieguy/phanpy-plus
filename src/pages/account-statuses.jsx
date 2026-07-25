@@ -22,12 +22,15 @@ import Link from '../components/link';
 import Menu2 from '../components/menu2';
 import Timeline from '../components/timeline';
 import { api } from '../utils/api';
+import { isBlueskyInstance } from '../utils/bluesky';
 import isSearchEnabled from '../utils/is-search-enabled';
 import mem from '../utils/mem';
+import { getMentionInstance } from '../utils/mention-network';
 import pmem from '../utils/pmem';
 import showToast from '../utils/show-toast';
 import states, { saveStatus } from '../utils/states';
 import {
+  getAccounts,
   getCurrentAccountID,
   isMediaFirstInstance,
 } from '../utils/store-utils';
@@ -344,6 +347,20 @@ function AccountStatuses({ columnMode, ...props }) {
     () => account?.id === getCurrentAccountID(),
     [account?.id],
   );
+
+  // A mention only links/notifies when posted from an account on the mentioned
+  // profile's own network; null means we have none, so don't prefill a dead
+  // mention into the composer (see mention-network).
+  const mentionInstance = account
+    ? getMentionInstance({
+        targetIsBluesky: account._bluesky || isBlueskyInstance(instance),
+        active: {
+          instance: currentInstance,
+          isBluesky: isBlueskyInstance(currentInstance),
+        },
+        accounts: getAccounts(),
+      })
+    : null;
 
   const filterBarRef = useRef();
   const TimelineStart = useMemo(() => {
@@ -738,12 +755,13 @@ function AccountStatuses({ columnMode, ...props }) {
           </Menu2>
         }
       />
-      {acct && !isSelf && (
+      {acct && !isSelf && mentionInstance && (
         <data
           class="compose-data"
           value={JSON.stringify({
             draftStatus: {
               status: `@${acct} `,
+              _instance: mentionInstance,
             },
           })}
         />
