@@ -21,6 +21,7 @@ import {
   profileToAccount,
   profileToRelationship,
 } from './convert';
+import { buildExternalEmbed, firstLinkFacetUri } from './link-card';
 
 const MAX_IMAGE_SIZE = 950_000; // Bluesky blob limit is ~976KB
 
@@ -768,6 +769,18 @@ export function createBlueskyClient({
       record.embed = mediaEmbed;
     } else if (recordEmbed) {
       record.embed = recordEmbed;
+    }
+
+    // Link card: when the text carries a URL and there's no other embed, attach
+    // an external card so shared links render as a rich preview. Best-effort —
+    // any failure just posts without a card. Skipped for image/quote posts,
+    // since an external embed can't coexist with them in the same slot.
+    if (!record.embed) {
+      const linkUrl = firstLinkFacetUri(rt.facets);
+      if (linkUrl) {
+        const externalEmbed = await buildExternalEmbed(agent, linkUrl);
+        if (externalEmbed) record.embed = externalEmbed;
+      }
     }
 
     const res = await agent.post(record);
