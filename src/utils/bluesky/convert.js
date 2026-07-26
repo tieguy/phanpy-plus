@@ -220,6 +220,76 @@ function externalToCard(external) {
   };
 }
 
+// Embedded non-post records (feed generators, lists, starter packs, labelers)
+// → Mastodon link card. These can be quoted on Bluesky just like posts, but
+// they aren't posts so they have no quotedStatus to render. Without this they
+// convert to nothing and the embed silently disappears; a link card lets the
+// existing StatusCard UI render them (title + description + thumbnail + link
+// back to Bluesky).
+function embeddedRecordToCard(record) {
+  if (!record) return null;
+  const type = record.$type || '';
+  const rkey = rkeyFromAtUri(record.uri);
+  const creator = record.creator;
+  const creatorHandle =
+    creator?.handle && creator.handle !== 'handle.invalid'
+      ? creator.handle
+      : creator?.did;
+  const baseCard = (props) => ({
+    type: 'link',
+    description: '',
+    image: null,
+    authorName: '',
+    authorUrl: '',
+    providerName: 'Bluesky',
+    providerUrl: BSKY_WEB,
+    html: '',
+    width: 0,
+    height: 0,
+    embedUrl: '',
+    ...props,
+  });
+  if (type.startsWith('app.bsky.feed.defs#generatorView')) {
+    return baseCard({
+      url: `${BSKY_WEB}/profile/${creatorHandle}/feed/${rkey}`,
+      title: record.displayName || 'Feed',
+      description: record.description || '',
+      image: record.avatar || null,
+      providerName: 'Feed on Bluesky',
+    });
+  }
+  if (type.startsWith('app.bsky.graph.defs#listView')) {
+    return baseCard({
+      url: `${BSKY_WEB}/profile/${creatorHandle}/lists/${rkey}`,
+      title: record.name || 'List',
+      description: record.description || '',
+      image: record.avatar || null,
+      providerName: 'List on Bluesky',
+    });
+  }
+  if (type.startsWith('app.bsky.graph.defs#starterPack')) {
+    // starterPackView / starterPackViewBasic carry name/description under record
+    return baseCard({
+      url: `${BSKY_WEB}/starter-pack/${creatorHandle}/${rkey}`,
+      title: record.record?.name || 'Starter pack',
+      description: record.record?.description || '',
+      providerName: 'Starter pack on Bluesky',
+    });
+  }
+  if (type.startsWith('app.bsky.labeler.defs#labelerView')) {
+    return baseCard({
+      url: `${BSKY_WEB}/profile/${creatorHandle}`,
+      title:
+        creator?.displayName ||
+        (creatorHandle ? `@${creatorHandle}` : 'Labeler'),
+      description: creator?.description || '',
+      image: creator?.avatar || null,
+      providerName: 'Labeler on Bluesky',
+    });
+  }
+  return null;
+}
+
 // Extract media attachments + card + quote from a post embed view
 function extractEmbed(embed, instance) {
   const result = { mediaAttachments: [], card: null, quote: null };
@@ -236,8 +306,14 @@ function extractEmbed(embed, instance) {
     result.mediaAttachments = mediaPart.mediaAttachments;
     result.card = mediaPart.card;
     result.quote = viewRecordToQuote(embed.record?.record, instance);
+    if (!result.quote && !result.card) {
+      result.card = embeddedRecordToCard(embed.record?.record);
+    }
   } else if (type.startsWith('app.bsky.embed.record')) {
     result.quote = viewRecordToQuote(embed.record, instance);
+    if (!result.quote) {
+      result.card = embeddedRecordToCard(embed.record);
+    }
   }
   return result;
 }
