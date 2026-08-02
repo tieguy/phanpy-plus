@@ -21,6 +21,11 @@ import {
   profileToAccount,
   profileToRelationship,
 } from './convert';
+import {
+  areSameAuthor,
+  getFeedItemAuthors,
+  shouldDisplayReplyInFollowing,
+} from './following-reply-filter';
 import { buildExternalEmbed, firstLinkFacetUri } from './link-card';
 
 const MAX_IMAGE_SIZE = 950_000; // Bluesky blob limit is ~976KB
@@ -1238,19 +1243,23 @@ export function createBlueskyClient({
                 getFeedViewPrefs().catch(() => ({})),
               ]);
               // Honor the official app's Following-feed preferences.
-              // Self-threads are never treated as replies (matching the
-              // official app), and reposted replies count as reposts
+              // Self-threads (the whole parent/root chain by one author)
+              // are never treated as replies, reposted replies count as
+              // reposts, and other replies must involve a second
+              // participant you follow (parent, grandparent or root) —
+              // the official app applies that rule unconditionally; here
+              // hideRepliesByUnfollowed: false (settable in our Settings
+              // UI) opts out of it
+              const userDid = agentDid();
               const feed = res.data.feed.filter((item) => {
                 if (fvp.hideReposts && item.reason) return false;
                 if (item.reply && !item.reason) {
-                  const parentAuthor = item.reply.parent?.author;
-                  const selfThread =
-                    parentAuthor?.did === item.post?.author?.did;
+                  const selfThread = areSameAuthor(getFeedItemAuthors(item));
                   if (!selfThread) {
                     if (fvp.hideReplies) return false;
                     if (
-                      fvp.hideRepliesByUnfollowed &&
-                      !parentAuthor?.viewer?.following
+                      fvp.hideRepliesByUnfollowed !== false &&
+                      !shouldDisplayReplyInFollowing(item, userDid)
                     ) {
                       return false;
                     }
