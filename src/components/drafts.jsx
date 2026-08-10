@@ -233,11 +233,13 @@ function Drafts({ onClose }) {
 function MiniDraft({ draft }) {
   const { t } = useLingui();
   const { draftStatus, replyTo, quote } = draft;
-  const { status, spoilerText, poll, mediaAttachments } = draftStatus;
+  const { status, spoilerText, poll, mediaAttachments, moreSegments } =
+    draftStatus;
   const hasPoll = poll?.options?.length > 0;
   const hasMedia = mediaAttachments?.length > 0;
   const hasQuote = !!quote?.id;
-  const hasPollOrMedia = hasPoll || hasMedia || hasQuote;
+  const hasThread = moreSegments?.length > 0;
+  const hasPollOrMedia = hasPoll || hasMedia || hasQuote || hasThread;
   const firstImageMedia = useMemo(() => {
     if (!hasMedia) return;
     const image = mediaAttachments.find((media) => /image/.test(media.type));
@@ -281,6 +283,12 @@ function MiniDraft({ draft }) {
               </span>
             )}
             {hasQuote && <Icon icon="quote" alt={t`Quote`} />}
+            {hasThread && (
+              <span>
+                <Icon icon="list" alt={t`Thread`} />{' '}
+                <small>{moreSegments.length + 1}</small>
+              </span>
+            )}
           </div>
         )}
         <div class="mini-draft-main">
