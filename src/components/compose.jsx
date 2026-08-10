@@ -18,7 +18,7 @@ import {
   isBlueskyInstance,
 } from '../utils/bluesky';
 import { blueskyInstanceInfo } from '../utils/bluesky/convert';
-import { countableText } from '../utils/compose-counting';
+import { countableText, segmentCharCount } from '../utils/compose-counting';
 import db from '../utils/db';
 import { getDtfLocale } from '../utils/dtf-locale';
 import haptics from '../utils/haptics';
@@ -650,6 +650,7 @@ function Compose({
         mediaAttachments,
         scheduledAt,
         quoteApprovalPolicy,
+        moreSegments,
       } = draftStatus;
       const composablePoll = !!poll?.options && {
         ...poll,
@@ -674,6 +675,7 @@ function Compose({
       if (mediaAttachments) setMediaAttachments(mediaAttachments);
       if (scheduledAt) setScheduledAt(scheduledAt);
       if (quoteApprovalPolicy) setQuoteApprovalPolicy(quoteApprovalPolicy);
+      if (moreSegments) setMoreSegments(moreSegments);
     }
   }, [draftStatus, editStatus, replyToStatus, replyMode]);
 
@@ -905,6 +907,7 @@ function Compose({
         mediaAttachments,
         scheduledAt,
         quoteApprovalPolicy,
+        moreSegments,
       },
       quote: currentQuoteStatus?.id
         ? {
@@ -1393,6 +1396,51 @@ function Compose({
                 return;
               }
             }
+
+            // Validate all segments (including moreSegments)
+            const shouldEnforceCharLimit =
+              effectiveMaxCharacters < maxCharacters || moreSegments.length > 0;
+            const blueskyRules =
+              charLimitBoundByBluesky ||
+              maxCharacters === BLUESKY_MAX_CHARACTERS;
+
+            // Check main segment text
+            if (shouldEnforceCharLimit) {
+              const mainSegmentCount = segmentCharCount(
+                status || '',
+                { blueskyRules },
+                stringLength,
+              );
+              if (mainSegmentCount > effectiveMaxCharacters) {
+                alert(
+                  t`Post is too long! Max characters: ${effectiveMaxCharacters}`,
+                );
+                return;
+              }
+            }
+
+            // Check all moreSegments
+            for (const segment of moreSegments) {
+              const trimmedText = (segment.text || '').trim();
+              if (!trimmedText) {
+                alert(t`Thread segments cannot be empty`);
+                return;
+              }
+              if (shouldEnforceCharLimit) {
+                const segCount = segmentCharCount(
+                  segment.text,
+                  { blueskyRules },
+                  stringLength,
+                );
+                if (segCount > effectiveMaxCharacters) {
+                  alert(
+                    t`Thread segment is too long! Max characters: ${effectiveMaxCharacters}`,
+                  );
+                  return;
+                }
+              }
+            }
+
             // TODO: check for URLs and use `charactersReservedPerUrl` to calculate max characters
 
             if (mediaAttachments.length > 0) {
@@ -1536,6 +1584,11 @@ function Compose({
                       ),
                       poll,
                     },
+                    ...moreSegments.map((segment) => ({
+                      text: segment.text,
+                      // publishThread uploads these to the target (fileData path)
+                      mediaAttachments: segment.mediaAttachments,
+                    })),
                   ];
                   const { statuses, failedAtIndex, error } =
                     await publishThread({
@@ -1546,11 +1599,31 @@ function Compose({
                       shared,
                       idempotencyPrefix: UID.current,
                     });
-                  if (failedAtIndex !== null) throw error;
+
+                  // Handle partial failures (Phase 6 replaces this)
+                  if (failedAtIndex !== null) {
+                    if (statuses.length > 0) {
+                      alert(
+                        t`Posted ${statuses.length} of ${segments.length} posts — the rest failed: ${error?.message}`,
+                      );
+                    }
+                    throw error;
+                  }
+
                   newStatus = statuses[0];
 
+                  // Clear moreSegments on success
+                  if (moreSegments.length > 0) {
+                    setMoreSegments([]);
+                  }
+
                   // Cross-post to other-network accounts (e.g. Bluesky)
-                  if (crossPost && crossPostAccounts.length) {
+                  // Skip for threads (Phase 7 makes cross-posted threads whole)
+                  if (moreSegments.length > 0) {
+                    showToast(
+                      t`Cross-posting threads coming soon — posted to primary account only`,
+                    );
+                  } else if (crossPost && crossPostAccounts.length) {
                     if (canCrossPost({ poll, scheduledAt, visibility })) {
                       for (const account of crossPostAccounts) {
                         try {
