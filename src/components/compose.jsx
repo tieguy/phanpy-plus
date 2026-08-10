@@ -2029,7 +2029,9 @@ function Compose({
           {!editStatus && moreSegments.length < MAX_THREAD_SEGMENTS - 1 && (
             <button
               type="button"
-              class="light add-thread-segment"
+              class={`light add-thread-segment${
+                replyToStatus ? ' subtle' : ''
+              }`}
               disabled={uiState === 'loading' || !!scheduledAt}
               title={scheduledAt ? t`Threads can't be scheduled` : undefined}
               onClick={() => {

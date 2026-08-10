@@ -1495,6 +1495,31 @@
     width: 18px;
     height: 18px;
   }
+
+  /* Replies are rarely threaded — keep the affordance available but quiet,
+     so it doesn't outweigh the reply itself. */
+  &.subtle {
+    width: auto;
+    margin: 4px 0 4px auto;
+    padding: 4px 6px;
+    gap: 4px;
+    background-color: transparent;
+    border-color: transparent;
+    color: var(--text-insignificant-color);
+    font-size: 90%;
+    font-weight: normal;
+
+    &:hover:not(:disabled) {
+      background-color: transparent;
+      border-color: transparent;
+      color: var(--link-color);
+    }
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
 }
 
 #compose-container .main-textarea-wrapper,
