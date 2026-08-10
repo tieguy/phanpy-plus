@@ -18,6 +18,7 @@ import {
   isBlueskyInstance,
 } from '../utils/bluesky';
 import { blueskyInstanceInfo } from '../utils/bluesky/convert';
+import { countableText } from '../utils/compose-counting';
 import db from '../utils/db';
 import { getDtfLocale } from '../utils/dtf-locale';
 import haptics from '../utils/haptics';
@@ -45,7 +46,6 @@ import {
 import stringLength from '../utils/string-length';
 import supports from '../utils/supports';
 import unfurlMastodonLink from '../utils/unfurl-link';
-import { countableText, segmentCharCount } from '../utils/compose-counting';
 import useCloseWatcher from '../utils/useCloseWatcher';
 import useInterval from '../utils/useInterval';
 import useThrottledResizeObserver from '../utils/useThrottledResizeObserver';

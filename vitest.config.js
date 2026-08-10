@@ -13,6 +13,5 @@ export default defineConfig({
   test: {
     // Playwright owns tests/*.spec.js; vitest only runs unit tests in src/
     include: ['src/**/*.test.{js,jsx}'],
-    globals: true,
   },
 });

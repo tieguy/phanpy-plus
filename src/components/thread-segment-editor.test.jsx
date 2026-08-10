@@ -7,7 +7,7 @@ import { describe, expect, it, vi } from 'vitest';
 // the test fails with a ReferenceError
 vi.mock('@lingui/react/macro', () => ({
   useLingui: () => ({
-    t: (str) => str,
+    t: (s, ...v) => s.reduce((a, p, i) => a + p + (v[i] ?? ''), ''),
   }),
 }));
 
@@ -55,12 +55,21 @@ describe('ThreadSegmentEditor', () => {
 
     // Assert: textarea exists with correct value
     const textarea = container.querySelector('textarea');
-    expect(textarea).toBeDefined();
+    expect(textarea).not.toBeNull();
     expect(textarea.value).toBe('hi');
 
     // Assert: char meter element exists
     const charMeter = container.querySelector('[class*="char-count"]');
-    expect(charMeter).toBeDefined();
+    expect(charMeter).not.toBeNull();
+    expect(charMeter.textContent).toBe('2/300');
+
+    // Assert: textarea name attribute is null (trap-invariant)
+    expect(textarea.getAttribute('name')).toBeNull();
+
+    // Assert: all buttons have type="button" (trap-invariant)
+    container
+      .querySelectorAll('button')
+      .forEach((b) => expect(b.getAttribute('type')).toBe('button'));
 
     // Assert: typing calls onChange with new text
     const inputEvent = new Event('input', { bubbles: true });
@@ -70,7 +79,7 @@ describe('ThreadSegmentEditor', () => {
 
     // Assert: remove button calls onRemove
     const removeButton = container.querySelector('.remove-segment');
-    expect(removeButton).toBeDefined();
+    expect(removeButton).not.toBeNull();
     removeButton.click();
     expect(onRemove).toHaveBeenCalled();
   });

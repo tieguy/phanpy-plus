@@ -589,7 +589,7 @@ msgstr "Choice {0}"
 #: src/components/compose-poll.jsx:64
 #: src/components/media-attachment.jsx:384
 #: src/components/shortcuts-settings.jsx:743
-#: src/components/thread-segment-editor.jsx:128
+#: src/components/thread-segment-editor.jsx:129
 #: src/pages/catchup.jsx:1228
 #: src/pages/filters.jsx:450
 msgid "Remove"
@@ -612,8 +612,8 @@ msgid "Take photo or video"
 msgstr "Take photo or video"
 
 #: src/components/compose.jsx:126
-#: src/components/thread-segment-editor.jsx:145
-#: src/components/thread-segment-editor.jsx:147
+#: src/components/thread-segment-editor.jsx:146
+#: src/components/thread-segment-editor.jsx:148
 msgid "Add media"
 msgstr "Add media"
 
@@ -3307,15 +3307,15 @@ msgid "{index}/X"
 msgstr "{index}/X"
 
 #. placeholder {0}: err?.message || err
-#: src/components/thread-segment-editor.jsx:42
+#: src/components/thread-segment-editor.jsx:43
 msgid "Error processing files: {0}"
 msgstr "Error processing files: {0}"
 
-#: src/components/thread-segment-editor.jsx:108
+#: src/components/thread-segment-editor.jsx:109
 msgid "Continue your thread..."
 msgstr "Continue your thread..."
 
-#: src/components/thread-segment-editor.jsx:164
+#: src/components/thread-segment-editor.jsx:165
 msgid "Remove this segment"
 msgstr "Remove this segment"
 

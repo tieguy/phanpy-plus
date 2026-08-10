@@ -1,7 +1,8 @@
 import { useLingui } from '@lingui/react/macro';
 import { useEffect, useMemo, useRef } from 'preact/hooks';
 
-import { countableText, segmentCharCount } from '../utils/compose-counting';
+import { segmentCharCount } from '../utils/compose-counting';
+
 import CharCountMeter from './char-count-meter';
 import Icon from './icon';
 
