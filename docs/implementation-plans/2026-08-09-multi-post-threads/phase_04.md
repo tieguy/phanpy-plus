@@ -189,6 +189,7 @@ describe('publishThread atomic delegation (Bluesky facade)', () => {
     const client = fakeBlueskyClient();
     const { statuses, failedAtIndex } = await publishThread({
       masto: client,
+      isBluesky: true,
       segments: segments3,
       shared: { inReplyToId: 'root-1' },
     });
@@ -208,10 +209,51 @@ describe('publishThread atomic delegation (Bluesky facade)', () => {
     };
     const { statuses, failedAtIndex } = await publishThread({
       masto: client,
+      isBluesky: true,
       segments: segments3,
     });
     expect(statuses).toHaveLength(0);
     expect(failedAtIndex).toBe(0);
+  });
+
+  it('NEVER routes Mastodon threads to createThread, even though masto.js proxies make every method look present', async () => {
+    // masto.js v7 clients are Proxy-based: unknown properties return a
+    // callable proxy, so `typeof client.v1.statuses.createThread ===
+    // 'function'` is TRUE on real Mastodon clients. Publishing must gate
+    // on the explicit isBluesky flag, not method presence — otherwise
+    // Mastodon threads 404 into POST /statuses/create_thread.
+    const calls = [];
+    const proxyStatuses = new Proxy(
+      {},
+      {
+        get: (_, prop) => {
+          if (prop === 'create') {
+            return async (params, opts) => {
+              calls.push({ params, opts });
+              return { id: `id-${calls.length - 1}`, ...params };
+            };
+          }
+          // Everything else "exists" as a callable, like real masto.js
+          return async () => {
+            throw new Error(`404: unknown endpoint ${String(prop)}`);
+          };
+        },
+      },
+    );
+    const client = {
+      v1: { statuses: proxyStatuses },
+      v2: { media: { create: async () => ({ id: 'uploaded-1' }) } },
+    };
+    // Sanity: the trap this test guards against is real on this fake
+    expect(typeof client.v1.statuses.createThread).toBe('function');
+    const { statuses, failedAtIndex } = await publishThread({
+      masto: client,
+      isBluesky: false,
+      segments: segments3,
+    });
+    expect(failedAtIndex).toBe(null);
+    expect(statuses).toHaveLength(3);
+    expect(calls).toHaveLength(3); // sequential path, one create per segment
   });
 });
 ```
@@ -235,10 +277,10 @@ In `publishThread`, after `client`/`isBluesky` are resolved and before the seque
 ```js
   // Atomic path: the Bluesky facade creates whole threads in one
   // applyWrites — all-or-nothing, so failure needs no resume bookkeeping.
-  if (
-    segments.length - startAt > 1 &&
-    typeof client.v1?.statuses?.createThread === 'function'
-  ) {
+  // Gate on the RESOLVED isBluesky flag, never on method presence:
+  // masto.js v7 is Proxy-based, so any property duck-types as a function
+  // and a presence check would 404 Mastodon threads into /create_thread.
+  if (segments.length - startAt > 1 && isBluesky) {
     onProgress?.(startAt, 'posting');
     try {
       const paramsList = [];

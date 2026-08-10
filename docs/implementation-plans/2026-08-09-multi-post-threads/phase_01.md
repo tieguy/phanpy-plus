@@ -98,6 +98,7 @@ export async function publishThread({
   account, // cross-post target account (other network) — omit for primary
   instance, // primary target instance string (used when no client given)
   masto, // pre-resolved client for the primary path (optional)
+  isBluesky, // explicit network flag; derived from account/instance if omitted
   segments, // [{ text, mediaIds?, mediaAttachments?, poll? }]
   shared = {}, // { visibility, language, spoilerText, sensitive, inReplyToId, quotedStatusId, quoteApprovalPolicy, scheduledAt }
   idempotencyPrefix, // per-segment Idempotency-Key: prefix, prefix-1, prefix-2…
@@ -110,14 +111,20 @@ export async function publishThread({
     const { api } = await import('./api');
     client = (account ? api({ account }) : api({ instance })).masto;
   }
-  // Bluesky targets, both primary and cross-post: the facade-only
-  // createThread method (exists from Phase 3 on) identifies the client
-  // directly; the account check covers cross-post targets before Phase 3
-  // and is a robust fallback after it.
-  let isBluesky = typeof client.v1?.statuses?.createThread === 'function';
-  if (!isBluesky && account) {
-    const { isBlueskyAccount } = await import('./bluesky');
-    isBluesky = isBlueskyAccount(account);
+  // Network detection must be EXPLICIT — never duck-type the client:
+  // masto.js v7 is Proxy-based, so `typeof client.v1.statuses.anything
+  // === 'function'` is true on real Mastodon clients. Callers pass
+  // isBluesky when they know it (compose.jsx knows its primary target);
+  // otherwise derive from the account/instance via the real predicates.
+  if (isBluesky === undefined) {
+    if (account || instance) {
+      const { isBlueskyAccount, isBlueskyInstance } = await import('./bluesky');
+      isBluesky = account
+        ? isBlueskyAccount(account)
+        : isBlueskyInstance(instance);
+    } else {
+      isBluesky = false;
+    }
   }
 
   const statuses = [];
@@ -225,6 +232,7 @@ Keep the **edit branch as-is**, but since `params` is now only used by the edit 
   const { statuses, failedAtIndex, error } = await publishThread({
     masto,
     instance,
+    isBluesky: isBlueskyTarget, // compose.jsx:201 — explicit, never duck-typed
     segments,
     shared,
     idempotencyPrefix: UID.current,

@@ -62,6 +62,10 @@ const { statuses, failedAtIndex, error } = await publishThread({
 });
 const allStatuses = [...(threadPublishState?.postedStatuses || []), ...statuses];
 if (failedAtIndex !== null) {
+  // Clear transient progress on every failure path too — leaving it
+  // stale would show "Posting 2/3…" on an idle errored composer
+  setPublishProgress(null);
+  states.composerState.publishingProgress = null;
   if (segments.length > 1 && allStatuses.length > 0) {
     // Genuine partial thread → enable resume UX
     setThreadPublishState({
