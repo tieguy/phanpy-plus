@@ -45,7 +45,10 @@ describe('firstLinkFacetUri', () => {
           index: { byteStart: 0, byteEnd: 1 },
           features: [
             { $type: 'app.bsky.richtext.facet#tag', tag: 'x' },
-            { $type: 'app.bsky.richtext.facet#link', uri: 'https://mixed.example' },
+            {
+              $type: 'app.bsky.richtext.facet#link',
+              uri: 'https://mixed.example',
+            },
           ],
         },
       ]),

@@ -64,7 +64,10 @@ console.log(`commit time: ${commitTime.toISOString()}`);
 console.log(`build time:  ${buildTime.toISOString()}`);
 
 let rollbarCode = fs.readFileSync(resolve(__dirname, './rollbar.js'), 'utf-8');
-rollbarCode = rollbarCode.replace('__FLEETING_COMMIT_HASH__', `'${commitHash}'`);
+rollbarCode = rollbarCode.replace(
+  '__FLEETING_COMMIT_HASH__',
+  `'${commitHash}'`,
+);
 
 // https://github.com/vitejs/vite/issues/9597#issuecomment-1209305107
 const excludedPostCSSWarnings = [

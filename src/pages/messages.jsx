@@ -50,8 +50,7 @@ function Messages() {
     return createMergedTimelineIterator(
       sources.map((source) => ({
         instance: source.instance,
-        makeIterator: () =>
-          source.listConversations({ limit: LIMIT }).values(),
+        makeIterator: () => source.listConversations({ limit: LIMIT }).values(),
       })),
     );
   }
@@ -63,7 +62,9 @@ function Messages() {
     const failed = streams
       .filter((s) => s.failed)
       .map(
-        (s) => sourcesRef.current.find((src) => src.instance === s.instance)?.network,
+        (s) =>
+          sourcesRef.current.find((src) => src.instance === s.instance)
+            ?.network,
       )
       .filter(Boolean);
     setFailedNetworks([...new Set(failed)]);
@@ -201,7 +202,11 @@ function Messages() {
             </p>
           )}
           {uiState === 'default' && conversations.length > 0 && (
-            <button type="button" class="plain block" onClick={() => loadMore()}>
+            <button
+              type="button"
+              class="plain block"
+              onClick={() => loadMore()}
+            >
               <Trans>Show more…</Trans>
             </button>
           )}

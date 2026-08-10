@@ -8,8 +8,7 @@ function mentionPost({ text, handle, did }) {
   const byteStart = new TextEncoder().encode(
     text.slice(0, text.indexOf(`@${handle}`)),
   ).length;
-  const byteEnd =
-    byteStart + new TextEncoder().encode(`@${handle}`).length;
+  const byteEnd = byteStart + new TextEncoder().encode(`@${handle}`).length;
   return {
     uri: 'at://did:plc:author/app.bsky.feed.post/abc',
     cid: 'cid1',
@@ -24,9 +23,7 @@ function mentionPost({ text, handle, did }) {
       facets: [
         {
           index: { byteStart, byteEnd },
-          features: [
-            { $type: 'app.bsky.richtext.facet#mention', did },
-          ],
+          features: [{ $type: 'app.bsky.richtext.facet#mention', did }],
         },
       ],
     },

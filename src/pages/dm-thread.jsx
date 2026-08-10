@@ -9,10 +9,7 @@ import Icon from '../components/icon';
 import Link from '../components/link';
 import Loader from '../components/loader';
 import RelativeTime from '../components/relative-time';
-import {
-  getCachedConversation,
-  getDMClientForInstance,
-} from '../utils/dm';
+import { getCachedConversation, getDMClientForInstance } from '../utils/dm';
 import sanitizeHTML from '../utils/sanitize-html';
 import useTitle from '../utils/useTitle';
 
@@ -155,12 +152,11 @@ function DMThread() {
               <div class="bubble">
                 <div
                   class="message-body"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(message.html) }}
+                  dangerouslySetInnerHTML={{
+                    __html: sanitizeHTML(message.html),
+                  }}
                 />
-                <RelativeTime
-                  datetime={message.createdAt}
-                  format="micro"
-                />
+                <RelativeTime datetime={message.createdAt} format="micro" />
               </div>
             </li>
           ))}

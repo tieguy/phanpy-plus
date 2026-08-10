@@ -16,19 +16,118 @@
 // capitalized but aren't main characters.
 const STOPWORDS = new Set(
   [
-    'the', 'a', 'an', 'and', 'or', 'but', 'if', 'then', 'so', 'because',
-    'i', 'im', "i'm", 'you', 'your', "you're", 'we', 'our', 'they', 'them',
-    'he', 'she', 'it', 'this', 'that', 'these', 'those', 'my', 'me', 'us',
-    'is', 'are', 'was', 'were', 'be', 'been', 'do', 'does', 'did', 'have',
-    'has', 'had', 'will', 'would', 'can', 'could', 'should', 'may', 'might',
-    'not', 'no', 'yes', 'here', 'there', 'when', 'where', 'what', 'who',
-    'why', 'how', 'all', 'just', 'like', 'get', 'got', 'one', 'now', 'today',
-    'tomorrow', 'yesterday', 'also', 'even', 'really', 'very', 'some', 'any',
-    'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday',
-    'sunday', 'january', 'february', 'march', 'april', 'may', 'june', 'july',
-    'august', 'september', 'october', 'november', 'december',
-    'bluesky', 'mastodon', 'fleeting', 'twitter', 'facebook', 'us', 'usa',
-    'am', 'pm', 'ok', 'okay', 'lol', 'rt', 'via', 'http', 'https', 'www',
+    'the',
+    'a',
+    'an',
+    'and',
+    'or',
+    'but',
+    'if',
+    'then',
+    'so',
+    'because',
+    'i',
+    'im',
+    "i'm",
+    'you',
+    'your',
+    "you're",
+    'we',
+    'our',
+    'they',
+    'them',
+    'he',
+    'she',
+    'it',
+    'this',
+    'that',
+    'these',
+    'those',
+    'my',
+    'me',
+    'us',
+    'is',
+    'are',
+    'was',
+    'were',
+    'be',
+    'been',
+    'do',
+    'does',
+    'did',
+    'have',
+    'has',
+    'had',
+    'will',
+    'would',
+    'can',
+    'could',
+    'should',
+    'may',
+    'might',
+    'not',
+    'no',
+    'yes',
+    'here',
+    'there',
+    'when',
+    'where',
+    'what',
+    'who',
+    'why',
+    'how',
+    'all',
+    'just',
+    'like',
+    'get',
+    'got',
+    'one',
+    'now',
+    'today',
+    'tomorrow',
+    'yesterday',
+    'also',
+    'even',
+    'really',
+    'very',
+    'some',
+    'any',
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+    'january',
+    'february',
+    'march',
+    'april',
+    'may',
+    'june',
+    'july',
+    'august',
+    'september',
+    'october',
+    'november',
+    'december',
+    'bluesky',
+    'mastodon',
+    'fleeting',
+    'twitter',
+    'facebook',
+    'us',
+    'usa',
+    'am',
+    'pm',
+    'ok',
+    'okay',
+    'lol',
+    'rt',
+    'via',
+    'http',
+    'https',
+    'www',
   ].map((w) => w.toLowerCase()),
 );
 
@@ -48,7 +147,9 @@ function normalizeApostrophes(s) {
 }
 
 function isStopword(word) {
-  return STOPWORDS.has(normalizeApostrophes(word.toLowerCase()).replace(/'s$/, ''));
+  return STOPWORDS.has(
+    normalizeApostrophes(word.toLowerCase()).replace(/'s$/, ''),
+  );
 }
 
 // Capitalized 1–3 word phrases that look like proper nouns.
@@ -63,7 +164,8 @@ export function properNounPhrases(text) {
     if (!words.length) continue;
     // Drop phrases that are entirely stopwords, or a lone short/common word.
     if (words.every(isStopword)) continue;
-    if (words.length === 1 && (phrase.length < 3 || isStopword(phrase))) continue;
+    if (words.length === 1 && (phrase.length < 3 || isStopword(phrase)))
+      continue;
     out.push(phrase);
   }
   return out;
@@ -156,7 +258,9 @@ export function findMainCharacter(statuses, opts = {}) {
     }))
     .filter((e) => {
       if (e.type === 'keyword') {
-        return e.postCount >= keywordMinPosts && e.authorCount >= keywordMinAuthors;
+        return (
+          e.postCount >= keywordMinPosts && e.authorCount >= keywordMinAuthors
+        );
       }
       return (
         e.postCount >= minPosts &&

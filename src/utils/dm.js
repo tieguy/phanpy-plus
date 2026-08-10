@@ -136,7 +136,9 @@ export function getDMSources({ merged = true } = {}) {
   const accounts = [current, ...(merged ? getOtherNetworkAccounts() : [])]
     .filter(Boolean)
     // De-dupe by account id in case current shows up in both lists.
-    .filter((a, i, arr) => arr.findIndex((b) => b.info?.id === a.info?.id) === i);
+    .filter(
+      (a, i, arr) => arr.findIndex((b) => b.info?.id === a.info?.id) === i,
+    );
   return accounts.map(getDMClient);
 }
 

@@ -181,7 +181,8 @@ function NotificationsMenu({ anchorRef, state, onClose }) {
         ? notifications.find((n) => !n._instance || n._instance === instance)
         : groupedNotifications[0];
 
-      states.notificationsLast = currentInstanceFirst || groupedNotifications[0];
+      states.notificationsLast =
+        currentInstanceFirst || groupedNotifications[0];
       states.notifications = groupedNotifications;
 
       if (currentInstanceFirst?.id) {

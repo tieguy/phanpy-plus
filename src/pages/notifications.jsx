@@ -38,8 +38,8 @@ import handleContentLinks from '../utils/handle-content-links';
 import haptics from '../utils/haptics';
 import mem from '../utils/mem';
 import { createMergedTimelineIterator } from '../utils/merged-timeline';
-import { isDirectResponse } from '../utils/notification-filter';
 import niceDateTime from '../utils/nice-date-time';
+import { isDirectResponse } from '../utils/notification-filter';
 import { getRegistration } from '../utils/push-notifications';
 import shortenNumber from '../utils/shorten-number';
 import showToast from '../utils/show-toast';
@@ -288,7 +288,8 @@ function Notifications({ columnMode }) {
           ? notifications.find((n) => !n._instance || n._instance === instance)
           : groupedNotifications[0];
 
-        states.notificationsLast = currentInstanceFirst || groupedNotifications[0];
+        states.notificationsLast =
+          currentInstanceFirst || groupedNotifications[0];
         states.notifications = groupedNotifications;
 
         if (currentInstanceFirst?.id) {

@@ -7,7 +7,10 @@ function post(id, author, mentionedAccts = [], text = '') {
   return {
     id,
     account: { id: author },
-    mentions: mentionedAccts.map((a) => ({ acct: a, username: a.split('@')[0] })),
+    mentions: mentionedAccts.map((a) => ({
+      acct: a,
+      username: a.split('@')[0],
+    })),
     text,
     content: '',
   };
@@ -15,7 +18,9 @@ function post(id, author, mentionedAccts = [], text = '') {
 
 // Filler posts so the total clears the minTotal bar without adding subjects.
 function filler(n) {
-  return Array.from({ length: n }, (_, i) => post(`f${i}`, `author${i}`, [], 'hello world'));
+  return Array.from({ length: n }, (_, i) =>
+    post(`f${i}`, `author${i}`, [], 'hello world'),
+  );
 }
 
 describe('properNounPhrases', () => {
@@ -27,9 +32,9 @@ describe('properNounPhrases', () => {
 
   it('drops stopwords and sentence-opener noise', () => {
     // "Today" / "The" are stopwords; only the real name survives.
-    expect(properNounPhrases('Today The discourse is about Elon again')).toEqual(
-      ['Elon'],
-    );
+    expect(
+      properNounPhrases('Today The discourse is about Elon again'),
+    ).toEqual(['Elon']);
   });
 
   it('ignores lowercase text', () => {
@@ -62,7 +67,9 @@ describe('findMainCharacter', () => {
   it('does not crown a subject pushed by a single author', () => {
     // One person mentions the account 8 times; only 1 distinct author.
     const statuses = [
-      ...Array.from({ length: 8 }, (_, i) => post(`r${i}`, 'ranter', ['obsession@m'])),
+      ...Array.from({ length: 8 }, (_, i) =>
+        post(`r${i}`, 'ranter', ['obsession@m']),
+      ),
       ...filler(20),
     ];
     expect(findMainCharacter(statuses)).toBeNull();

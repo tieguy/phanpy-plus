@@ -196,7 +196,9 @@ function Search({ columnMode, ...props }) {
               <Link
                 class="status-link"
                 to={
-                  itemInstance ? `/${itemInstance}/s/${item.id}` : `/s/${item.id}`
+                  itemInstance
+                    ? `/${itemInstance}/s/${item.id}`
+                    : `/s/${item.id}`
                 }
               >
                 <Status status={item} instance={itemInstance} />
@@ -242,7 +244,10 @@ function Search({ columnMode, ...props }) {
           const { masto: m, instance: inst } = api({ account });
           const res = await m.v2.search.list(searchParams);
           const stamp = (arr) =>
-            (arr || []).map((it) => ({ ...it, _instance: it._instance || inst }));
+            (arr || []).map((it) => ({
+              ...it,
+              _instance: it._instance || inst,
+            }));
           return {
             accounts: stamp(res.accounts),
             statuses: stamp(res.statuses),

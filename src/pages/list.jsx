@@ -170,48 +170,48 @@ function List(props) {
         headerEnd={
           // A subscribed Bluesky feed isn't ours to edit — no Edit/members menu.
           list._feed ? null : (
-          <Menu2
-            portal
-            setDownOverflow
-            overflow="auto"
-            viewScroll="close"
-            position="anchor"
-            menuButton={
-              <button type="button" class="plain">
-                <Icon icon="more" size="l" alt={t`More`} />
-              </button>
-            }
-          >
-            {list?.exclusive && (
-              <>
-                <MenuHeader className="plain">
-                  <ListExclusiveBadge />{' '}
-                  <Trans>
-                    Posts on this list are hidden from Home/Following
-                  </Trans>
-                </MenuHeader>
-                <MenuDivider />
-              </>
-            )}
-            <MenuItem
-              onClick={() =>
-                setShowListAddEditModal({
-                  list,
-                })
+            <Menu2
+              portal
+              setDownOverflow
+              overflow="auto"
+              viewScroll="close"
+              position="anchor"
+              menuButton={
+                <button type="button" class="plain">
+                  <Icon icon="more" size="l" alt={t`More`} />
+                </button>
               }
             >
-              <Icon icon="pencil" size="l" />
-              <span>
-                <Trans>Edit</Trans>
-              </span>
-            </MenuItem>
-            <MenuItem onClick={() => setShowManageMembersModal(true)}>
-              <Icon icon="group" size="l" />
-              <span>
-                <Trans>Manage members</Trans>
-              </span>
-            </MenuItem>
-          </Menu2>
+              {list?.exclusive && (
+                <>
+                  <MenuHeader className="plain">
+                    <ListExclusiveBadge />{' '}
+                    <Trans>
+                      Posts on this list are hidden from Home/Following
+                    </Trans>
+                  </MenuHeader>
+                  <MenuDivider />
+                </>
+              )}
+              <MenuItem
+                onClick={() =>
+                  setShowListAddEditModal({
+                    list,
+                  })
+                }
+              >
+                <Icon icon="pencil" size="l" />
+                <span>
+                  <Trans>Edit</Trans>
+                </span>
+              </MenuItem>
+              <MenuItem onClick={() => setShowManageMembersModal(true)}>
+                <Icon icon="group" size="l" />
+                <span>
+                  <Trans>Manage members</Trans>
+                </span>
+              </MenuItem>
+            </Menu2>
           )
         }
       />

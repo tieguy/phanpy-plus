@@ -35,7 +35,10 @@ function collectSrc(dir, acc = []) {
     if (full.includes('/locales') || full.endsWith('mock-posts.json')) continue;
     const s = statSync(full);
     if (s.isDirectory()) collectSrc(full, acc);
-    else if (/\.(js|jsx)$/.test(entry) && !full.endsWith('rename-guard.test.js'))
+    else if (
+      /\.(js|jsx)$/.test(entry) &&
+      !full.endsWith('rename-guard.test.js')
+    )
       acc.push(full);
   }
   return acc;

@@ -13,8 +13,8 @@ import {
 } from '../utils/bluesky';
 import { isSupported as collectionsSupported } from '../utils/collections';
 import i18nDuration from '../utils/i18n-duration';
-import { getMentionInstance } from '../utils/mention-network';
 import isSearchEnabled from '../utils/is-search-enabled';
+import { getMentionInstance } from '../utils/mention-network';
 import niceDateTime from '../utils/nice-date-time';
 import showCompose from '../utils/show-compose';
 import showToast from '../utils/show-toast';

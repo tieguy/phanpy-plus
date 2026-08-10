@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  hasNewDirectResponse,
-  isDirectResponse,
-} from './notification-filter';
+import { hasNewDirectResponse, isDirectResponse } from './notification-filter';
 
 describe('isDirectResponse', () => {
   it('keeps replies and @-mentions (both are the `mention` type)', () => {

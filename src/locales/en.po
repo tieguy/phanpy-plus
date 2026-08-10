@@ -138,10 +138,10 @@ msgstr "Go to account page"
 #: src/components/account-info.jsx:422
 #: src/components/timeline.jsx:663
 #: src/components/timeline2.jsx:701
-#: src/pages/dm-thread.jsx:175
-#: src/pages/home.jsx:302
-#: src/pages/messages.jsx:199
-#: src/pages/notifications.jsx:1142
+#: src/pages/dm-thread.jsx:171
+#: src/pages/home.jsx:303
+#: src/pages/messages.jsx:200
+#: src/pages/notifications.jsx:1143
 #: src/pages/status.jsx:1279
 #: src/pages/status.jsx:1755
 msgid "Try again"
@@ -314,7 +314,7 @@ msgstr "View post stats"
 #: src/pages/filters.jsx:260
 #: src/pages/filters.jsx:676
 #: src/pages/list.jsx:313
-#: src/pages/notifications.jsx:1186
+#: src/pages/notifications.jsx:1187
 #: src/pages/scheduled-posts.jsx:288
 #: src/pages/settings.jsx:102
 #: src/pages/status.jsx:1693
@@ -476,7 +476,7 @@ msgstr "Unlisted"
 #: src/components/quote-settings-sheet.jsx:92
 #: src/components/shortcuts-settings.jsx:732
 #: src/pages/filters.jsx:607
-#: src/pages/notifications.jsx:1258
+#: src/pages/notifications.jsx:1259
 msgid "Save"
 msgstr ""
 
@@ -558,8 +558,8 @@ msgstr "Add account"
 #: src/pages/followed-hashtags.jsx:41
 #: src/pages/home.jsx:60
 #: src/pages/home.jsx:68
-#: src/pages/messages.jsx:109
-#: src/pages/notifications.jsx:812
+#: src/pages/messages.jsx:110
+#: src/pages/notifications.jsx:813
 #: src/pages/scheduled-posts.jsx:74
 msgid "Home"
 msgstr ""
@@ -1079,7 +1079,7 @@ msgid "No featured profiles."
 msgstr "No featured profiles."
 
 #: src/components/follow-request-buttons.jsx:45
-#: src/pages/notifications.jsx:1242
+#: src/pages/notifications.jsx:1243
 msgid "Accept"
 msgstr ""
 
@@ -1088,7 +1088,7 @@ msgid "Reject"
 msgstr ""
 
 #: src/components/follow-request-buttons.jsx:79
-#: src/pages/notifications.jsx:1528
+#: src/pages/notifications.jsx:1529
 msgid "Accepted"
 msgstr ""
 
@@ -1100,7 +1100,7 @@ msgstr ""
 #: src/components/notification.jsx:502
 #: src/pages/accounts.jsx:53
 #: src/pages/search.jsx:129
-#: src/pages/search.jsx:545
+#: src/pages/search.jsx:550
 msgid "Accounts"
 msgstr ""
 
@@ -1109,9 +1109,9 @@ msgstr ""
 #: src/components/timeline.jsx:628
 #: src/pages/account-collections.jsx:234
 #: src/pages/list.jsx:332
-#: src/pages/messages.jsx:205
-#: src/pages/notifications.jsx:1166
-#: src/pages/search.jsx:633
+#: src/pages/messages.jsx:210
+#: src/pages/notifications.jsx:1167
+#: src/pages/search.jsx:638
 #: src/pages/status.jsx:1726
 msgid "Show more…"
 msgstr ""
@@ -1121,7 +1121,7 @@ msgstr ""
 #: src/components/quotes-modal.jsx:133
 #: src/components/timeline.jsx:633
 #: src/components/timeline2.jsx:679
-#: src/pages/search.jsx:638
+#: src/pages/search.jsx:643
 msgid "The end."
 msgstr ""
 
@@ -1203,7 +1203,7 @@ msgid "Install <0>Fleeting</0>: tap Share, then <1>Add to Home Screen</1>."
 msgstr "Install <0>Fleeting</0>: tap Share, then <1>Add to Home Screen</1>."
 
 #: src/components/ios-install-hint.jsx:43
-#: src/pages/notifications.jsx:1520
+#: src/pages/notifications.jsx:1521
 msgid "Dismiss"
 msgstr ""
 
@@ -1314,7 +1314,7 @@ msgstr ""
 #: src/components/shortcuts-settings.jsx:54
 #: src/components/shortcuts-settings.jsx:182
 #: src/pages/search.jsx:60
-#: src/pages/search.jsx:527
+#: src/pages/search.jsx:532
 msgid "Search"
 msgstr ""
 
@@ -1678,10 +1678,10 @@ msgstr ""
 #: src/components/nav-menu.jsx:211
 #: src/components/shortcuts-settings.jsx:60
 #: src/components/shortcuts-settings.jsx:149
-#: src/pages/home.jsx:314
+#: src/pages/home.jsx:315
 #: src/pages/mentions.jsx:25
 #: src/pages/mentions.jsx:256
-#: src/pages/notifications.jsx:1036
+#: src/pages/notifications.jsx:1037
 #: src/pages/settings.jsx:1449
 #: src/pages/trending.jsx:384
 msgid "Mentions"
@@ -1692,9 +1692,9 @@ msgstr ""
 #: src/components/shortcuts-settings.jsx:155
 #: src/pages/filters.jsx:29
 #: src/pages/home.jsx:100
-#: src/pages/home.jsx:265
+#: src/pages/home.jsx:266
 #: src/pages/notifications.jsx:148
-#: src/pages/notifications.jsx:816
+#: src/pages/notifications.jsx:817
 msgid "Notifications"
 msgstr ""
 
@@ -2617,7 +2617,7 @@ msgid "Look up <0>{query}</0>"
 msgstr ""
 
 #: src/components/search-form.jsx:366
-#: src/pages/home.jsx:331
+#: src/pages/home.jsx:332
 msgid "See all"
 msgstr ""
 
@@ -3465,7 +3465,7 @@ msgstr "Search @{0}'s posts"
 
 #: src/pages/account-statuses.jsx:645
 #: src/pages/search.jsx:187
-#: src/pages/search.jsx:555
+#: src/pages/search.jsx:560
 msgid "Posts"
 msgstr ""
 
@@ -3733,7 +3733,7 @@ msgstr ""
 
 #: src/pages/catchup.jsx:1466
 #: src/pages/mentions.jsx:235
-#: src/pages/search.jsx:540
+#: src/pages/search.jsx:545
 msgid "All"
 msgstr ""
 
@@ -3887,41 +3887,41 @@ msgid "Marked as sensitive"
 msgstr "Marked as sensitive"
 
 #. placeholder {0}: account.displayName || account.acct
-#: src/pages/dm-thread.jsx:39
+#: src/pages/dm-thread.jsx:36
 msgid "Messages with {0}"
 msgstr "Messages with {0}"
 
-#: src/pages/dm-thread.jsx:40
-#: src/pages/home.jsx:320
+#: src/pages/dm-thread.jsx:37
+#: src/pages/home.jsx:321
 #: src/pages/messages.jsx:36
-#: src/pages/messages.jsx:113
+#: src/pages/messages.jsx:114
 msgid "Messages"
 msgstr "Messages"
 
-#: src/pages/dm-thread.jsx:105
+#: src/pages/dm-thread.jsx:102
 msgid "Your message couldn’t be sent. Try again."
 msgstr "Your message couldn’t be sent. Try again."
 
-#: src/pages/dm-thread.jsx:123
-#: src/pages/dm-thread.jsx:124
+#: src/pages/dm-thread.jsx:120
+#: src/pages/dm-thread.jsx:121
 #: src/pages/status.jsx:1467
 msgid "Back"
 msgstr ""
 
-#: src/pages/dm-thread.jsx:173
+#: src/pages/dm-thread.jsx:169
 msgid "Couldn’t load this conversation."
 msgstr "Couldn’t load this conversation."
 
-#: src/pages/dm-thread.jsx:181
+#: src/pages/dm-thread.jsx:177
 msgid "No messages yet. Say hello."
 msgstr "No messages yet. Say hello."
 
-#: src/pages/dm-thread.jsx:188
+#: src/pages/dm-thread.jsx:184
 msgid "Message…"
 msgstr "Message…"
 
-#: src/pages/dm-thread.jsx:198
-#: src/pages/dm-thread.jsx:200
+#: src/pages/dm-thread.jsx:194
+#: src/pages/dm-thread.jsx:196
 msgid "Send"
 msgstr "Send"
 
@@ -4243,11 +4243,11 @@ msgstr "Go to another server…"
 msgid "Go to my server (<0>{currentInstance}</0>)"
 msgstr "Go to my server (<0>{currentInstance}</0>)"
 
-#: src/pages/home.jsx:298
+#: src/pages/home.jsx:299
 msgid "Unable to fetch notifications."
 msgstr ""
 
-#: src/pages/home.jsx:325
+#: src/pages/home.jsx:326
 msgid "<0>New</0> <1>Follow Requests</1>"
 msgstr ""
 
@@ -4369,23 +4369,23 @@ msgstr ""
 msgid "Unable to load mentions."
 msgstr ""
 
-#: src/pages/messages.jsx:121
+#: src/pages/messages.jsx:122
 msgid "Bluesky messages couldn’t load. Log in to your Bluesky account again to grant direct-message access."
 msgstr "Bluesky messages couldn’t load. Log in to your Bluesky account again to grant direct-message access."
 
-#: src/pages/messages.jsx:174
+#: src/pages/messages.jsx:175
 msgid "You:"
 msgstr "You:"
 
-#: src/pages/messages.jsx:181
+#: src/pages/messages.jsx:182
 msgid "No messages yet"
 msgstr "No messages yet"
 
-#: src/pages/messages.jsx:197
+#: src/pages/messages.jsx:198
 msgid "Couldn’t load messages."
 msgstr "Couldn’t load messages."
 
-#: src/pages/messages.jsx:210
+#: src/pages/messages.jsx:215
 msgid "No conversations yet."
 msgstr "No conversations yet."
 
@@ -4413,109 +4413,109 @@ msgstr "Moderated accounts"
 msgid "Bot accounts"
 msgstr "Bot accounts"
 
-#: src/pages/notifications.jsx:830
-#: src/pages/notifications.jsx:1190
+#: src/pages/notifications.jsx:831
+#: src/pages/notifications.jsx:1191
 msgid "Notifications settings"
 msgstr ""
 
-#: src/pages/notifications.jsx:848
+#: src/pages/notifications.jsx:849
 msgid "New notifications"
 msgstr ""
 
 #. placeholder {0}: announcements.length
-#: src/pages/notifications.jsx:859
+#: src/pages/notifications.jsx:860
 msgid "{0, plural, one {Announcement} other {Announcements}}"
 msgstr ""
 
-#: src/pages/notifications.jsx:906
+#: src/pages/notifications.jsx:907
 #: src/pages/settings.jsx:1465
 msgid "Follow requests"
 msgstr ""
 
 #. placeholder {0}: followRequests.length
-#: src/pages/notifications.jsx:911
+#: src/pages/notifications.jsx:912
 msgid "{0, plural, one {# follow request} other {# follow requests}}"
 msgstr ""
 
 #. placeholder {0}: notificationsPolicy.summary.pendingRequestsCount
-#: src/pages/notifications.jsx:966
+#: src/pages/notifications.jsx:967
 msgid "{0, plural, one {Filtered notifications from # person} other {Filtered notifications from # people}}"
 msgstr ""
 
-#: src/pages/notifications.jsx:1049
+#: src/pages/notifications.jsx:1050
 msgid "Only mentions"
 msgstr ""
 
-#: src/pages/notifications.jsx:1055
+#: src/pages/notifications.jsx:1056
 msgid "Today"
 msgstr ""
 
-#: src/pages/notifications.jsx:1060
+#: src/pages/notifications.jsx:1061
 msgid "You're all caught up."
 msgstr ""
 
-#: src/pages/notifications.jsx:1090
+#: src/pages/notifications.jsx:1091
 msgid "Yesterday"
 msgstr ""
 
-#: src/pages/notifications.jsx:1138
+#: src/pages/notifications.jsx:1139
 msgid "Unable to load notifications"
 msgstr ""
 
-#: src/pages/notifications.jsx:1221
+#: src/pages/notifications.jsx:1222
 msgid "Notifications settings updated"
 msgstr ""
 
-#: src/pages/notifications.jsx:1229
+#: src/pages/notifications.jsx:1230
 msgid "Filter notifications from:"
 msgstr "Filter notifications from:"
 
-#: src/pages/notifications.jsx:1245
+#: src/pages/notifications.jsx:1246
 msgid "Filter"
 msgstr ""
 
-#: src/pages/notifications.jsx:1248
+#: src/pages/notifications.jsx:1249
 msgid "Ignore"
 msgstr ""
 
 #. placeholder {0}: niceDateTime(updatedAtDate)
-#: src/pages/notifications.jsx:1321
+#: src/pages/notifications.jsx:1322
 msgid "Updated <0>{0}</0>"
 msgstr ""
 
 #. placeholder {0}: account.username
-#: src/pages/notifications.jsx:1389
+#: src/pages/notifications.jsx:1390
 msgid "View notifications from <0>@{0}</0>"
 msgstr ""
 
 #. placeholder {0}: account.username
-#: src/pages/notifications.jsx:1410
+#: src/pages/notifications.jsx:1411
 msgid "Notifications from <0>@{0}</0>"
 msgstr ""
 
 #. placeholder {0}: request.account.username
-#: src/pages/notifications.jsx:1479
+#: src/pages/notifications.jsx:1480
 msgid "Notifications from @{0} will not be filtered from now on."
 msgstr ""
 
-#: src/pages/notifications.jsx:1484
+#: src/pages/notifications.jsx:1485
 msgid "Unable to accept notification request"
 msgstr ""
 
-#: src/pages/notifications.jsx:1489
+#: src/pages/notifications.jsx:1490
 msgid "Allow"
 msgstr ""
 
 #. placeholder {0}: request.account.username
-#: src/pages/notifications.jsx:1510
+#: src/pages/notifications.jsx:1511
 msgid "Notifications from @{0} will not show up in Filtered notifications from now on."
 msgstr "Notifications from @{0} will not show up in Filtered notifications from now on."
 
-#: src/pages/notifications.jsx:1515
+#: src/pages/notifications.jsx:1516
 msgid "Unable to dismiss notification request"
 msgstr ""
 
-#: src/pages/notifications.jsx:1535
+#: src/pages/notifications.jsx:1536
 msgid "Dismissed"
 msgstr ""
 
@@ -4611,7 +4611,7 @@ msgid "No accounts found."
 msgstr ""
 
 #: src/pages/search.jsx:147
-#: src/pages/search.jsx:550
+#: src/pages/search.jsx:555
 msgid "Hashtags"
 msgstr ""
 
@@ -4631,11 +4631,11 @@ msgstr ""
 msgid "No posts found."
 msgstr ""
 
-#: src/pages/search.jsx:583
+#: src/pages/search.jsx:588
 msgid "See more"
 msgstr ""
 
-#: src/pages/search.jsx:656
+#: src/pages/search.jsx:661
 msgid "Enter your search term or paste a URL above to get started."
 msgstr ""
 

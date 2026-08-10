@@ -58,8 +58,7 @@ export async function buildExternalEmbed(agent, url) {
         if (imgRes.ok) {
           const buf = await imgRes.arrayBuffer();
           if (buf.byteLength && buf.byteLength <= MAX_THUMB_BYTES) {
-            const encoding =
-              imgRes.headers.get('content-type') || 'image/jpeg';
+            const encoding = imgRes.headers.get('content-type') || 'image/jpeg';
             const uploaded = await agent.uploadBlob(new Uint8Array(buf), {
               encoding,
             });
