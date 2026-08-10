@@ -126,6 +126,12 @@ function countableText(inputText) {
     .replace(usernameRegex, '$1@$3');
 }
 
+// Segment character count under the strictest active network's rules:
+// when any Bluesky target is active, Bluesky's literal-text counting wins.
+function segmentCharCount(text, { blueskyRules }) {
+  return stringLength(blueskyRules ? text : countableText(text));
+}
+
 // const rtf = new Intl.RelativeTimeFormat();
 const LF = mem((locale) => new Intl.ListFormat(locale || undefined));
 
@@ -140,6 +146,7 @@ const ADD_LABELS = {
 };
 
 const DEFAULT_SCHEDULED_AT = Math.max(10 * 60 * 1000, MIN_SCHEDULED_AT); // 10 mins
+const MAX_THREAD_SEGMENTS = 25;
 
 function isMimeTypeSupported(fileType, supportedMimeTypes) {
   if (!supportedMimeTypes) return true;
@@ -255,6 +262,19 @@ function Compose({
       minExpiration,
     } = {},
   } = configuration || {};
+
+  const BLUESKY_MAX_CHARACTERS = 300;
+  // When cross-posting to a Bluesky account, the strictest limit binds.
+  const crossPostToBluesky =
+    crossPost && crossPostAccounts.some((a) => isBlueskyAccount(a));
+  const effectiveMaxCharacters =
+    crossPostToBluesky && maxCharacters > BLUESKY_MAX_CHARACTERS
+      ? BLUESKY_MAX_CHARACTERS
+      : maxCharacters;
+  const charLimitBoundByBluesky =
+    effectiveMaxCharacters === BLUESKY_MAX_CHARACTERS &&
+    maxCharacters !== BLUESKY_MAX_CHARACTERS;
+
   const supportedImagesVideosTypes = supportedMimeTypes?.filter((mimeType) =>
     /^(image|video)/i.test(mimeType),
   );
@@ -273,6 +293,7 @@ function Compose({
   const [mediaAttachments, setMediaAttachments] = useState([]);
   const [poll, setPoll] = useState(null);
   const [scheduledAt, setScheduledAt] = useState(null);
+  const [moreSegments, setMoreSegments] = useState([]);
   const [quoteSuggestion, setQuoteSuggestion] = useState(null);
   const [localQuoteStatus, setLocalQuoteStatus] = useState(quoteStatus);
   const [quoteCleared, setQuoteCleared] = useState(false);
@@ -1682,7 +1703,7 @@ function Compose({
               onInput={() => {
                 updateCharCount();
               }}
-              maxCharacters={maxCharacters}
+              maxCharacters={effectiveMaxCharacters}
               onTrigger={(action) => {
                 if (action?.name === 'custom-emojis') {
                   setShowEmoji2Picker({
@@ -2089,10 +2110,20 @@ function Compose({
             {uiState === 'loading' ? (
               <Loader abrupt />
             ) : (
-              <CharCountMeter
-                maxCharacters={maxCharacters}
-                hidden={uiState === 'loading'}
-              />
+              <>
+                <CharCountMeter
+                  maxCharacters={effectiveMaxCharacters}
+                  hidden={uiState === 'loading'}
+                />
+                {charLimitBoundByBluesky && (
+                  <span
+                    class="ib insignificant"
+                    title={t`Bluesky limit applied: 300 characters`}
+                  >
+                    Bluesky
+                  </span>
+                )}
+              </>
             )}
             {supportsNativeQuote(instance) && (
               <label
