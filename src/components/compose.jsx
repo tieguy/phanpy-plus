@@ -18,7 +18,12 @@ import {
   isBlueskyInstance,
 } from '../utils/bluesky';
 import { blueskyInstanceInfo } from '../utils/bluesky/convert';
-import { countableText, segmentCharCount } from '../utils/compose-counting';
+import {
+  countableText,
+  getSegmentCharCount,
+  segmentCharCount,
+  validateSegments,
+} from '../utils/compose-counting';
 import db from '../utils/db';
 import { getDtfLocale } from '../utils/dtf-locale';
 import haptics from '../utils/haptics';
@@ -1339,6 +1344,14 @@ function Compose({
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+              // Validate that main post is not empty when posting a thread
+              if (moreSegments.length > 0) {
+                const mainText = (textareaRef.current?.value || '').trim();
+                if (!mainText) {
+                  alert(t`The first post can't be empty`);
+                  return;
+                }
+              }
               formRef.current.dispatchEvent(
                 new Event('submit', { cancelable: true }),
               );
@@ -1398,47 +1411,36 @@ function Compose({
             }
 
             // Validate all segments (including moreSegments)
-            const shouldEnforceCharLimit =
-              effectiveMaxCharacters < maxCharacters || moreSegments.length > 0;
             const blueskyRules =
               charLimitBoundByBluesky ||
               maxCharacters === BLUESKY_MAX_CHARACTERS;
 
-            // Check main segment text
-            if (shouldEnforceCharLimit) {
-              const mainSegmentCount = segmentCharCount(
-                status || '',
-                { blueskyRules },
-                stringLength,
-              );
-              if (mainSegmentCount > effectiveMaxCharacters) {
-                alert(
-                  t`Post is too long! Max characters: ${effectiveMaxCharacters}`,
-                );
-                return;
-              }
-            }
+            const validationError = validateSegments({
+              mainText: status || '',
+              moreSegments,
+              spoilerText,
+              sensitive,
+              effectiveMaxCharacters,
+              blueskyRules,
+              stringLength,
+            });
 
-            // Check all moreSegments
-            for (const segment of moreSegments) {
-              const trimmedText = (segment.text || '').trim();
-              if (!trimmedText) {
+            if (validationError) {
+              const { segmentIndex, reason } = validationError;
+              if (reason === 'empty') {
                 alert(t`Thread segments cannot be empty`);
-                return;
-              }
-              if (shouldEnforceCharLimit) {
-                const segCount = segmentCharCount(
-                  segment.text,
-                  { blueskyRules },
-                  stringLength,
-                );
-                if (segCount > effectiveMaxCharacters) {
+              } else if (reason === 'too-long') {
+                if (segmentIndex === 0) {
                   alert(
-                    t`Thread segment is too long! Max characters: ${effectiveMaxCharacters}`,
+                    t`Your post is too long for this network — max characters: ${effectiveMaxCharacters}`,
                   );
-                  return;
+                } else {
+                  alert(
+                    t`Post #${segmentIndex} is too long — max characters: ${effectiveMaxCharacters}`,
+                  );
                 }
               }
+              return;
             }
 
             // TODO: check for URLs and use `charactersReservedPerUrl` to calculate max characters
@@ -1603,26 +1605,36 @@ function Compose({
                   // Handle partial failures (Phase 6 replaces this)
                   if (failedAtIndex !== null) {
                     if (statuses.length > 0) {
-                      alert(
-                        t`Posted ${statuses.length} of ${segments.length} posts — the rest failed: ${error?.message}`,
-                      );
+                      const partialMsg = t`Posted ${statuses.length} of ${segments.length} posts — the rest failed: ${error?.message}`;
+                      alert(partialMsg);
+                      // Mark error so catch block knows we already alerted
+                      error._alerted = true;
                     }
                     throw error;
                   }
 
                   newStatus = statuses[0];
 
+                  // Hoist isThread for clarity
+                  const isThread = moreSegments.length > 0;
+
                   // Clear moreSegments on success
-                  if (moreSegments.length > 0) {
+                  if (isThread) {
                     setMoreSegments([]);
                   }
 
                   // Cross-post to other-network accounts (e.g. Bluesky)
                   // Skip for threads (Phase 7 makes cross-posted threads whole)
-                  if (moreSegments.length > 0) {
-                    showToast(
-                      t`Cross-posting threads coming soon — posted to primary account only`,
-                    );
+                  if (isThread) {
+                    if (
+                      crossPost &&
+                      crossPostAccounts.length &&
+                      canCrossPost({ poll, scheduledAt, visibility })
+                    ) {
+                      showToast(
+                        t`Cross-posting threads coming soon — posted to primary account only`,
+                      );
+                    }
                   } else if (crossPost && crossPostAccounts.length) {
                     if (canCrossPost({ poll, scheduledAt, visibility })) {
                       for (const account of crossPostAccounts) {
@@ -1687,13 +1699,16 @@ function Compose({
                 states.composerState.publishing = false;
                 states.composerState.publishingError = true;
                 console.error(e);
-                const msg = e?.reason || e?.message || `${e}`;
-                if (/session.*(deleted|expired|revoked)/i.test(msg)) {
-                  alert(
-                    'Your session has expired. Please log out and log back in.',
-                  );
-                } else {
-                  alert(msg);
+                // Skip alert if error was already alerted (e.g., partial failure)
+                if (!e?._alerted) {
+                  const msg = e?.reason || e?.message || `${e}`;
+                  if (/session.*(deleted|expired|revoked)/i.test(msg)) {
+                    alert(
+                      'Your session has expired. Please log out and log back in.',
+                    );
+                  } else {
+                    alert(msg);
+                  }
                 }
                 setUIState('error');
               }
