@@ -1,6 +1,6 @@
 # fleeting-social — developer notes
 
-Last verified: 2026-07-25
+Last verified: 2026-08-10
 
 fleeting-social is a fork of [Phanpy](https://github.com/cheeaun/phanpy) (a Mastodon web client) that adds native Bluesky (AT Protocol) support and interweaves the two networks. Most of the codebase is stock Phanpy; the fork-specific machinery lives under `src/utils/bluesky/` plus a handful of merge/filter helpers.
 
@@ -19,6 +19,16 @@ A small adapter layer (`src/utils/bluesky/`) wraps [`@atproto/api`](https://gith
 `@atproto/api` is **lazy-loaded**, so Mastodon-only users don't pay the bundle cost.
 
 The facade deliberately over-loads some Mastodon concepts. `v1.lists.list()` returns not only the user's Bluesky lists but also their subscribed **feed generators**, shaped as lists and tagged `_feed`. Per-list metadata and timeline calls branch on the AT-URI collection (`app.bsky.feed.generator` → `getFeedGenerator`/`getFeed`; `app.bsky.graph.list` → `getList`/`getListFeed`). Consumers must treat `_feed` entries as read-only — no edit / manage-members — see `src/pages/lists.jsx` and `src/pages/list.jsx`.
+
+### Publishing and threading
+
+**Single publish path:** `src/utils/publish.js` — `publishThread({ account, segments, shared, ... })` is the unified entry point for posts, replies, threads, and cross-posts. A single-segment thread is a post; multi-segment is a thread. `canCrossPost({ poll, scheduledAt, visibility })` is the sole eligibility predicate (no polls, scheduling, or non-public visibility). Cross-post targets re-upload media from `mediaAttachments.fileData` (primary posts come pre-uploaded).
+
+**Atomic Bluesky threads:** `src/utils/bluesky/thread-writes.js` — `createThread(agent, segments)` builds client-side thread CIDs and TIDs. Lazy-loaded. Silent-failure gotchas: `$type` must be present before hashing, undefined properties must be stripped, TIDs are strictly monotonic (no same-millisecond posts), and `createdAt` must advance by ≥1ms. Uses Bluesky's `applyWrites` for atomic all-or-nothing commits; no resume needed (failure = zero statuses, failedAtIndex 0).
+
+**Sequential Mastodon chains:** Each segment posts as a reply to the previous. Per-segment idempotency keys enable safe retries. Partial failure returns statuses posted so far and `resumeInReplyToId` — `compose.jsx` offers "retry remaining" via `threadPublishState` tracking. Drafts auto-delete on partial failure to prevent stale state.
+
+**Contract details:** `visibility` and `sensitiveMedia` are React-state bindings in `compose.jsx` (not FormData) — future editors must not revert this; callers rely on real-time updates. `compose-counting.js` validates segment text length and enforces per-network character limits.
 
 ### Interweaving (merged timeline + notifications)
 
