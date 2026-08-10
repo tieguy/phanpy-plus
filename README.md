@@ -109,7 +109,7 @@ then `fly deploy`. Alternatively, GitHub Pages / Cloudflare Pages / Netlify serv
 - 🔔 Grouped notifications
 - 🪺 Nested comments thread
 - 📬 Unsent draft recovery
-- 🧵 **Multi-post threads** — build threads with a "+" button; posts atomically on Bluesky, chained on Mastodon; cross-posts whole threads to other-network accounts.
+- 🧵 Multi-post threads — atomic on Bluesky, chained on Mastodon, cross-posted whole
 - 🎠 Boosts Carousel™️
 - ⚡ Shortcuts™️ with view modes like multi-column or tab bar
 - #️⃣ Multi-hashtag timeline

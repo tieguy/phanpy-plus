@@ -1747,11 +1747,17 @@ function Compose({
                             },
                           });
                           if (crossFailedAt !== null) {
-                            // Partial cross-post: report precisely what made it up
+                            // Partial cross-post: report precisely what made it
+                            // up. Single posts keep the original failure copy —
+                            // "0 of 1 posts" reads worse than "Unable to".
                             showToast(
-                              t`Cross-posted ${crossStatuses.length} of ${crossSegments.length} posts to @${acctName} — the rest failed: ${
-                                crossError?.message || crossError
-                              }`,
+                              crossSegments.length > 1
+                                ? t`Cross-posted ${crossStatuses.length} of ${crossSegments.length} posts to @${acctName} — the rest failed: ${
+                                    crossError?.message || crossError
+                                  }`
+                                : t`Unable to cross-post to @${acctName}: ${
+                                    crossError?.message || crossError
+                                  }`,
                             );
                             continue;
                           }
