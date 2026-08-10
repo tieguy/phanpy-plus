@@ -87,7 +87,7 @@ Investigation (`compose.jsx`, `src/utils/bluesky/`) found:
 - **Idempotency keys** — compose.jsx:1511-1521 already sends `Idempotency-Key: UID.current` with fallback; the sequential chain extends this to UID + segment index.
 - **Divergence (deliberate):** the current cross-post path (`src/utils/bluesky/cross-post.js` + inlined eligibility conditionals at compose.jsx:1523-1569) duplicates the primary posting path. This design deletes `cross-post.js` and unifies both paths in `src/utils/publish.js`; a single post is a one-segment thread.
 
-No test infrastructure exists in the repo; this design introduces minimal Vitest coverage for the silent-failure-prone logic only (see LUI-149 for the general test-suite effort).
+Test infrastructure: Vitest unit tests exist (`npm run test:unit`, `src/utils/*.test.js` — e.g. `notification-filter.test.js`) alongside Playwright E2E; new unit tests follow the sibling-file `*.test.js` pattern. (An earlier draft of this document incorrectly said no test infrastructure existed. See LUI-149 for the broader coverage effort.)
 
 ## Implementation Phases
 
@@ -118,7 +118,7 @@ No test infrastructure exists in the repo; this design introduces minimal Vitest
 **Components:**
 - `src/utils/bluesky/thread-writes.js` — lazy-loaded CID computation (DAG-CBOR + SHA-256 → CIDv1) and monotonic TID generation; new deps `@ipld/dag-cbor`, sha256 implementation, declared explicitly
 - `src/utils/bluesky/client.js` — `masto.v1.statuses.createThread(paramsList)`: build all records via `buildPostRecord`, resolve facets/cards pre-hash, stamp `createdAt` +1ms per segment, chain reply refs, submit `applyWrites`, construct Mastodon-shaped statuses locally
-- Minimal Vitest setup (config + npm script), scoped to this phase's tests
+- Unit tests as sibling `*.test.js` files, run with the existing `npm run test:unit` (Vitest)
 
 **Dependencies:** Phase 2.
 
