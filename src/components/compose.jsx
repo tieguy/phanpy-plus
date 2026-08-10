@@ -1373,11 +1373,15 @@ function Compose({
             const formData = new FormData(e.target);
             const entries = Object.fromEntries(formData.entries());
             console.log('ENTRIES', entries);
+            // `visibility` and `sensitiveMedia` deliberately come from React
+            // state, NOT FormData: their controls are disabled while retrying
+            // a partially-posted thread, and disabled controls drop out of
+            // FormData — which would silently change the remaining segments'
+            // visibility/sensitivity mid-thread. Both are controlled inputs,
+            // so state is always current.
             let {
               status,
-              visibility,
               sensitive,
-              sensitiveMedia,
               spoilerText,
               scheduledAt,
               quoteApprovalPolicy,
@@ -1386,7 +1390,6 @@ function Compose({
             // Pre-cleanup
             // checkboxes return "on" if checked
             sensitive = sensitive === 'on';
-            sensitiveMedia = sensitiveMedia === 'on';
 
             // Convert datetime-local input value to RFC3339 Date string value
             scheduledAt = scheduledAt
@@ -1608,15 +1611,20 @@ function Compose({
                       mediaAttachments: segment.mediaAttachments,
                     })),
                   ];
-                  // Orphan-root guard: if lastPostedId is falsy, the chain would silently
-                  // restart as a detached root. Clear and retry from 0 instead.
-                  if (threadPublishState && !threadPublishState.lastPostedId) {
+                  // Orphan-root guard: if lastPostedId is falsy, resuming would
+                  // silently restart the chain as a detached root. Decide from a
+                  // LOCAL before calling the setter — setThreadPublishState(null)
+                  // doesn't change this render's closure binding, so deriving
+                  // resume/startAt from threadPublishState after the setter would
+                  // still resume with the stale object.
+                  const canResume = !!threadPublishState?.lastPostedId;
+                  if (threadPublishState && !canResume) {
                     setThreadPublishState(null);
                   }
                   // Resume state exists ONLY for genuine partial threads (some posts up,
                   // some not). Plain single-post failures and index-0 thread failures keep
                   // today's behavior exactly — no "Retry remaining", no locking.
-                  const resume = threadPublishState != null;
+                  const resume = canResume;
                   const startAt = resume
                     ? threadPublishState.postedStatuses.length
                     : 0;
@@ -1659,6 +1667,11 @@ function Compose({
                         postedStatuses: allStatuses,
                         lastPostedId: allStatuses.at(-1)?.id || null,
                       });
+                      // The pre-failure draft on disk still holds every segment
+                      // with no record that some posted — restoring it after a
+                      // reload would republish from zero. Delete it; resume
+                      // state is deliberately session-scoped.
+                      db.drafts.del(draftKey());
                       const msg = error?.reason || error?.message || `${error}`;
                       throw Object.assign(error || new Error('thread failed'), {
                         _threadPartial: {
