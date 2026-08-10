@@ -58,8 +58,8 @@ export async function nextTid() {
 }
 
 // Build the writes and post metadata for an atomic thread creation.
-// Records must already carry $type, text, and other fields — this function
-// only adds reply refs (chaining posts together) and stamps createdAt.
+// Records must already carry $type, text, createdAt, and other fields — this
+// function only adds reply refs (chaining posts together).
 // Returns { writes, posts, finalReply } where posts = [{ uri, cid, record }].
 export async function buildThreadWrites({
   did,

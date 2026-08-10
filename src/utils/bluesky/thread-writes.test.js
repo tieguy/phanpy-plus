@@ -41,71 +41,68 @@ describe('computeCid', () => {
     );
   });
 
-  it('produces a deterministic CID for identical records (ground truth vector)', async () => {
-    // Simulates bsky.social golden vector: exact record structure with real values.
+  it('matches a real PDS-assigned CID (ground truth, bsky.social listRecords)', async () => {
+    // Apostrophes in text are load-bearing: U+2019 (curly) in We/don words,
+    // U+0027 (ASCII) in everyone word. Exactly as stored on PDS. Do not normalize.
     const value = {
-      text: 'We’re rolling out improvements to trending topics right now! If you don’t already have it, you will in the next day or so.\n\nThe new system catches more topics, identifies more posts within that topic, and serves them up faster, so you can feel more in tune with what everyone’s talking about.',
+      text: "We’re rolling out improvements to trending topics right now! If you don’t already have it, you will in the next day or so.\n\nThe new system catches more topics, identifies more posts within that topic, and serves them up faster, so you can feel more in tune with what everyone's talking about.",
       $type: 'app.bsky.feed.post',
       langs: ['en'],
       createdAt: '2026-08-05T20:32:40.425Z',
     };
-    // Compute CID twice; must be identical
-    const cid1 = await computeCid(value);
-    const cid2 = await computeCid(value);
-    expect(cid1).toBe(cid2);
-    // Verify it’s a valid CIDv1 dag-cbor
-    expect(cid1).toMatch(/^bafyrei[a-z2-7]+$/);
+    expect(await computeCid(value)).toBe(
+      'bafyreihehij4mewgkpubxrgdnddstvtubvjabx5wvp43rihukr7nvuaeoi',
+    );
   });
 
   it('handles BlobRef instances with nested CID refs deterministically', async () => {
     const { CID } = await import('multiformats/cid');
     const { sha256 } = await import('multiformats/hashes/sha2');
+    const { BlobRef } = await import('@atproto/lexicon');
 
-    // Create a deterministic CID for testing
-    const refCid = CID.createV1(
+    // Create two deterministic CIDs for testing
+    const cid1 = CID.createV1(
       0x71,
       await sha256.digest(new Uint8Array([1, 2, 3])),
     );
+    const cid2 = CID.createV1(
+      0x71,
+      await sha256.digest(new Uint8Array([4, 5, 6])),
+    );
 
-    // Construct a record with an embedded blob reference
+    // Construct a real BlobRef
+    const blobRef1 = new BlobRef(cid1, 'image/jpeg', 12345);
+
+    // Construct a record with an embedded BlobRef
     const recordWithBlob = {
       ...record,
       embed: {
         $type: 'app.bsky.embed.images',
         images: [
           {
-            image: {
-              $type: 'blob',
-              ref: refCid,
-              mimeType: 'image/jpeg',
-              size: 12345,
-            },
+            image: blobRef1,
             alt: 'test image',
           },
         ],
       },
     };
 
-    // Compute CID for record with this blob
+    // (a) Test determinism: same record, same CID
     const cidWithBlob = await computeCid(recordWithBlob);
+    const cidWithBlobAgain = await computeCid(recordWithBlob);
+    expect(cidWithBlob).toBe(cidWithBlobAgain);
     expect(cidWithBlob).toMatch(/^bafyrei[a-z2-7]+$/);
 
-    // Changing the blob's ref CID should produce a different record CID
-    const differentRefCid = CID.createV1(
-      0x71,
-      await sha256.digest(new Uint8Array([4, 5, 6])),
-    );
+    // (b) Test that changing the BlobRef's inner CID produces a different record CID
+    const blobRef2 = new BlobRef(cid2, 'image/jpeg', 12345);
     const recordWithDifferentBlob = {
-      ...recordWithBlob,
+      ...record,
       embed: {
         ...recordWithBlob.embed,
         images: [
           {
             ...recordWithBlob.embed.images[0],
-            image: {
-              ...recordWithBlob.embed.images[0].image,
-              ref: differentRefCid,
-            },
+            image: blobRef2,
           },
         ],
       },
@@ -113,6 +110,12 @@ describe('computeCid', () => {
 
     const cidWithDifferentBlob = await computeCid(recordWithDifferentBlob);
     expect(cidWithDifferentBlob).not.toBe(cidWithBlob);
+
+    // (c) Test that prepareForHashing converts via ipld() and preserves the CID instance
+    const prepared = prepareForHashing(recordWithBlob);
+    const imageBlobValue = prepared.embed.images[0].image;
+    expect(imageBlobValue).toHaveProperty('$type', 'blob');
+    expect(imageBlobValue.ref).toBe(cid1); // Identity check: same CID instance
   });
 });
 
@@ -170,13 +173,22 @@ describe('buildThreadWrites', () => {
     createdAt: '2026-08-10T00:00:00.000Z',
   };
 
+  const stubs = () => {
+    let n = 0;
+    return {
+      nextTidFn: async () => `tid${String(n).padEnd(10, '0')}`,
+      computeCidFn: async () => `bafyreicid${n++}`,
+    };
+  };
+
   it('builds writes with correct shape ($type/collection/rkey/value)', async () => {
     const records = [{ ...baseRecord }];
+    const { nextTidFn, computeCidFn } = stubs();
     const result = await buildThreadWrites({
       did: testDid,
       records,
-      computeCidFn: async () => 'bafyreihash',
-      nextTidFn: async () => 'abc1234567890',
+      computeCidFn,
+      nextTidFn,
     });
 
     expect(result.writes).toHaveLength(1);
@@ -186,29 +198,28 @@ describe('buildThreadWrites', () => {
       'com.atproto.repo.applyWrites#create',
     );
     expect(write).toHaveProperty('collection', 'app.bsky.feed.post');
-    expect(write).toHaveProperty('rkey', 'abc1234567890');
+    expect(write).toHaveProperty('rkey', 'tid0000000000');
     expect(write).toHaveProperty('value');
     expect(write.value).toBe(records[0]);
   });
 
   it('generates URIs in format at://did/app.bsky.feed.post/rkey', async () => {
     const records = [{ ...baseRecord }, { ...baseRecord, text: 'post 2' }];
-    const tids = ['abc1234567890', 'def1234567890'];
-    let tidIndex = 0;
+    const { nextTidFn, computeCidFn } = stubs();
 
     const result = await buildThreadWrites({
       did: testDid,
       records,
-      computeCidFn: async () => 'bafyreihash',
-      nextTidFn: async () => tids[tidIndex++],
+      computeCidFn,
+      nextTidFn,
     });
 
     expect(result.posts).toHaveLength(2);
     expect(result.posts[0].uri).toBe(
-      `at://${testDid}/app.bsky.feed.post/${tids[0]}`,
+      `at://${testDid}/app.bsky.feed.post/tid0000000000`,
     );
     expect(result.posts[1].uri).toBe(
-      `at://${testDid}/app.bsky.feed.post/${tids[1]}`,
+      `at://${testDid}/app.bsky.feed.post/tid1000000000`,
     );
   });
 
@@ -219,11 +230,13 @@ describe('buildThreadWrites', () => {
       { ...baseRecord, text: 'post 2' },
     ];
 
+    const { nextTidFn, computeCidFn } = stubs();
+
     const result = await buildThreadWrites({
       did: testDid,
       records,
-      computeCidFn: async () => 'bafyreihash',
-      nextTidFn: async () => 'abc1234567890',
+      computeCidFn,
+      nextTidFn,
     });
 
     const posts = result.posts;
@@ -269,12 +282,14 @@ describe('buildThreadWrites', () => {
       { ...baseRecord, text: 'reply 1' },
     ];
 
+    const { nextTidFn, computeCidFn } = stubs();
+
     const result = await buildThreadWrites({
       did: testDid,
       records,
       initialReply,
-      computeCidFn: async () => 'bafyreihash',
-      nextTidFn: async () => 'abc1234567890',
+      computeCidFn,
+      nextTidFn,
     });
 
     const posts = result.posts;
@@ -295,11 +310,13 @@ describe('buildThreadWrites', () => {
   it('returns finalReply for next-thread chaining', async () => {
     const records = [{ ...baseRecord, text: 'post' }];
 
+    const { nextTidFn, computeCidFn } = stubs();
+
     const result = await buildThreadWrites({
       did: testDid,
       records,
-      computeCidFn: async () => 'bafyreihash',
-      nextTidFn: async () => 'abc1234567890',
+      computeCidFn,
+      nextTidFn,
     });
 
     expect(result.finalReply).toEqual({

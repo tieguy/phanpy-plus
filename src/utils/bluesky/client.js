@@ -862,7 +862,14 @@ export function createBlueskyClient({
     await ready();
     const did = agentDid();
 
-    // Build all records first
+    // Determine initial reply ref if this thread is a reply
+    // Do this BEFORE building records so we fail fast if the reply target is deleted
+    let initialReply;
+    if (paramsList[0].in_reply_to_id) {
+      initialReply = await buildReplyRefs(paramsList[0].in_reply_to_id);
+    }
+
+    // Build all records
     const records = [];
     const baseTime = Date.now();
     for (let i = 0; i < paramsList.length; i++) {
@@ -871,12 +878,6 @@ export function createBlueskyClient({
       // undefined feed ordering (atproto issue #3027).
       record.createdAt = new Date(baseTime + i).toISOString();
       records.push(record);
-    }
-
-    // Determine initial reply ref if this thread is a reply
-    let initialReply;
-    if (paramsList[0].in_reply_to_id) {
-      initialReply = await buildReplyRefs(paramsList[0].in_reply_to_id);
     }
 
     // Build writes and posts using the pure orchestration function
