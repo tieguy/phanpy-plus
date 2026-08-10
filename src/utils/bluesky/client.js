@@ -703,6 +703,8 @@ export function createBlueskyClient({
   // everything EXCEPT reply refs (callers attach those). Shared by
   // createStatus and (Phase 3) createThread.
   async function buildPostRecord(params) {
+    await ready();
+
     const {
       status: text,
       spoiler_text: spoilerText,

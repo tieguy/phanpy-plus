@@ -86,3 +86,15 @@ git push
 ```
 
 **Phase done when:** build + unit tests pass and `createStatus` is recomposed from the two new helpers with `$type` on the record. Live smoke (single Bluesky post with media + link card + reply) DEFERRED to morning checklist.
+
+---
+
+### Accepted deviation (review cycle 1)
+
+Reply-ref resolution (parent post fetch for `buildReplyRefs`) moved to execute *after* embed and link-card construction. This reorders error handling: failed parent fetches now fail fast *before* any network requests for link-card unfurling, avoiding orphaned blobs in the temporary media map.
+
+**Success path:** Bit-identical. Reply refs and embeds/link-card are independent; order change zero impact on the posted record's shape or content.
+
+**Failure path:** If parent fetch fails with `buildReplyRefs`, we now skip link-card unfurling entirely (network + blob fetch avoided). The old order threw after link-card construction and blob upload, leaving a blob to be GC'd.
+
+**Justification:** Restoring old order would move the validation throw *after* a network fetch, which violates the principle of fail-fast validation. The trade-off (fail early vs. clean blob handling on failure) consciously favors validation order — single posts failing on invalid parents is the primary case; link-card unfurling failure is already best-effort and graceful.
