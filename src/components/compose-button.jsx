@@ -153,7 +153,7 @@ export default function ComposeButton() {
         title={
           snapStates.composerState.publishing &&
           snapStates.composerState.publishingProgress
-            ? `Posting ${snapStates.composerState.publishingProgress}…`
+            ? t`Posting ${snapStates.composerState.publishingProgress}…`
             : undefined
         }
       >

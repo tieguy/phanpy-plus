@@ -887,6 +887,10 @@ function Compose({
     // Maybe it could be a big edit change but it should be rare
     if (editStatus) return;
     if (states.composerState.minimized) return;
+    // Session-scoped resume state must not leak into a restorable draft.
+    // A browser reload would restore all segments with no record that some posted,
+    // making the Post button a from-zero duplicate trap. Skip entirely while resuming.
+    if (threadPublishState) return;
     const key = draftKey();
     const backgroundDraft = {
       key,
@@ -1604,6 +1608,11 @@ function Compose({
                       mediaAttachments: segment.mediaAttachments,
                     })),
                   ];
+                  // Orphan-root guard: if lastPostedId is falsy, the chain would silently
+                  // restart as a detached root. Clear and retry from 0 instead.
+                  if (threadPublishState && !threadPublishState.lastPostedId) {
+                    setThreadPublishState(null);
+                  }
                   // Resume state exists ONLY for genuine partial threads (some posts up,
                   // some not). Plain single-post failures and index-0 thread failures keep
                   // today's behavior exactly — no "Retry remaining", no locking.
@@ -1661,6 +1670,13 @@ function Compose({
                     }
                     // Nothing posted (or not a thread): behave exactly like today
                     setThreadPublishState(null);
+                    // Bluesky atomic failure warning: if connection dropped mid-post on
+                    // the server side, a blind retry duplicates the whole thread
+                    if (isBlueskyTarget && segments.length > 1) {
+                      throw Object.assign(error || new Error('thread failed'), {
+                        _blueskyAtomicWarning: true,
+                      });
+                    }
                     throw error;
                   }
                   setThreadPublishState(null);
@@ -1750,6 +1766,7 @@ function Compose({
                 });
               } catch (e) {
                 states.composerState.publishing = false;
+                states.composerState.publishingProgress = null;
                 states.composerState.publishingError = true;
                 console.error(e);
                 // Handle partial thread failure with resume UX
@@ -1758,7 +1775,12 @@ function Compose({
                   alert(
                     t`Posted ${posted} of ${total} thread posts. The rest failed (${msg}). Your remaining posts are still here — press "Retry remaining".`,
                   );
-                } else if (!e?._alerted) {
+                } else if (e?._blueskyAtomicWarning) {
+                  const msg = e?.reason || e?.message || `${e}`;
+                  alert(
+                    t`Thread failed to post. If the connection dropped mid-post, it may have gone through on Bluesky — check your profile before retrying to avoid duplicating the thread. Error: ${msg}`,
+                  );
+                } else {
                   const msg = e?.reason || e?.message || `${e}`;
                   if (/session.*(deleted|expired|revoked)/i.test(msg)) {
                     alert(
@@ -1800,6 +1822,12 @@ function Compose({
                   placeholder={t`Content warning`}
                   data-allow-custom-emoji="true"
                   disabled={uiState === 'loading'}
+                  readOnly={!!threadPublishState}
+                  title={
+                    threadPublishState
+                      ? t`Locked while retrying a partially-posted thread`
+                      : undefined
+                  }
                   class="spoiler-text-field"
                   lang={language}
                   spellCheck="true"
@@ -1846,7 +1874,8 @@ function Compose({
                         : t`What are you doing?`
                 }
                 required={mediaAttachments?.length === 0}
-                disabled={uiState === 'loading' || !!threadPublishState}
+                disabled={uiState === 'loading'}
+                readOnly={!!threadPublishState}
                 lang={language}
                 onInput={() => {
                   updateCharCount();
@@ -1879,7 +1908,7 @@ function Compose({
               )}
             </div>
           </div>
-          {!threadPublishState && mediaAttachments?.length > 0 && (
+          {mediaAttachments?.length > 0 && (
             <div class="media-attachments">
               {mediaAttachments.map((attachment, i) => {
                 const { id, file } = attachment;
@@ -1888,7 +1917,7 @@ function Compose({
                   <MediaAttachment
                     key={id || fileID || i}
                     attachment={attachment}
-                    disabled={uiState === 'loading'}
+                    disabled={uiState === 'loading' || !!threadPublishState}
                     lang={language}
                     supportedMimeTypes={supportedMimeTypes}
                     descriptionLimit={descriptionLimit}
@@ -1915,7 +1944,7 @@ function Compose({
                   name="sensitiveMedia"
                   type="checkbox"
                   checked={sensitiveMedia}
-                  disabled={uiState === 'loading'}
+                  disabled={uiState === 'loading' || !!threadPublishState}
                   onChange={(e) => {
                     const sensitiveMedia = e.target.checked;
                     setSensitiveMedia(sensitiveMedia);
@@ -1954,7 +1983,6 @@ function Compose({
                   )
                 }
                 onRemove={() => {
-                  setThreadPublishState(null);
                   setMoreSegments((segs) =>
                     segs.filter((s) => s.uid !== segment.uid),
                   );
@@ -1971,7 +1999,6 @@ function Compose({
               disabled={uiState === 'loading' || !!scheduledAt}
               title={scheduledAt ? t`Threads can't be scheduled` : undefined}
               onClick={() => {
-                setThreadPublishState(null);
                 setMoreSegments((segs) => [
                   ...segs,
                   { uid: uid(), text: '', mediaAttachments: [] },
@@ -2419,7 +2446,14 @@ function Compose({
                     setQuoteCleared(false);
                   }
                 }}
-                disabled={uiState === 'loading' || !!editStatus}
+                disabled={
+                  uiState === 'loading' || !!editStatus || !!threadPublishState
+                }
+                title={
+                  threadPublishState
+                    ? t`Locked while retrying a partially-posted thread`
+                    : undefined
+                }
                 dir="auto"
               >
                 <option value="public">
@@ -2458,7 +2492,12 @@ function Compose({
                   setLanguage(value || DEFAULT_LANG);
                   store.session.set('currentLanguage', value || DEFAULT_LANG);
                 }}
-                disabled={uiState === 'loading'}
+                disabled={uiState === 'loading' || !!threadPublishState}
+                title={
+                  threadPublishState
+                    ? t`Locked while retrying a partially-posted thread`
+                    : undefined
+                }
                 dir="auto"
               >
                 {topSupportedLanguages.map(([code, common, native]) => {
@@ -2493,7 +2532,7 @@ function Compose({
               disabled={uiState === 'loading'}
               onClick={() => haptics.trigger('medium')}
               title={
-                publishProgress ? `Posting ${publishProgress}…` : undefined
+                publishProgress ? t`Posting ${publishProgress}…` : undefined
               }
             >
               {threadPublishState
