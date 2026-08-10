@@ -84,7 +84,7 @@ msgstr ""
 
 #: src/components/account-info-mini.jsx:57
 #: src/components/account-info.jsx:813
-#: src/components/compose.jsx:2425
+#: src/components/compose.jsx:2438
 #: src/pages/settings.jsx:310
 #: src/utils/visibility-text.jsx:7
 msgid "Followers"
@@ -400,7 +400,7 @@ msgstr "Search accounts"
 
 #: src/components/collection-add-account.jsx:197
 #: src/components/compose-poll.jsx:80
-#: src/components/compose.jsx:2121
+#: src/components/compose.jsx:2134
 #: src/components/mention-modal.jsx:221
 #: src/components/shortcuts-settings.jsx:732
 #: src/pages/list.jsx:399
@@ -457,7 +457,7 @@ msgid "Mark as sensitive"
 msgstr "Mark as sensitive"
 
 #: src/components/collection-add-edit.jsx:183
-#: src/components/compose.jsx:2413
+#: src/components/compose.jsx:2426
 #: src/pages/collection.jsx:686
 #: src/pages/settings.jsx:304
 #: src/utils/visibility-text.jsx:4
@@ -569,15 +569,15 @@ msgstr ""
 msgid "Compose"
 msgstr ""
 
-#: src/components/compose-button.jsx:191
+#: src/components/compose-button.jsx:193
 #: src/components/nav-menu.jsx:280
 #: src/pages/scheduled-posts.jsx:31
 #: src/pages/scheduled-posts.jsx:78
 msgid "Scheduled Posts"
 msgstr "Scheduled Posts"
 
-#: src/components/compose-button.jsx:204
-#: src/components/compose.jsx:1968
+#: src/components/compose-button.jsx:206
+#: src/components/compose.jsx:1981
 msgid "Add to thread"
 msgstr "Add to thread"
 
@@ -589,7 +589,7 @@ msgstr "Choice {0}"
 #: src/components/compose-poll.jsx:64
 #: src/components/media-attachment.jsx:384
 #: src/components/shortcuts-settings.jsx:743
-#: src/components/thread-segment-editor.jsx:136
+#: src/components/thread-segment-editor.jsx:138
 #: src/pages/catchup.jsx:1228
 #: src/pages/filters.jsx:450
 msgid "Remove"
@@ -612,8 +612,8 @@ msgid "Take photo or video"
 msgstr "Take photo or video"
 
 #: src/components/compose.jsx:130
-#: src/components/thread-segment-editor.jsx:154
 #: src/components/thread-segment-editor.jsx:156
+#: src/components/thread-segment-editor.jsx:158
 msgid "Add media"
 msgstr "Add media"
 
@@ -645,7 +645,7 @@ msgid "{0, plural, one {File {1} is not supported.} other {Files {2} are not sup
 msgstr "{0, plural, one {File {1} is not supported.} other {Files {2} are not supported.}}"
 
 #: src/components/compose.jsx:363
-#: src/components/compose.jsx:2567
+#: src/components/compose.jsx:2583
 #: src/components/file-picker-input.jsx:47
 msgid "{maxMediaAttachments, plural, one {You can only attach up to 1 file.} other {You can only attach up to # files.}}"
 msgstr ""
@@ -655,7 +655,7 @@ msgid "You have unsaved changes. Discard this post?"
 msgstr "You have unsaved changes. Discard this post?"
 
 #: src/components/compose.jsx:1116
-#: src/components/compose.jsx:1959
+#: src/components/compose.jsx:1972
 msgid "Threads can't be scheduled"
 msgstr "Threads can't be scheduled"
 
@@ -730,41 +730,41 @@ msgstr "Some media have no descriptions. Continue?"
 msgid "Attachment #{i} failed"
 msgstr "Attachment #{i} failed"
 
-#: src/components/compose.jsx:1681
+#: src/components/compose.jsx:1688
 msgid "Cross-posting threads coming soon — posted to primary account only"
 msgstr "Cross-posting threads coming soon — posted to primary account only"
 
 #. placeholder {0}: account.info.acct || account.info.username
-#: src/components/compose.jsx:1709
+#: src/components/compose.jsx:1716
 msgid "Cross-posted to @{0}"
 msgstr "Cross-posted to @{0}"
 
-#: src/components/compose.jsx:1713
+#: src/components/compose.jsx:1720
 msgid "some attachments skipped"
 msgstr "some attachments skipped"
 
 #. placeholder {0}: account.info.acct || account.info.username
 #. placeholder {1}: e?.message || e
-#: src/components/compose.jsx:1719
+#: src/components/compose.jsx:1726
 msgid "Unable to cross-post to @{0}: {1}"
 msgstr "Unable to cross-post to @{0}: {1}"
 
-#: src/components/compose.jsx:1727
+#: src/components/compose.jsx:1734
 msgid "Cross-posting skipped (not supported for polls, scheduled or non-public posts)"
 msgstr "Cross-posting skipped (not supported for polls, scheduled or non-public posts)"
 
-#: src/components/compose.jsx:1751
+#: src/components/compose.jsx:1759
 msgid "Posted {posted} of {total} thread posts. The rest failed ({msg}). Your remaining posts are still here — press \"Retry remaining\"."
 msgstr "Posted {posted} of {total} thread posts. The rest failed ({msg}). Your remaining posts are still here — press \"Retry remaining\"."
 
-#: src/components/compose.jsx:1791
+#: src/components/compose.jsx:1800
 #: src/components/status.jsx:2592
 #: src/components/timeline.jsx:1070
 msgid "Content warning"
 msgstr ""
 
-#: src/components/compose.jsx:1823
-#: src/components/compose.jsx:2025
+#: src/components/compose.jsx:1832
+#: src/components/compose.jsx:2038
 #: src/components/edit-profile-sheet.jsx:692
 #: src/components/import-accounts-selection.jsx:175
 #: src/components/open-link-sheet.jsx:74
@@ -773,97 +773,97 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/components/compose.jsx:1832
+#: src/components/compose.jsx:1841
 msgid "Post your reply"
 msgstr "Post your reply"
 
-#: src/components/compose.jsx:1834
+#: src/components/compose.jsx:1843
 msgid "Edit your post"
 msgstr "Edit your post"
 
-#: src/components/compose.jsx:1836
+#: src/components/compose.jsx:1845
 msgid "Ask a question"
 msgstr "Ask a question"
 
-#: src/components/compose.jsx:1837
+#: src/components/compose.jsx:1846
 msgid "What are you doing?"
 msgstr "What are you doing?"
 
-#: src/components/compose.jsx:1867
-#: src/components/thread-segment-editor.jsx:118
+#: src/components/compose.jsx:1877
+#: src/components/thread-segment-editor.jsx:119
 msgid "Posted"
 msgstr "Posted"
 
-#: src/components/compose.jsx:1914
+#: src/components/compose.jsx:1925
 msgid "Mark media as sensitive"
 msgstr ""
 
-#: src/components/compose.jsx:2005
+#: src/components/compose.jsx:2018
 msgid "Posting on <0/>"
 msgstr "Posting on <0/>"
 
 #. placeholder {0}: crossPostAccounts .map((a) => `@${a.info.acct || a.info.username}`) .join(', ')
-#: src/components/compose.jsx:2093
+#: src/components/compose.jsx:2106
 msgid "Also post to {0}"
 msgstr "Also post to {0}"
 
-#: src/components/compose.jsx:2317
+#: src/components/compose.jsx:2330
 msgid "Bluesky limit applied: 300 characters"
 msgstr "Bluesky limit applied: 300 characters"
 
-#: src/components/compose.jsx:2345
+#: src/components/compose.jsx:2358
 #: src/components/quote-settings-sheet.jsx:82
 #: src/components/status.jsx:306
 #: src/pages/settings.jsx:352
 msgid "Anyone can quote"
 msgstr "Anyone can quote"
 
-#: src/components/compose.jsx:2348
+#: src/components/compose.jsx:2361
 #: src/components/quote-settings-sheet.jsx:85
 #: src/components/status.jsx:307
 #: src/pages/settings.jsx:355
 msgid "Your followers can quote"
 msgstr "Your followers can quote"
 
-#: src/components/compose.jsx:2351
+#: src/components/compose.jsx:2364
 #: src/components/quote-settings-sheet.jsx:88
 #: src/components/status.jsx:308
 #: src/pages/settings.jsx:358
 msgid "Only you can quote"
 msgstr "Only you can quote"
 
-#: src/components/compose.jsx:2391
+#: src/components/compose.jsx:2404
 msgid "Quotes can't be embedded in private mentions."
 msgstr "Quotes can't be embedded in private mentions."
 
-#: src/components/compose.jsx:2418
+#: src/components/compose.jsx:2431
 #: src/components/nav-menu.jsx:367
 #: src/components/shortcuts-settings.jsx:168
 #: src/utils/visibility-text.jsx:5
 msgid "Local"
 msgstr ""
 
-#: src/components/compose.jsx:2422
+#: src/components/compose.jsx:2435
 #: src/pages/settings.jsx:307
 #: src/utils/visibility-text.jsx:6
 msgid "Quiet public"
 msgstr "Quiet public"
 
-#: src/components/compose.jsx:2428
+#: src/components/compose.jsx:2441
 #: src/components/status.jsx:2471
 #: src/utils/visibility-text.jsx:8
 msgid "Private mention"
 msgstr ""
 
-#: src/components/compose.jsx:2485
+#: src/components/compose.jsx:2500
 msgid "Retry remaining"
 msgstr "Retry remaining"
 
-#: src/components/compose.jsx:2487
+#: src/components/compose.jsx:2502
 msgid "Schedule"
 msgstr "Schedule"
 
-#: src/components/compose.jsx:2489
+#: src/components/compose.jsx:2504
 #: src/components/keyboard-shortcuts-help.jsx:165
 #: src/components/status.jsx:1123
 #: src/components/status.jsx:1172
@@ -874,20 +874,20 @@ msgstr "Schedule"
 msgid "Reply"
 msgstr ""
 
-#: src/components/compose.jsx:2491
+#: src/components/compose.jsx:2506
 msgid "Update"
 msgstr "Update"
 
-#: src/components/compose.jsx:2492
+#: src/components/compose.jsx:2507
 msgctxt "Submit button in composer"
 msgid "Post"
 msgstr "Post"
 
-#: src/components/compose.jsx:2579
+#: src/components/compose.jsx:2595
 msgid "Downloading GIF…"
 msgstr "Downloading GIF…"
 
-#: src/components/compose.jsx:2603
+#: src/components/compose.jsx:2619
 msgid "Failed to download GIF"
 msgstr "Failed to download GIF"
 
@@ -3349,7 +3349,7 @@ msgstr "Error processing files: {0}"
 msgid "Continue your thread..."
 msgstr "Continue your thread..."
 
-#: src/components/thread-segment-editor.jsx:175
+#: src/components/thread-segment-editor.jsx:177
 msgid "Remove this segment"
 msgstr "Remove this segment"
 
