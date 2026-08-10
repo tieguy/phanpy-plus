@@ -84,7 +84,7 @@ msgstr ""
 
 #: src/components/account-info-mini.jsx:57
 #: src/components/account-info.jsx:813
-#: src/components/compose.jsx:2190
+#: src/components/compose.jsx:2198
 #: src/pages/settings.jsx:310
 #: src/utils/visibility-text.jsx:7
 msgid "Followers"
@@ -400,7 +400,7 @@ msgstr "Search accounts"
 
 #: src/components/collection-add-account.jsx:197
 #: src/components/compose-poll.jsx:80
-#: src/components/compose.jsx:1898
+#: src/components/compose.jsx:1906
 #: src/components/mention-modal.jsx:221
 #: src/components/shortcuts-settings.jsx:732
 #: src/pages/list.jsx:399
@@ -457,7 +457,7 @@ msgid "Mark as sensitive"
 msgstr "Mark as sensitive"
 
 #: src/components/collection-add-edit.jsx:183
-#: src/components/compose.jsx:2178
+#: src/components/compose.jsx:2186
 #: src/pages/collection.jsx:686
 #: src/pages/settings.jsx:304
 #: src/utils/visibility-text.jsx:4
@@ -641,7 +641,7 @@ msgid "{0, plural, one {File {1} is not supported.} other {Files {2} are not sup
 msgstr "{0, plural, one {File {1} is not supported.} other {Files {2} are not supported.}}"
 
 #: src/components/compose.jsx:341
-#: src/components/compose.jsx:2324
+#: src/components/compose.jsx:2332
 #: src/components/file-picker-input.jsx:47
 msgid "{maxMediaAttachments, plural, one {You can only attach up to 1 file.} other {You can only attach up to # files.}}"
 msgstr ""
@@ -706,32 +706,32 @@ msgid "Attachment #{i} failed"
 msgstr "Attachment #{i} failed"
 
 #. placeholder {0}: account.info.acct || account.info.username
-#: src/components/compose.jsx:1543
+#: src/components/compose.jsx:1556
 msgid "Cross-posted to @{0}"
 msgstr "Cross-posted to @{0}"
 
-#: src/components/compose.jsx:1547
+#: src/components/compose.jsx:1560
 msgid "some attachments skipped"
 msgstr "some attachments skipped"
 
 #. placeholder {0}: account.info.acct || account.info.username
 #. placeholder {1}: e?.message || e
-#: src/components/compose.jsx:1553
+#: src/components/compose.jsx:1566
 msgid "Unable to cross-post to @{0}: {1}"
 msgstr "Unable to cross-post to @{0}: {1}"
 
-#: src/components/compose.jsx:1567
+#: src/components/compose.jsx:1574
 msgid "Cross-posting skipped (not supported for polls, scheduled or non-public posts)"
 msgstr "Cross-posting skipped (not supported for polls, scheduled or non-public posts)"
 
-#: src/components/compose.jsx:1624
+#: src/components/compose.jsx:1632
 #: src/components/status.jsx:2592
 #: src/components/timeline.jsx:1070
 msgid "Content warning"
 msgstr ""
 
-#: src/components/compose.jsx:1656
-#: src/components/compose.jsx:1802
+#: src/components/compose.jsx:1664
+#: src/components/compose.jsx:1810
 #: src/components/edit-profile-sheet.jsx:692
 #: src/components/import-accounts-selection.jsx:175
 #: src/components/open-link-sheet.jsx:74
@@ -740,84 +740,84 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: src/components/compose.jsx:1664
+#: src/components/compose.jsx:1672
 msgid "Post your reply"
 msgstr "Post your reply"
 
-#: src/components/compose.jsx:1666
+#: src/components/compose.jsx:1674
 msgid "Edit your post"
 msgstr "Edit your post"
 
-#: src/components/compose.jsx:1668
+#: src/components/compose.jsx:1676
 msgid "Ask a question"
 msgstr "Ask a question"
 
-#: src/components/compose.jsx:1669
+#: src/components/compose.jsx:1677
 msgid "What are you doing?"
 msgstr "What are you doing?"
 
-#: src/components/compose.jsx:1742
+#: src/components/compose.jsx:1750
 msgid "Mark media as sensitive"
 msgstr ""
 
-#: src/components/compose.jsx:1782
+#: src/components/compose.jsx:1790
 msgid "Posting on <0/>"
 msgstr "Posting on <0/>"
 
 #. placeholder {0}: crossPostAccounts .map((a) => `@${a.info.acct || a.info.username}`) .join(', ')
-#: src/components/compose.jsx:1870
+#: src/components/compose.jsx:1878
 msgid "Also post to {0}"
 msgstr "Also post to {0}"
 
-#: src/components/compose.jsx:2110
+#: src/components/compose.jsx:2118
 #: src/components/quote-settings-sheet.jsx:82
 #: src/components/status.jsx:306
 #: src/pages/settings.jsx:352
 msgid "Anyone can quote"
 msgstr "Anyone can quote"
 
-#: src/components/compose.jsx:2113
+#: src/components/compose.jsx:2121
 #: src/components/quote-settings-sheet.jsx:85
 #: src/components/status.jsx:307
 #: src/pages/settings.jsx:355
 msgid "Your followers can quote"
 msgstr "Your followers can quote"
 
-#: src/components/compose.jsx:2116
+#: src/components/compose.jsx:2124
 #: src/components/quote-settings-sheet.jsx:88
 #: src/components/status.jsx:308
 #: src/pages/settings.jsx:358
 msgid "Only you can quote"
 msgstr "Only you can quote"
 
-#: src/components/compose.jsx:2156
+#: src/components/compose.jsx:2164
 msgid "Quotes can't be embedded in private mentions."
 msgstr "Quotes can't be embedded in private mentions."
 
-#: src/components/compose.jsx:2183
+#: src/components/compose.jsx:2191
 #: src/components/nav-menu.jsx:367
 #: src/components/shortcuts-settings.jsx:168
 #: src/utils/visibility-text.jsx:5
 msgid "Local"
 msgstr ""
 
-#: src/components/compose.jsx:2187
+#: src/components/compose.jsx:2195
 #: src/pages/settings.jsx:307
 #: src/utils/visibility-text.jsx:6
 msgid "Quiet public"
 msgstr "Quiet public"
 
-#: src/components/compose.jsx:2193
+#: src/components/compose.jsx:2201
 #: src/components/status.jsx:2471
 #: src/utils/visibility-text.jsx:8
 msgid "Private mention"
 msgstr ""
 
-#: src/components/compose.jsx:2249
+#: src/components/compose.jsx:2257
 msgid "Schedule"
 msgstr "Schedule"
 
-#: src/components/compose.jsx:2251
+#: src/components/compose.jsx:2259
 #: src/components/keyboard-shortcuts-help.jsx:165
 #: src/components/status.jsx:1123
 #: src/components/status.jsx:1172
@@ -828,20 +828,20 @@ msgstr "Schedule"
 msgid "Reply"
 msgstr ""
 
-#: src/components/compose.jsx:2253
+#: src/components/compose.jsx:2261
 msgid "Update"
 msgstr "Update"
 
-#: src/components/compose.jsx:2254
+#: src/components/compose.jsx:2262
 msgctxt "Submit button in composer"
 msgid "Post"
 msgstr "Post"
 
-#: src/components/compose.jsx:2336
+#: src/components/compose.jsx:2344
 msgid "Downloading GIF…"
 msgstr "Downloading GIF…"
 
-#: src/components/compose.jsx:2360
+#: src/components/compose.jsx:2368
 msgid "Failed to download GIF"
 msgstr "Failed to download GIF"
 
