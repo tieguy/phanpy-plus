@@ -839,7 +839,8 @@ export function createBlueskyClient({
   // Atomically create an N-post self-thread via com.atproto.repo.applyWrites.
   // All-or-nothing: on failure, nothing is posted. paramsList entries are the
   // same masto-shaped params accepted by createStatus; only the first may
-  // carry in_reply_to_id / quoted_status_id.
+  // carry in_reply_to_id; quoted_status_id works per-segment and is ignored
+  // in posts following the first.
   async function createThread(paramsList) {
     if (!Array.isArray(paramsList) || paramsList.length === 0) {
       throw new Error('createThread: empty paramsList');
@@ -847,38 +848,43 @@ export function createBlueskyClient({
     if (paramsList.length === 1) {
       return [await createStatus(paramsList[0])];
     }
-    const { computeCid, nextTid } = await import('./thread-writes');
-    await ready();
-    const did = agentDid(); // file's existing idiom (client.js ~187)
 
-    let reply;
-    if (paramsList[0].in_reply_to_id) {
-      reply = await buildReplyRefs(paramsList[0].in_reply_to_id);
+    // Enforce contract: only the first entry may carry in_reply_to_id
+    for (let i = 1; i < paramsList.length; i++) {
+      if (paramsList[i].in_reply_to_id) {
+        throw new Error(
+          `createThread: only the first post may carry in_reply_to_id (found at index ${i})`,
+        );
+      }
     }
 
-    const writes = [];
-    const posts = [];
+    const { buildThreadWrites } = await import('./thread-writes');
+    await ready();
+    const did = agentDid();
+
+    // Build all records first
+    const records = [];
     const baseTime = Date.now();
     for (let i = 0; i < paramsList.length; i++) {
       const record = await buildPostRecord(paramsList[i]);
       // Monotonic createdAt (+1ms per post): identical timestamps cause
       // undefined feed ordering (atproto issue #3027).
       record.createdAt = new Date(baseTime + i).toISOString();
-      if (reply) record.reply = reply;
-      const rkey = await nextTid();
-      const uri = `at://${did}/app.bsky.feed.post/${rkey}`;
-      writes.push({
-        $type: 'com.atproto.repo.applyWrites#create',
-        collection: 'app.bsky.feed.post',
-        rkey,
-        value: record,
-      });
-      // Next post replies to this one; root stays the thread's first ref
-      const cid = await computeCid(record);
-      posts.push({ uri, cid, record });
-      const ref = { uri, cid };
-      reply = { root: reply?.root ?? ref, parent: ref };
+      records.push(record);
     }
+
+    // Determine initial reply ref if this thread is a reply
+    let initialReply;
+    if (paramsList[0].in_reply_to_id) {
+      initialReply = await buildReplyRefs(paramsList[0].in_reply_to_id);
+    }
+
+    // Build writes and posts using the pure orchestration function
+    const { writes, posts } = await buildThreadWrites({
+      did,
+      records,
+      initialReply,
+    });
 
     const res = await agent.com.atproto.repo.applyWrites({
       repo: did,
@@ -892,8 +898,15 @@ export function createBlueskyClient({
     // and would silently vanish from thread views. Warn loudly and prefer
     // the server's values for everything downstream.
     const results = res?.data?.results || [];
+    if (results.length && results.length !== posts.length) {
+      console.warn('createThread: server results length mismatch', {
+        expected: posts.length,
+        got: results.length,
+      });
+    }
     for (let i = 0; i < posts.length; i++) {
       const serverCid = results[i]?.cid;
+      const serverUri = results[i]?.uri;
       if (serverCid && serverCid !== posts[i].cid) {
         console.warn(
           'createThread: computed CID mismatch — reply refs may be broken',
@@ -901,19 +914,26 @@ export function createBlueskyClient({
         );
         posts[i].cid = serverCid;
       }
+      if (serverUri && serverUri !== posts[i].uri) {
+        console.warn('createThread: computed URI mismatch', {
+          index: i,
+          computed: posts[i].uri,
+          server: serverUri,
+        });
+        posts[i].uri = serverUri;
+      }
     }
 
-    // Post-success bookkeeping, mirroring createStatus: consumed media ids
-    // must leave pendingMedia (replicate whatever cleanup createStatus does
-    // after agent.post — see Phase 2 extraction notes).
+    // Post-success bookkeeping: consumed media ids leave pendingMedia,
+    // mirroring createStatus cleanup after agent.post.
     for (const params of paramsList) {
       for (const mid of params.media_ids || []) pendingMedia.delete(mid);
     }
 
-    const statuses = [];
-    for (const { uri, cid, record } of posts) {
-      statuses.push(await toReturnedStatus(uri, cid, record));
-    }
+    // Parallelize status construction
+    const statuses = await Promise.all(
+      posts.map(({ uri, cid, record }) => toReturnedStatus(uri, cid, record)),
+    );
     return statuses;
   }
 
