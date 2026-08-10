@@ -91,10 +91,10 @@ git push
 
 ### Accepted deviation (review cycle 1)
 
-Reply-ref resolution (parent post fetch for `buildReplyRefs`) moved to execute *after* embed and link-card construction. This reorders error handling: failed parent fetches now fail fast *before* any network requests for link-card unfurling, avoiding orphaned blobs in the temporary media map.
+Reply-ref resolution (`buildReplyRefs`' parent post fetch) now executes *after* embed and link-card construction — the recomposed `createStatus` runs `buildPostRecord` (which includes quote-CID resolution and the CardyB unfurl + thumbnail `uploadBlob`) before attaching reply refs. In the original code, reply refs were resolved *before* the embed block, so a failed parent fetch aborted early.
 
-**Success path:** Bit-identical. Reply refs and embeds/link-card are independent; order change zero impact on the posted record's shape or content.
+**Success path:** Bit-identical. Reply refs and embeds/link-card are independent keys; ordering has zero impact on the posted record's shape or content.
 
-**Failure path:** If parent fetch fails with `buildReplyRefs`, we now skip link-card unfurling entirely (network + blob fetch avoided). The old order threw after link-card construction and blob upload, leaving a blob to be GC'd.
+**Failure path (the actual delta):** A reply whose parent fetch fails (deleted/blocked parent) now throws *after* the link-card unfurl and thumbnail blob upload have already run — costing extra round trips and leaving an orphaned (PDS-garbage-collected) thumbnail blob, where the old order failed fast before any of that.
 
-**Justification:** Restoring old order would move the validation throw *after* a network fetch, which violates the principle of fail-fast validation. The trade-off (fail early vs. clean blob handling on failure) consciously favors validation order — single posts failing on invalid parents is the primary case; link-card unfurling failure is already best-effort and graceful.
+**Justification for accepting:** Restoring the original order isn't free — hoisting `buildReplyRefs` above `buildPostRecord` in `createStatus` would move the `poll`/`scheduled_at` validation throws *after* a network fetch, trading one ordering fidelity for another. Failed-parent replies are rare, the orphaned blob is server-GC'd, and keeping validation-first inside `buildPostRecord` is the more valuable property. Consciously accepted.
