@@ -1349,7 +1349,7 @@
   gap: 8px;
   margin: 8px 0;
   padding: 12px;
-  border-left: 3px solid var(--bg-color);
+  border-left: 3px solid var(--outline-color);
   border-radius: 4px;
   background-color: var(--bg-faded-color);
 
@@ -1365,7 +1365,7 @@
   padding: 8px;
   border: 1px solid var(--outline-color);
   border-radius: 4px;
-  background-color: var(--input-bg-color);
+  background-color: var(--bg-color);
   color: var(--text-color);
   font-size: inherit;
   font-family: inherit;

@@ -76,6 +76,7 @@ import ScheduledAtField, {
 } from './ScheduledAtField';
 import Status from './status';
 import TextExpander from './text-expander';
+import ThreadSegmentEditor from './thread-segment-editor';
 
 const supportedLanguagesMap = supportedLanguages.reduce((acc, l) => {
   const [code, common, native] = l;
@@ -263,10 +264,24 @@ function Compose({
     } = {},
   } = configuration || {};
 
+  const supportedImagesVideosTypes = supportedMimeTypes?.filter((mimeType) =>
+    /^(image|video)/i.test(mimeType),
+  );
+
+  const textareaRef = useRef();
+  const spoilerTextRef = useRef();
+
+  // Declare these early for use in crossPostToBluesky calculation
+  const [visibility, setVisibility] = useState('public');
+  const [poll, setPoll] = useState(null);
+  const [scheduledAt, setScheduledAt] = useState(null);
+
   const BLUESKY_MAX_CHARACTERS = 300;
   // When cross-posting to a Bluesky account, the strictest limit binds.
   const crossPostToBluesky =
-    crossPost && crossPostAccounts.some((a) => isBlueskyAccount(a));
+    crossPost &&
+    canCrossPost({ poll, scheduledAt, visibility }) &&
+    crossPostAccounts.some((a) => isBlueskyAccount(a));
   const effectiveMaxCharacters =
     crossPostToBluesky && maxCharacters > BLUESKY_MAX_CHARACTERS
       ? BLUESKY_MAX_CHARACTERS
@@ -275,14 +290,6 @@ function Compose({
     effectiveMaxCharacters === BLUESKY_MAX_CHARACTERS &&
     maxCharacters !== BLUESKY_MAX_CHARACTERS;
 
-  const supportedImagesVideosTypes = supportedMimeTypes?.filter((mimeType) =>
-    /^(image|video)/i.test(mimeType),
-  );
-
-  const textareaRef = useRef();
-  const spoilerTextRef = useRef();
-
-  const [visibility, setVisibility] = useState('public');
   const [quoteApprovalPolicy, setQuoteApprovalPolicy] = useState('public');
   const [sensitive, setSensitive] = useState(false);
   const [sensitiveMedia, setSensitiveMedia] = useState(false);
@@ -291,8 +298,6 @@ function Compose({
   );
   const prevLanguage = useRef(language);
   const [mediaAttachments, setMediaAttachments] = useState([]);
-  const [poll, setPoll] = useState(null);
-  const [scheduledAt, setScheduledAt] = useState(null);
   const [moreSegments, setMoreSegments] = useState([]);
   const [quoteSuggestion, setQuoteSuggestion] = useState(null);
   const [localQuoteStatus, setLocalQuoteStatus] = useState(quoteStatus);
@@ -330,7 +335,10 @@ function Compose({
     }
   };
 
-  const processFiles = async (files) => {
+  const processFiles = async (
+    files,
+    currentCount = mediaAttachments.length,
+  ) => {
     const supportedFiles = [];
     const unsupportedFiles = [];
     for (const file of files || []) {
@@ -356,7 +364,7 @@ function Compose({
       // Auto-cut-off files to avoid exceeding maxMediaAttachments
       let allowedFiles = supportedFiles;
       if (maxMediaAttachments !== undefined) {
-        const max = maxMediaAttachments - mediaAttachments.length;
+        const max = maxMediaAttachments - currentCount;
         if (max <= 0) {
           alert(
             plural(maxMediaAttachments, {
@@ -732,8 +740,11 @@ function Compose({
       .trim()
       .replace(/^\p{White_Space}+|\p{White_Space}+$/gu, '');
     const hasMediaAttachments = mediaAttachments.length > 0;
-    if (!hasValue && !hasMediaAttachments) {
-      console.log('canClose', { value, mediaAttachments });
+    const hasSegments = moreSegments.some(
+      (s) => s.text.trim() || s.mediaAttachments.length,
+    );
+    if (!hasValue && !hasMediaAttachments && !hasSegments) {
+      console.log('canClose', { value, mediaAttachments, hasSegments });
       return true;
     }
 
@@ -807,7 +818,9 @@ function Compose({
     const { value: spoilerText } = spoilerTextRef.current;
     // Mastodon shortens URLs to a fixed length for counting purposes;
     // Bluesky counts the literal text, so don't collapse URLs there.
-    const text = isBlueskyTarget ? value : countableText(value);
+    // When cross-posting to Bluesky, use Bluesky's strictest counting rules.
+    const useBlueskyRules = isBlueskyTarget || charLimitBoundByBluesky;
+    const text = useBlueskyRules ? value : countableText(value);
     return stringLength(text) + stringLength(spoilerText);
   };
   const updateCharCount = () => {
@@ -1101,6 +1114,8 @@ function Compose({
   const showScheduledAt = !editStatus;
   const scheduledAtButtonDisabled =
     uiState === 'loading' || !!scheduledAt || moreSegments.length > 0;
+  const scheduledAtButtonTitle =
+    moreSegments.length > 0 ? t`Threads can't be scheduled` : undefined;
   const onScheduledAtClick = () => {
     const date = new Date(Date.now() + DEFAULT_SCHEDULED_AT);
     setScheduledAt(date);
@@ -1775,10 +1790,9 @@ function Compose({
               </label>
             </div>
           )}
-          {moreSegments.map((segment, i) => (
+          {moreSegments.map((segment) => (
             <ThreadSegmentEditor
               key={segment.uid}
-              index={i}
               segment={segment}
               maxCharacters={effectiveMaxCharacters}
               blueskyRules={
@@ -1799,6 +1813,9 @@ function Compose({
                   segs.filter((s) => s.uid !== segment.uid),
                 )
               }
+              processFiles={processFiles}
+              stringLength={stringLength}
+              countableText={countableText}
             />
           ))}
           {!editStatus && moreSegments.length < MAX_THREAD_SEGMENTS - 1 && (
@@ -1806,6 +1823,7 @@ function Compose({
               type="button"
               class="light add-thread-segment"
               disabled={uiState === 'loading' || !!scheduledAt}
+              title={scheduledAt ? t`Threads can't be scheduled` : undefined}
               onClick={() =>
                 setMoreSegments((segs) => [
                   ...segs,
@@ -2043,6 +2061,7 @@ function Compose({
                       <MenuDivider />
                       <MenuItem
                         disabled={scheduledAtButtonDisabled}
+                        title={scheduledAtButtonTitle}
                         onClick={onScheduledAtClick}
                       >
                         <Icon icon="schedule" />{' '}
@@ -2141,6 +2160,7 @@ function Compose({
                       type="button"
                       class={`toolbar-button ${scheduledAt ? 'highlight' : ''}`}
                       disabled={scheduledAtButtonDisabled}
+                      title={scheduledAtButtonTitle}
                       onClick={onScheduledAtClick}
                     >
                       <Icon icon="schedule" alt={_(ADD_LABELS.scheduledPost)} />
@@ -2445,135 +2465,6 @@ function Compose({
           />
         </Modal>
       )}
-    </div>
-  );
-}
-
-function ThreadSegmentEditor({
-  segment,
-  maxCharacters,
-  blueskyRules,
-  maxMediaAttachments,
-  disabled,
-  onChange,
-  onRemove,
-}) {
-  const fileInputRef = useRef();
-
-  const handleTextChange = (e) => {
-    onChange({ text: e.target.value });
-  };
-
-  const handleAddMedia = async () => {
-    if (!fileInputRef.current) return;
-
-    const files = fileInputRef.current.files;
-    if (!files?.length) return;
-
-    // Reset input to allow same file selection
-    const currentInput = fileInputRef.current;
-
-    try {
-      const processedFiles = await processFiles(Array.from(files));
-      if (processedFiles) {
-        onChange({
-          mediaAttachments: [
-            ...segment.mediaAttachments,
-            ...processedFiles,
-          ].slice(0, maxMediaAttachments),
-        });
-      }
-    } catch (err) {
-      console.error('Error processing files:', err);
-    }
-
-    currentInput.value = '';
-  };
-
-  const handleRemoveMedia = (indexToRemove) => {
-    onChange({
-      mediaAttachments: segment.mediaAttachments.filter(
-        (_, i) => i !== indexToRemove,
-      ),
-    });
-  };
-
-  const charCount = segmentCharCount(segment.text, { blueskyRules });
-  const mediaCanAdd =
-    !maxMediaAttachments ||
-    segment.mediaAttachments.length < maxMediaAttachments;
-
-  return (
-    <div class="thread-segment">
-      <textarea
-        class="segment-textarea"
-        placeholder={t`Continue your thread...`}
-        value={segment.text}
-        disabled={disabled}
-        onInput={handleTextChange}
-      />
-
-      {segment.mediaAttachments?.length > 0 && (
-        <div class="media-attachments segment-media">
-          {segment.mediaAttachments.map((attachment, i) => {
-            const { id, file } = attachment;
-            const fileID = file?.size + file?.type + file?.name;
-            return (
-              <div key={id || fileID || i} class="segment-media-item">
-                <div class="media-preview">
-                  {file && (
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt=""
-                      class="media-preview-img"
-                    />
-                  )}
-                </div>
-                <button
-                  type="button"
-                  class="remove-media"
-                  title={t`Remove`}
-                  onClick={() => handleRemoveMedia(i)}
-                >
-                  <Icon icon="x" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      <div class="segment-controls">
-        <button
-          type="button"
-          class="toolbar-button"
-          disabled={disabled || !mediaCanAdd}
-          onClick={() => fileInputRef.current?.click()}
-          title={t`Add media`}
-        >
-          <Icon icon="attachment" alt={t`Add media`} />
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*,video/*"
-          hidden
-          onChange={handleAddMedia}
-        />
-
-        <CharCountMeter maxCharacters={maxCharacters} charCount={charCount} />
-
-        <button
-          type="button"
-          class="remove-segment"
-          disabled={disabled}
-          title={t`Remove this segment`}
-          onClick={onRemove}
-        >
-          <Icon icon="x" />
-        </button>
-      </div>
     </div>
   );
 }
