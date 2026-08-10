@@ -101,6 +101,50 @@ export async function publishThread({
 
   const statuses = [];
   const skippedMedia = [];
+
+  // Atomic path: the Bluesky facade creates whole threads in one
+  // applyWrites — all-or-nothing, so failure needs no resume bookkeeping.
+  // Gate on the RESOLVED isBluesky flag, never on method presence:
+  // masto.js v7 is Proxy-based, so any property duck-types as a function
+  // and a presence check would 404 Mastodon threads into /create_thread.
+  if (segments.length - startAt > 1 && isBluesky) {
+    onProgress?.(startAt, 'posting');
+    try {
+      const paramsList = [];
+      for (let i = startAt; i < segments.length; i++) {
+        const segment = segments[i];
+        const { mediaIds, skippedMedia: skipped } = await resolveMediaIds({
+          client,
+          isBluesky,
+          segment,
+        });
+        skippedMedia.push(...skipped);
+        paramsList.push(
+          removeNullUndefined({
+            status: segment.text,
+            spoiler_text: shared.spoilerText || undefined,
+            language: shared.language,
+            sensitive: !!shared.sensitive,
+            media_ids: mediaIds.length ? mediaIds : undefined,
+            in_reply_to_id:
+              i === startAt
+                ? (startAt > 0 ? resumeInReplyToId : shared.inReplyToId) ||
+                  undefined
+                : undefined,
+            quoted_status_id: i === 0 ? shared.quotedStatusId : undefined,
+          }),
+        );
+      }
+      const created = await client.v1.statuses.createThread(paramsList);
+      statuses.push(...created);
+      for (let i = startAt; i < segments.length; i++) onProgress?.(i, 'done');
+      return { statuses, failedAtIndex: null, error: null, skippedMedia };
+    } catch (error) {
+      onProgress?.(startAt, 'failed');
+      return { statuses, failedAtIndex: startAt, error, skippedMedia };
+    }
+  }
+
   let inReplyToId = startAt > 0 ? resumeInReplyToId : shared.inReplyToId;
   for (let i = startAt; i < segments.length; i++) {
     const segment = segments[i];
