@@ -12,6 +12,7 @@ function ThreadSegmentEditor({
   blueskyRules,
   maxMediaAttachments,
   disabled,
+  posted,
   onChange,
   onRemove,
   processFiles,
@@ -104,15 +105,23 @@ function ThreadSegmentEditor({
 
   return (
     <div class="thread-segment">
-      <textarea
-        class="segment-textarea"
-        placeholder={t`Continue your thread...`}
-        value={segment.text}
-        disabled={disabled}
-        onInput={handleTextChange}
-      />
+      <div class="segment-textarea-wrapper">
+        <textarea
+          class="segment-textarea"
+          placeholder={t`Continue your thread...`}
+          value={segment.text}
+          disabled={disabled}
+          readOnly={posted}
+          onInput={handleTextChange}
+        />
+        {posted && (
+          <div class="posted-chip">
+            ✓ <span>{t`Posted`}</span>
+          </div>
+        )}
+      </div>
 
-      {segment.mediaAttachments?.length > 0 && (
+      {!posted && segment.mediaAttachments?.length > 0 && (
         <div class="media-attachments segment-media">
           {segment.mediaAttachments.map((attachment, i) => {
             const previewUrl = mediaPreviewUrls[i];
@@ -138,15 +147,17 @@ function ThreadSegmentEditor({
       )}
 
       <div class="segment-controls">
-        <button
-          type="button"
-          class="toolbar-button"
-          disabled={disabled || !mediaCanAdd}
-          onClick={() => fileInputRef.current?.click()}
-          title={t`Add media`}
-        >
-          <Icon icon="attachment" alt={t`Add media`} />
-        </button>
+        {!posted && (
+          <button
+            type="button"
+            class="toolbar-button"
+            disabled={disabled || !mediaCanAdd}
+            onClick={() => fileInputRef.current?.click()}
+            title={t`Add media`}
+          >
+            <Icon icon="attachment" alt={t`Add media`} />
+          </button>
+        )}
         <input
           ref={fileInputRef}
           type="file"
@@ -158,15 +169,17 @@ function ThreadSegmentEditor({
 
         <CharCountMeter maxCharacters={maxCharacters} charCount={charCount} />
 
-        <button
-          type="button"
-          class="remove-segment"
-          disabled={disabled}
-          title={t`Remove this segment`}
-          onClick={onRemove}
-        >
-          <Icon icon="x" />
-        </button>
+        {!posted && (
+          <button
+            type="button"
+            class="remove-segment"
+            disabled={disabled}
+            title={t`Remove this segment`}
+            onClick={onRemove}
+          >
+            <Icon icon="x" />
+          </button>
+        )}
       </div>
     </div>
   );

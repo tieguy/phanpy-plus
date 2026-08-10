@@ -150,8 +150,20 @@ export default function ComposeButton() {
         class={`${snapStates.composerState.minimized ? 'min' : ''} ${
           snapStates.composerState.publishing ? 'loading' : ''
         } ${snapStates.composerState.publishingError ? 'error' : ''}`}
+        title={
+          snapStates.composerState.publishing &&
+          snapStates.composerState.publishingProgress
+            ? `Posting ${snapStates.composerState.publishingProgress}…`
+            : undefined
+        }
       >
         <Icon icon="quill" size="xl" alt={t`Compose`} />
+        {snapStates.composerState.publishing &&
+          snapStates.composerState.publishingProgress && (
+            <span class="progress-badge">
+              {snapStates.composerState.publishingProgress}
+            </span>
+          )}
       </button>
       <ControlledMenu
         ref={menuRef}

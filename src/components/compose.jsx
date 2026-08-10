@@ -291,6 +291,10 @@ function Compose({
   const [quoteSuggestion, setQuoteSuggestion] = useState(null);
   const [localQuoteStatus, setLocalQuoteStatus] = useState(quoteStatus);
   const [quoteCleared, setQuoteCleared] = useState(false);
+  // Survives a failed publish attempt so retry can resume mid-thread.
+  // Non-null ONLY for genuine partial threads: { postedStatuses: [...], lastPostedId }
+  const [threadPublishState, setThreadPublishState] = useState(null);
+  const [publishProgress, setPublishProgress] = useState(null); // 'n/N' string
 
   const prefs = getPreferences();
 
@@ -1600,6 +1604,13 @@ function Compose({
                       mediaAttachments: segment.mediaAttachments,
                     })),
                   ];
+                  // Resume state exists ONLY for genuine partial threads (some posts up,
+                  // some not). Plain single-post failures and index-0 thread failures keep
+                  // today's behavior exactly — no "Retry remaining", no locking.
+                  const resume = threadPublishState != null;
+                  const startAt = resume
+                    ? threadPublishState.postedStatuses.length
+                    : 0;
                   const { statuses, failedAtIndex, error } =
                     await publishThread({
                       masto,
@@ -1608,21 +1619,54 @@ function Compose({
                       segments,
                       shared,
                       idempotencyPrefix: UID.current,
+                      startAt,
+                      resumeInReplyToId: resume
+                        ? threadPublishState.lastPostedId
+                        : undefined,
+                      onProgress: (i, state) => {
+                        if (state === 'posting' && segments.length > 1) {
+                          const progress = `${i + 1}/${segments.length}`;
+                          setPublishProgress(progress);
+                          // Mirror into global composer state so the minimized-composer
+                          // indicator can show it too (design asked for composerState here;
+                          // the resume bookkeeping itself stays component-local — recorded
+                          // as a minor deviation).
+                          states.composerState.publishingProgress = progress;
+                        }
+                      },
                     });
-
-                  // Handle partial failures (Phase 6 replaces this)
+                  const allStatuses = [
+                    ...(threadPublishState?.postedStatuses || []),
+                    ...statuses,
+                  ];
                   if (failedAtIndex !== null) {
-                    if (statuses.length > 0) {
-                      const partialMsg = t`Posted ${statuses.length} of ${segments.length} posts — the rest failed: ${error?.message}`;
-                      alert(partialMsg);
-                      // Mark error so catch block knows we already alerted
-                      if (error && typeof error === 'object')
-                        error._alerted = true;
+                    // Clear transient progress on every failure path too — leaving it
+                    // stale would show "Posting 2/3…" on an idle errored composer
+                    setPublishProgress(null);
+                    states.composerState.publishingProgress = null;
+                    if (segments.length > 1 && allStatuses.length > 0) {
+                      // Genuine partial thread → enable resume UX
+                      setThreadPublishState({
+                        postedStatuses: allStatuses,
+                        lastPostedId: allStatuses.at(-1)?.id || null,
+                      });
+                      const msg = error?.reason || error?.message || `${error}`;
+                      throw Object.assign(error || new Error('thread failed'), {
+                        _threadPartial: {
+                          posted: allStatuses.length,
+                          total: segments.length,
+                          msg,
+                        },
+                      });
                     }
+                    // Nothing posted (or not a thread): behave exactly like today
+                    setThreadPublishState(null);
                     throw error;
                   }
-
-                  newStatus = statuses[0];
+                  setThreadPublishState(null);
+                  setPublishProgress(null);
+                  states.composerState.publishingProgress = null;
+                  newStatus = allStatuses[0];
 
                   // Hoist isThread for clarity
                   const isThread = moreSegments.length > 0;
@@ -1708,8 +1752,13 @@ function Compose({
                 states.composerState.publishing = false;
                 states.composerState.publishingError = true;
                 console.error(e);
-                // Skip alert if error was already alerted (e.g., partial failure)
-                if (!e?._alerted) {
+                // Handle partial thread failure with resume UX
+                if (e?._threadPartial) {
+                  const { posted, total, msg } = e._threadPartial;
+                  alert(
+                    t`Posted ${posted} of ${total} thread posts. The rest failed (${msg}). Your remaining posts are still here — press "Retry remaining".`,
+                  );
+                } else if (!e?._alerted) {
                   const msg = e?.reason || e?.message || `${e}`;
                   if (/session.*(deleted|expired|revoked)/i.test(msg)) {
                     alert(
@@ -1783,47 +1832,54 @@ function Compose({
                 <Icon icon="x" alt={t`Cancel`} />
               </button>
             </div>
-            <Textarea
-              ref={textareaRef}
-              data-allow-custom-emoji="true"
-              placeholder={
-                replyToStatus
-                  ? t`Post your reply`
-                  : editStatus
-                    ? t`Edit your post`
-                    : !!poll
-                      ? t`Ask a question`
-                      : t`What are you doing?`
-              }
-              required={mediaAttachments?.length === 0}
-              disabled={uiState === 'loading'}
-              lang={language}
-              onInput={() => {
-                updateCharCount();
-              }}
-              maxCharacters={effectiveMaxCharacters}
-              onTrigger={(action) => {
-                if (action?.name === 'custom-emojis') {
-                  setShowEmoji2Picker({
-                    targetElement: lastFocusedEmojiFieldRef,
-                    defaultSearchTerm: action?.defaultSearchTerm || null,
-                  });
-                } else if (action?.name === 'mention') {
-                  setShowMentionPicker({
-                    defaultSearchTerm: action?.defaultSearchTerm || null,
-                  });
-                } else if (
-                  action?.name === 'auto-detect-language' &&
-                  action?.languages
-                ) {
-                  setAutoDetectedLanguages(action.languages);
-                } else if (action?.name === 'pasted-link' && action?.url) {
-                  handlePastedLink(action.url);
+            <div class="main-textarea-wrapper">
+              <Textarea
+                ref={textareaRef}
+                data-allow-custom-emoji="true"
+                placeholder={
+                  replyToStatus
+                    ? t`Post your reply`
+                    : editStatus
+                      ? t`Edit your post`
+                      : !!poll
+                        ? t`Ask a question`
+                        : t`What are you doing?`
                 }
-              }}
-            />
+                required={mediaAttachments?.length === 0}
+                disabled={uiState === 'loading' || !!threadPublishState}
+                lang={language}
+                onInput={() => {
+                  updateCharCount();
+                }}
+                maxCharacters={effectiveMaxCharacters}
+                onTrigger={(action) => {
+                  if (action?.name === 'custom-emojis') {
+                    setShowEmoji2Picker({
+                      targetElement: lastFocusedEmojiFieldRef,
+                      defaultSearchTerm: action?.defaultSearchTerm || null,
+                    });
+                  } else if (action?.name === 'mention') {
+                    setShowMentionPicker({
+                      defaultSearchTerm: action?.defaultSearchTerm || null,
+                    });
+                  } else if (
+                    action?.name === 'auto-detect-language' &&
+                    action?.languages
+                  ) {
+                    setAutoDetectedLanguages(action.languages);
+                  } else if (action?.name === 'pasted-link' && action?.url) {
+                    handlePastedLink(action.url);
+                  }
+                }}
+              />
+              {threadPublishState && (
+                <div class="posted-chip">
+                  ✓ <span>{t`Posted`}</span>
+                </div>
+              )}
+            </div>
           </div>
-          {mediaAttachments?.length > 0 && (
+          {!threadPublishState && mediaAttachments?.length > 0 && (
             <div class="media-attachments">
               {mediaAttachments.map((attachment, i) => {
                 const { id, file } = attachment;
@@ -1872,45 +1928,55 @@ function Compose({
               </label>
             </div>
           )}
-          {moreSegments.map((segment) => (
-            <ThreadSegmentEditor
-              key={segment.uid}
-              segment={segment}
-              maxCharacters={effectiveMaxCharacters}
-              blueskyRules={
-                charLimitBoundByBluesky ||
-                maxCharacters === BLUESKY_MAX_CHARACTERS
-              }
-              maxMediaAttachments={maxMediaAttachments}
-              disabled={uiState === 'loading'}
-              onChange={(patch) =>
-                setMoreSegments((segs) =>
-                  segs.map((s) =>
-                    s.uid === segment.uid ? { ...s, ...patch } : s,
-                  ),
-                )
-              }
-              onRemove={() =>
-                setMoreSegments((segs) =>
-                  segs.filter((s) => s.uid !== segment.uid),
-                )
-              }
-              processFiles={processFiles}
-              stringLength={stringLength}
-            />
-          ))}
+          {moreSegments.map((segment, index) => {
+            // Overall index: main editor = 0, moreSegments[i] = i + 1
+            const overallIndex = index + 1;
+            const isPosted =
+              threadPublishState &&
+              overallIndex < threadPublishState.postedStatuses.length;
+            return (
+              <ThreadSegmentEditor
+                key={segment.uid}
+                segment={segment}
+                maxCharacters={effectiveMaxCharacters}
+                blueskyRules={
+                  charLimitBoundByBluesky ||
+                  maxCharacters === BLUESKY_MAX_CHARACTERS
+                }
+                maxMediaAttachments={maxMediaAttachments}
+                disabled={uiState === 'loading'}
+                posted={isPosted}
+                onChange={(patch) =>
+                  setMoreSegments((segs) =>
+                    segs.map((s) =>
+                      s.uid === segment.uid ? { ...s, ...patch } : s,
+                    ),
+                  )
+                }
+                onRemove={() => {
+                  setThreadPublishState(null);
+                  setMoreSegments((segs) =>
+                    segs.filter((s) => s.uid !== segment.uid),
+                  );
+                }}
+                processFiles={processFiles}
+                stringLength={stringLength}
+              />
+            );
+          })}
           {!editStatus && moreSegments.length < MAX_THREAD_SEGMENTS - 1 && (
             <button
               type="button"
               class="light add-thread-segment"
               disabled={uiState === 'loading' || !!scheduledAt}
               title={scheduledAt ? t`Threads can't be scheduled` : undefined}
-              onClick={() =>
+              onClick={() => {
+                setThreadPublishState(null);
                 setMoreSegments((segs) => [
                   ...segs,
                   { uid: uid(), text: '', mediaAttachments: [] },
-                ])
-              }
+                ]);
+              }}
             >
               <Icon icon="plus" /> <Trans>Add to thread</Trans>
             </button>
@@ -2426,17 +2492,28 @@ function Compose({
               type="submit"
               disabled={uiState === 'loading'}
               onClick={() => haptics.trigger('medium')}
+              title={
+                publishProgress ? `Posting ${publishProgress}…` : undefined
+              }
             >
-              {scheduledAt
-                ? t`Schedule`
-                : replyToStatus
-                  ? t`Reply`
-                  : editStatus
-                    ? t`Update`
-                    : t({
-                        message: 'Post',
-                        context: 'Submit button in composer',
-                      })}
+              {threadPublishState
+                ? t`Retry remaining`
+                : scheduledAt
+                  ? t`Schedule`
+                  : replyToStatus
+                    ? t`Reply`
+                    : editStatus
+                      ? t`Update`
+                      : t({
+                          message: 'Post',
+                          context: 'Submit button in composer',
+                        })}
+              {uiState === 'loading' && publishProgress && (
+                <>
+                  {' '}
+                  <span class="progress-text">{publishProgress}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

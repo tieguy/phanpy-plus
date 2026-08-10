@@ -1496,3 +1496,31 @@
     height: 18px;
   }
 }
+
+#compose-container .main-textarea-wrapper,
+#compose-container .segment-textarea-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+#compose-container .posted-chip {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background-color: var(--green-color);
+  color: white;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+#compose-container button[type='submit'] .progress-text {
+  font-size: 90%;
+  opacity: 0.8;
+}

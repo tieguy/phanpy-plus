@@ -1854,6 +1854,25 @@ body:has(.media-modal-container + .status-deck) .media-post-link {
       background-color: var(--red-color);
     }
   }
+
+  .progress-badge {
+    position: absolute;
+    top: -4px;
+    inset-inline-end: -4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 4px;
+    background-color: var(--green-color);
+    color: white;
+    border-radius: 9999px;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1;
+    border: 2px solid var(--button-bg-color);
+  }
 }
 
 .menu-post-text {

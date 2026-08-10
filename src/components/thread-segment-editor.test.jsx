@@ -83,4 +83,55 @@ describe('ThreadSegmentEditor', () => {
     removeButton.click();
     expect(onRemove).toHaveBeenCalled();
   });
+
+  it('when posted prop is true, makes textarea readOnly and hides remove/media buttons, shows ✓ chip', () => {
+    const onChange = vi.fn();
+    const onRemove = vi.fn();
+    const container = document.createElement('div');
+
+    render(
+      h(ThreadSegmentEditor, {
+        segment: {
+          uid: 'test-uid-2',
+          text: 'posted segment',
+          mediaAttachments: [],
+        },
+        maxCharacters: 300,
+        blueskyRules: false,
+        maxMediaAttachments: 4,
+        disabled: false,
+        posted: true, // This is the new prop
+        onChange,
+        onRemove,
+        processFiles: async () => [],
+        stringLength: (s) => s.length,
+      }),
+      container,
+    );
+
+    // Assert: textarea exists and is readOnly
+    const textarea = container.querySelector('textarea');
+    expect(textarea).not.toBeNull();
+    expect(textarea.readOnly).toBe(true);
+
+    // Assert: remove/media buttons are hidden or removed
+    const removeButton = container.querySelector('.remove-segment');
+    const addMediaButton = container.querySelector('.toolbar-button');
+    // When posted, these buttons should not exist or be hidden
+    expect(
+      !removeButton ||
+        removeButton.hidden ||
+        removeButton.style.display === 'none',
+    ).toBe(true);
+    // Media button should be removed or hidden when posted
+    expect(
+      !addMediaButton ||
+        addMediaButton.hidden ||
+        addMediaButton.style.display === 'none',
+    ).toBe(true);
+
+    // Assert: ✓ Posted chip is visible
+    const postedChip = container.querySelector('.posted-chip');
+    expect(postedChip).not.toBeNull();
+  });
 });
