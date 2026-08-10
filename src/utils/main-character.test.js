@@ -37,6 +37,16 @@ describe('properNounPhrases', () => {
     ).toEqual(['Elon']);
   });
 
+  it('drops contractions of stopwords', () => {
+    // Sentence-opening contractions ("I've", "Don't", "We're") are the
+    // stopword with a suffix, not proper nouns.
+    expect(properNounPhrases("I've been reading about Elon")).toEqual(['Elon']);
+    expect(properNounPhrases('I’ve been reading about Elon')).toEqual(['Elon']);
+    expect(properNounPhrases("Don't @ me, it's Elon again")).toEqual(['Elon']);
+    expect(properNounPhrases("We're done. Won't miss Elon")).toEqual(['Elon']);
+    expect(properNounPhrases("They'll say Elon")).toEqual(['Elon']);
+  });
+
   it('ignores lowercase text', () => {
     expect(properNounPhrases('just a normal sentence here')).toEqual([]);
   });

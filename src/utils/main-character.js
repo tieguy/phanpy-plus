@@ -68,6 +68,12 @@ const STOPWORDS = new Set(
     'not',
     'no',
     'yes',
+    // Contractions whose stripped base isn't itself a word.
+    "won't",
+    "ain't",
+    "shan't",
+    "let's",
+    "y'all",
     'here',
     'there',
     'when',
@@ -147,9 +153,14 @@ function normalizeApostrophes(s) {
 }
 
 function isStopword(word) {
-  return STOPWORDS.has(
-    normalizeApostrophes(word.toLowerCase()).replace(/'s$/, ''),
-  );
+  const w = normalizeApostrophes(word.toLowerCase());
+  if (STOPWORDS.has(w)) return true;
+  // Collapse possessives and contractions onto their base word, so the list
+  // doesn't have to spell out every form: "I've" → "i", "They'll" → "they",
+  // "Didn't" → "did". Irregular forms whose base isn't a word ("won't",
+  // "ain't") are listed verbatim and caught by the check above.
+  const base = w.replace(/n't$/, '').replace(/'(s|ve|d|ll|re|m|t)$/, '');
+  return base !== w && STOPWORDS.has(base);
 }
 
 // Capitalized 1–3 word phrases that look like proper nouns.
