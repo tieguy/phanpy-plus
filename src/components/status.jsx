@@ -53,6 +53,7 @@ import {
   getAPIVersions,
   getCurrentAccID,
   hasAccountInInstance,
+  isSelfAccountID,
 } from '../utils/store-utils';
 import supports from '../utils/supports';
 import useTruncated from '../utils/useTruncated';
@@ -514,7 +515,11 @@ function Status({
   if (mediaFirst && hasMediaAttachments) size = 's';
 
   const currentAccount = getCurrentAccID();
-  const isSelf = currentAccount && currentAccount == accountId;
+  // Any logged-in account, not just the active one — a merged timeline shows
+  // your Bluesky posts while a Mastodon account is current, and they're still
+  // yours. The self-only actions (delete, pin, edit, conversation mute) all go
+  // through `masto`, which api({ instance }) already routes to that account.
+  const isSelf = isSelfAccountID(accountId, instance);
 
   const filterContext = useContext(FilterContext);
   const filterInfo =
@@ -3341,7 +3346,6 @@ const QuoteStatus = memo(({ quote, level = 0 }) => {
   const { _ } = useLingui();
   const snapStates = useSnapshot(states);
   const filterContext = useContext(FilterContext);
-  const currentAccount = getCurrentAccID();
 
   const q = quote;
   let unfulfilledState;
@@ -3352,7 +3356,7 @@ const QuoteStatus = memo(({ quote, level = 0 }) => {
   const quoteStatus =
     snapStates.statuses[statusKey(q.id, q.instance)] || q.quoteStatus;
   if (quoteStatus) {
-    const isSelf = currentAccount && currentAccount === quoteStatus.account?.id;
+    const isSelf = isSelfAccountID(quoteStatus.account?.id, q.instance);
     const filterInfo =
       !isSelf && isFiltered(quoteStatus.filtered, filterContext);
 

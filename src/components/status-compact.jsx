@@ -6,7 +6,7 @@ import FilterContext from '../utils/filter-context';
 import { isFiltered } from '../utils/filters';
 import states, { getStatus, statusKey } from '../utils/states';
 import statusPeek from '../utils/status-peek';
-import { getCurrentAccID } from '../utils/store-utils';
+import { isSelfAccountID } from '../utils/store-utils';
 
 import Avatar from './avatar';
 import LazyRender from './lazy-render';
@@ -36,8 +36,7 @@ function StatusCompact({ sKey }) {
   const srKey = statusKey(id, instance);
   const statusPeekText = statusPeek(status);
 
-  const currentAccount = getCurrentAccID();
-  const isSelf = currentAccount && currentAccount === accountId;
+  const isSelf = isSelfAccountID(accountId, instance);
 
   const filterContext = useContext(FilterContext);
   let filterInfo = !isSelf && isFiltered(filtered, filterContext);

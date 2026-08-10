@@ -38,6 +38,24 @@ export function hasAccountInInstance(instance) {
   return accounts.some((a) => a.instanceURL === instance);
 }
 
+// Is this account one of *ours* — on any logged-in account, either network?
+// Not just the currently-active one: in a merged timeline your own Bluesky post
+// shows up while a Mastodon account is active (and vice-versa), and it's still
+// yours to delete, pin, or edit. Must be keyed on (id, instance) together —
+// Mastodon account IDs are only unique within an instance.
+export function isSelfAccountID(id, instance) {
+  if (!id || !instance) return false;
+  // api() lowercases the instance it hands back, and both login paths store
+  // instanceURL lowercased — normalize anyway, since account records outlive
+  // builds in localStorage and a mismatch here would silently hide the
+  // self-only actions rather than fail loudly.
+  const key = String(instance).toLowerCase().trim();
+  return getAccounts().some(
+    (a) =>
+      a.info?.id === id && String(a.instanceURL).toLowerCase().trim() === key,
+  );
+}
+
 const standaloneMQ =
   typeof window !== 'undefined'
     ? window.matchMedia('(display-mode: standalone)')
