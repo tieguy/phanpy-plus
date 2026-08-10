@@ -151,7 +151,7 @@ export async function publishThread({
         visibility: account && isBluesky ? undefined : shared.visibility,
         in_reply_to_id: inReplyToId || undefined,
         // These only make sense on the first post of a thread
-        scheduled_at: i === startAt && startAt === 0 ? shared.scheduledAt : undefined,
+        scheduled_at: i === 0 ? shared.scheduledAt : undefined,
         quoted_status_id: i === 0 ? shared.quotedStatusId : undefined,
         quote_approval_policy: shared.quoteApprovalPolicy,
       });
