@@ -33,7 +33,7 @@ Expected: single version of each (common-web 0.5.x and multiformats 13.4.x dedup
 **Step 3: Verify build unaffected**
 
 Run: `npm run build`
-Expected: success, and the main bundle does NOT grow materially (these are only imported behind dynamic `import()` added in later tasks; nothing imports them yet).
+Expected: success. Then run `npm run build:sizes` (script exists) and note the main-bundle size — it must not grow materially now (nothing imports the new deps yet) and should be re-checked the same way after Task 3 (they must stay behind dynamic `import()`).
 
 **Step 4: Commit**
 
@@ -109,6 +109,22 @@ describe('prepareForHashing', () => {
     expect(prepareForHashing({ image: blobRef })).toEqual({
       image: { $type: 'blob', mimeType: 'image/jpeg' },
     });
+  });
+
+  it('passes real multiformats CID instances through untouched', async () => {
+    // A real BlobRef.ipld() contains a live CID in its ref field — that
+    // instance must survive prepareForHashing so dag-cbor can encode it
+    // natively (tag 42), and computeCid must accept records containing it.
+    const { CID } = await import('multiformats/cid');
+    const { sha256 } = await import('multiformats/hashes/sha2');
+    const cid = CID.createV1(0x71, await sha256.digest(new Uint8Array([1])));
+    expect(prepareForHashing({ ref: cid }).ref).toBe(cid);
+    const withBlob = {
+      ...record,
+      embed: { $type: 'app.bsky.embed.images', ref: cid },
+    };
+    expect(await computeCid(withBlob)).toBe(await computeCid({ ...withBlob }));
+    expect(await computeCid(withBlob)).not.toBe(await computeCid(record));
   });
 });
 
@@ -230,7 +246,7 @@ async function createThread(paramsList) {
     return [await createStatus(paramsList[0])];
   }
   const { computeCid, nextTid } = await import('./thread-writes');
-  const did = agent.assertDid;
+  const did = agentDid(); // file's existing idiom (client.js ~187)
 
   let reply;
   if (paramsList[0].in_reply_to_id) {
@@ -254,28 +270,54 @@ async function createThread(paramsList) {
       rkey,
       value: record,
     });
-    posts.push({ uri, record });
     // Next post replies to this one; root stays the thread's first ref
-    const ref = { uri, cid: await computeCid(record) };
+    const cid = await computeCid(record);
+    posts.push({ uri, cid, record });
+    const ref = { uri, cid };
     reply = { root: reply?.root ?? ref, parent: ref };
   }
 
-  await agent.com.atproto.repo.applyWrites({
+  const res = await agent.com.atproto.repo.applyWrites({
     repo: did,
     writes,
     validate: true,
   });
 
+  // Ground-truth check: the server's applyWrites results carry the real
+  // CIDs. A mismatch means our local computeCid is wrong — the thread's
+  // internal reply refs are then broken (posts reference nonexistent CIDs)
+  // and would silently vanish from thread views. Warn loudly and prefer
+  // the server's values for everything downstream.
+  const results = res?.data?.results || [];
+  for (let i = 0; i < posts.length; i++) {
+    const serverCid = results[i]?.cid;
+    if (serverCid && serverCid !== posts[i].cid) {
+      console.warn(
+        'createThread: computed CID mismatch — reply refs may be broken',
+        { index: i, computed: posts[i].cid, server: serverCid },
+      );
+      posts[i].cid = serverCid;
+    }
+  }
+
+  // Post-success bookkeeping, mirroring createStatus: consumed media ids
+  // must leave pendingMedia (replicate whatever cleanup createStatus does
+  // after agent.post — see Phase 2 extraction notes).
+  for (const params of paramsList) {
+    for (const mid of params.media_ids || []) pendingMedia.delete(mid);
+  }
+
   const statuses = [];
-  for (const { uri, record } of posts) {
-    statuses.push(await toReturnedStatus(uri, record));
+  for (const { uri, cid, record } of posts) {
+    statuses.push(await toReturnedStatus(uri, cid, record));
   }
   return statuses;
 }
 ```
 
 Implementation notes:
-- `agent.assertDid` throws without a session — acceptable (matches social-app); if client.js elsewhere uses `agent.session.did`, match the file's existing idiom instead.
+- `agentDid()` is the file's existing idiom (~line 187); use it rather than `agent.assertDid`.
+- The server-CID cross-check above substitutes for the design's "known record → known CID" fixture (no authoritative vector exists to hardcode safely) — this gives *ground truth* verification on every real thread post instead. Recorded as a deliberate deviation.
 - `buildPostRecord` runs facets + media embeds + link card *before* the batch — required, since CIDs hash the final record. Per-segment link cards remain best-effort inside `buildPostRecord`.
 - If `toReturnedStatus` (Phase 2) refreshes from the server, a just-written thread may not be indexed yet — if it has a fetch-with-local-fallback shape, that's already handled; otherwise prefer the local-construction branch for thread posts.
 

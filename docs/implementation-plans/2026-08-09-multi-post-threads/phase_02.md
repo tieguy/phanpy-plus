@@ -21,14 +21,14 @@
 
 **Step 1: Read the current `createStatus`**
 
-Read `src/utils/bluesky/client.js` lines 685–820 in full before editing. Its verified internal order:
-1. 693–710: `loadAtproto()`, reject `poll` and `scheduled_at` (throws)
-2. 712–726: fullText with CW/spoiler prefix; `new RichText({ text })`; `detectFacets(agent)`; record `{ text, facets, createdAt, langs, labels }`
-3. 734–741: reply refs from `in_reply_to_id` (idToAtUri → fetchPost → `{ root, parent }`)
-4. 743–777: embeds — images from `pendingMedia` by `media_ids`; quote record embed from `quoted_status_id`
-5. 783–789: link card — `firstLinkFacetUri(rt.facets)` → `buildExternalEmbed(agent, url)` → `record.embed` (only when no other embed; best-effort)
-6. 791: `await agent.post(record)`
-7. 792–815: return Mastodon-shaped status (refresh from server, local fallback)
+Read `src/utils/bluesky/client.js` lines 685–820 in full before editing. Its verified internal order (line refs ±2 — trust the file):
+1. ~693: `await ready()`; validation rejecting `poll` and `scheduled_at` (throws)
+2. ~712–726: fullText with CW/spoiler prefix; `RichText` from `loadAtproto()` (~717); `detectFacets(agent)`; record `{ text, facets, createdAt, langs, labels }`
+3. ~733–741: reply refs from `in_reply_to_id` (idToAtUri → fetchPost → `{ root, parent }`)
+4. ~743–777: embeds — images from `pendingMedia` by `media_ids`; quote record embed from `quoted_status_id`
+5. ~783–789: link card — `firstLinkFacetUri(rt.facets)` → `buildExternalEmbed(agent, url)` → `record.embed` (only when no other embed; best-effort)
+6. ~792: `await agent.post(record)`; `pendingMedia.delete(...)` cleanup for consumed media ids; `cids.set(res.uri, res.cid)` (~795, `cids` map declared ~192)
+7. ~797–815: return Mastodon-shaped status (refresh from server; local fallback passes `cid: res.cid` into `postToStatus`)
 
 **Step 2: Perform the extraction**
 
@@ -64,7 +64,7 @@ async function createStatus(params) {
 
 Watch for closures: the moved code references `agent`, `pendingMedia`, `idToAtUri`, `fetchPost`, `firstLinkFacetUri`, `buildExternalEmbed`, and `loadAtproto` — all already module-scope in client.js, so the move is safe. If the existing code computes `rt` (RichText) and later uses `rt.facets` for the link card, keep that flow inside `buildPostRecord`.
 
-While extracting step 7, if the Mastodon-shaped return logic is inline, extract it too as `async function toReturnedStatus(uri, record)` (or reuse the existing helper if one already exists) — Phase 3's `createThread` needs to call the same logic per thread post. Match whatever the current code actually does; do not invent a new shape.
+While extracting step 7, extract the Mastodon-shaped return logic as `async function toReturnedStatus(uri, cid, record)` — the **cid parameter is required**: the current local-fallback branch passes `cid: res.cid` into `postToStatus`, and Phase 3's `createThread` will pass its locally/server-computed CID per post. The helper must also perform the bookkeeping the current success path does: `cids.set(uri, cid)` and (if currently inside this region) the `pendingMedia.delete(...)` cleanup for consumed media ids — if `pendingMedia.delete` happens outside the extracted region, leave it in `createStatus` and note that `createThread` (Phase 3) must replicate it. `createStatus` calls `toReturnedStatus(res.uri, res.cid, record)` with the values from `agent.post`'s response. Match whatever the current code actually does; do not invent a new shape.
 
 **Step 3: Verify**
 

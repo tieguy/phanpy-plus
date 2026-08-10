@@ -23,7 +23,7 @@
 
 ```js
 // Survives a failed publish attempt so retry can resume mid-thread.
-// { postedStatuses: [], failedAtIndex: null, lastPostedId: null }
+// Non-null ONLY for genuine partial threads: { postedStatuses: [...], lastPostedId }
 const [threadPublishState, setThreadPublishState] = useState(null);
 const [publishProgress, setPublishProgress] = useState(null); // 'n/N' string
 ```
@@ -35,40 +35,53 @@ Reset `threadPublishState` to `null` whenever the draft meaningfully changes seg
 In the create branch, derive resume args and pass `onProgress`:
 
 ```js
-const resume = threadPublishState?.failedAtIndex != null;
+// Resume state exists ONLY for genuine partial threads (some posts up,
+// some not). Plain single-post failures and index-0 thread failures keep
+// today's behavior exactly — no "Retry remaining", no locking.
+const resume = threadPublishState != null;
+const startAt = resume ? threadPublishState.postedStatuses.length : 0;
 const { statuses, failedAtIndex, error } = await publishThread({
   masto,
   instance,
   segments,
   shared,
   idempotencyPrefix: UID.current,
-  startAt: resume ? threadPublishState.failedAtIndex : 0,
+  startAt,
   resumeInReplyToId: resume ? threadPublishState.lastPostedId : undefined,
   onProgress: (i, state) => {
     if (state === 'posting' && segments.length > 1) {
-      setPublishProgress(`${i + 1}/${segments.length}`);
+      const progress = `${i + 1}/${segments.length}`;
+      setPublishProgress(progress);
+      // Mirror into global composer state so the minimized-composer
+      // indicator can show it too (design asked for composerState here;
+      // the resume bookkeeping itself stays component-local — recorded
+      // as a minor deviation).
+      states.composerState.publishingProgress = progress;
     }
   },
 });
 const allStatuses = [...(threadPublishState?.postedStatuses || []), ...statuses];
 if (failedAtIndex !== null) {
-  setThreadPublishState({
-    postedStatuses: allStatuses,
-    failedAtIndex,
-    lastPostedId: allStatuses.at(-1)?.id || null,
-  });
-  throw Object.assign(
-    error || new Error('thread failed'),
-    {
+  if (segments.length > 1 && allStatuses.length > 0) {
+    // Genuine partial thread → enable resume UX
+    setThreadPublishState({
+      postedStatuses: allStatuses,
+      lastPostedId: allStatuses.at(-1)?.id || null,
+    });
+    throw Object.assign(error || new Error('thread failed'), {
       _threadPartial: {
         posted: allStatuses.length,
         total: segments.length,
       },
-    },
-  );
+    });
+  }
+  // Nothing posted (or not a thread): behave exactly like today
+  setThreadPublishState(null);
+  throw error;
 }
 setThreadPublishState(null);
 setPublishProgress(null);
+states.composerState.publishingProgress = null;
 newStatus = allStatuses[0];
 ```
 
@@ -97,9 +110,9 @@ git push
 
 **Step 1: Lock posted segments**
 
-A segment is *posted* when `threadPublishState` exists and its overall index `< threadPublishState.failedAtIndex`. Overall index: main editor = 0, `moreSegments[i]` = i + 1.
+`threadPublishState` now exists *only* when at least one thread post is up (Task 1's gating), so: a segment is *posted* when its overall index `< threadPublishState.postedStatuses.length`. Overall index: main editor = 0, `moreSegments[i]` = i + 1. (The main editor is therefore always locked whenever the state exists.)
 
-- Main editor (only lockable if `failedAtIndex > 0`... which always holds when state exists and index 0 posted): set the textarea `readOnly` + a `✓ Posted` chip; disable its media/poll controls.
+- Main editor: set the textarea `readOnly` + a `✓ Posted` chip; disable its media/poll controls.
 - `ThreadSegmentEditor`: add a `posted` prop → `readOnly` textarea, hide remove/media buttons, `✓` chip.
 
 **Step 2: Post button + progress**

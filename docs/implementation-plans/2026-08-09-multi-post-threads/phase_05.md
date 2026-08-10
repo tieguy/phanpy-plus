@@ -36,7 +36,7 @@ const [moreSegments, setMoreSegments] = useState([]);
 
 **Step 2: Effective character limit**
 
-Near the `configuration` destructure (~236–257), add a memo. `getCurrentAccount`/network detection: `blueskyInstanceInfo` already reports `maxCharacters: 300` when the *primary* account is Bluesky, so only cross-post targets need checking. Import `isBlueskyAccount` from `../utils/bluesky` (check its export in `src/utils/bluesky/index.js` first):
+Near the `configuration` destructure (~236–257), add a memo. `blueskyInstanceInfo` already reports `maxCharacters: 300` when the *primary* account is Bluesky, so only cross-post targets need checking. `isBlueskyAccount` is **already imported** in compose.jsx (used ~line 1863):
 
 ```js
 const BLUESKY_MAX_CHARACTERS = 300;
@@ -54,9 +54,33 @@ const charLimitBoundByBluesky =
 
 Note: `crossPost`/`crossPostAccounts` are declared at 225–234, *before* this region — verify ordering; if the config destructure precedes them, move this memo below both.
 
-**Step 3: Point the existing counter at the effective limit**
+**Step 3: Make CharCountMeter usable per-segment, and point everything at the effective limit**
 
-At the `CharCountMeter` render (2084–2087), pass `maxCharacters={effectiveMaxCharacters}`; when `charLimitBoundByBluesky`, render a small adjacent hint (`<span class="ib insignificant">Bluesky</span>` styled like neighboring hints, with a `title` explaining the limit). Also update any submit-validation that compares text length against `maxCharacters` to use `effectiveMaxCharacters` (search the handler for `maxCharacters` uses).
+`CharCountMeter` (`src/components/char-count-meter.jsx`) currently reads the **global** valtio signal `states.composerCharacterCount` — it cannot show a per-segment count. Extend it backward-compatibly with an optional `charCount` prop:
+
+```jsx
+function CharCountMeter({ maxCharacters = 500, hidden, charCount }) {
+  const snapStates = useSnapshot(states);
+  const charCountValue = charCount ?? snapStates.composerCharacterCount;
+  // …rest unchanged, using charCountValue
+}
+```
+
+(Adapt to the component's actual body — read it first; keep the default global-signal path byte-for-byte identical.)
+
+Then: at the main `CharCountMeter` render (~2084–2087) pass `maxCharacters={effectiveMaxCharacters}`; ALSO update the main `<Textarea maxCharacters={maxCharacters}>` prop (~line 1677) to `effectiveMaxCharacters` so editor and meter agree. When `charLimitBoundByBluesky`, render a small adjacent hint (`<span class="ib insignificant">Bluesky</span>` styled like neighboring hints, with a `title` explaining the limit).
+
+**Character counting idiom (applies to segments in Tasks 2–3):** mirror the main input handler (~line 789): Bluesky counts literal text, Mastodon counts `countableText(...)`, and lengths use the repo's grapheme-aware `stringLength(...)` — not `.length`. Add one helper next to `countableText`:
+
+```js
+// Segment character count under the strictest active network's rules:
+// when any Bluesky target is active, Bluesky's literal-text counting wins.
+function segmentCharCount(text, { blueskyRules }) {
+  return stringLength(blueskyRules ? text : countableText(text));
+}
+```
+
+with `blueskyRules = charLimitBoundByBluesky || maxCharacters === BLUESKY_MAX_CHARACTERS` computed at the call sites (verify `stringLength`'s actual import name/source in the file and match it).
 
 **Step 4: Verify build, commit**
 
@@ -88,6 +112,7 @@ Directly after the main editor block (textarea + its media list), before the act
     index={i}
     segment={segment}
     maxCharacters={effectiveMaxCharacters}
+    blueskyRules={charLimitBoundByBluesky || maxCharacters === BLUESKY_MAX_CHARACTERS}
     maxMediaAttachments={maxMediaAttachments}
     disabled={uiState === 'loading'}
     onChange={(patch) =>
@@ -102,7 +127,11 @@ Directly after the main editor block (textarea + its media list), before the act
 ))}
 ```
 
-`ThreadSegmentEditor` is a new component in the same file (below `Compose`, alongside the file's other internal components): a bordered container with (a) a plain `<textarea>` (reuse the main textarea's styling class; simple `onInput` into `onChange({ text })` — no autocomplete/custom-text-area integration needed for v1), (b) a media button (`<Icon icon="attachment" />`) triggering a hidden `<input type="file" multiple accept="image/*,video/*">` whose files run through `processFiles`-equivalent logic into `onChange({ mediaAttachments })` (respect `maxMediaAttachments`; reuse the existing attachment-preview rendering if cheaply reusable — otherwise filename chips with a remove button suffice for v1), (c) its own `CharCountMeter` fed by `countableText(segment.text)`, and (d) a remove "×" button (`onRemove` — deleting a middle segment just closes the gap).
+`ThreadSegmentEditor` is a new component in the same file (below `Compose`, alongside the file's other internal components): a bordered container with (a) a plain `<textarea>` (reuse the main textarea's styling class; simple `onInput` into `onChange({ text })` — no autocomplete/custom-text-area integration needed for v1), (b) a media button (`<Icon icon="attachment" />`) triggering a hidden `<input type="file" multiple accept="image/*,video/*">` whose files run through `processFiles`-equivalent logic into `onChange({ mediaAttachments })` (respect `maxMediaAttachments`; reuse the existing attachment-preview rendering if cheaply reusable — otherwise filename chips with a remove button suffice for v1), (c) its own `<CharCountMeter charCount={segmentCharCount(segment.text, { blueskyRules })} maxCharacters={maxCharacters} />` (the `charCount` prop added in Task 1), and (d) a remove "×" button (`onRemove` — deleting a middle segment just closes the gap).
+
+**Two form-interaction traps — get these right or the feature silently corrupts posts:**
+- The composer submits via `Object.fromEntries(new FormData(e.target))` and destructures `status` from it (~1325–1326). Segment textareas must have **NO `name` attribute** (a `name="status"` copied from the main textarea would silently *replace the main post's text* with the last segment's).
+- The whole editor lives inside the composer `<form>`: **every** `<button>` in `ThreadSegmentEditor` (media, remove) must have `type="button"`, or clicking it submits — i.e. publishes the thread.
 
 **Step 2: The "+" button**
 
@@ -156,7 +185,11 @@ git push
 
 **Step 1: Validation**
 
-In the submit handler's validation section (~1338–1373), add: every `moreSegments` entry must have non-empty trimmed `text` and `countableText(text).length <= effectiveMaxCharacters`; on violation, `alert` (matching the file's existing validation idiom) and return.
+In the submit handler's validation section (~1338–1373), add checks for **all segments including the main one** — note the old main-text length check is commented out ("Let the backend validate this"), but the backend can't know about *cross-target* limits, so client-side validation is now load-bearing:
+
+- every `moreSegments` entry: non-empty trimmed `text`;
+- every segment **including segment #1** (`status`): `segmentCharCount(text, { blueskyRules }) <= effectiveMaxCharacters` — but only enforce when `effectiveMaxCharacters < maxCharacters` (cross-target constraint) or the draft is a thread; single posts within the primary instance's own limit keep today's backend-validates behavior;
+- on violation, `alert` (matching the file's existing validation idiom) and return.
 
 **Step 2: Build segments and publish**
 
@@ -218,4 +251,4 @@ git commit -m "feat: persist thread segments in drafts"
 git push
 ```
 
-**Phase done when:** build + tests green; composer renders segment editors; a thread posts via `publishThread` on the primary account (LIVE verification deferred to morning checklist: 3-post thread on each network, draft save/restore of a multi-segment draft, old draft still loads).
+**Phase done when:** build + tests green; composer renders segment editors; a thread posts via `publishThread` on the primary account (LIVE verification deferred to morning checklist: 3-post thread on each network, draft save/restore of a multi-segment draft, old draft still loads, and Ctrl/Cmd+Enter from *inside a segment textarea* posts the thread — expected to work since the hotkey handler sits on the wrapping div (~1315) and bubbles, but confirm).

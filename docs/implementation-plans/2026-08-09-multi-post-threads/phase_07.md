@@ -4,7 +4,9 @@
 
 **Goal:** Full threads cross-post to other-network accounts with per-target failure isolation; docs updated.
 
-**Architecture:** The Phase 1 cross-post loop already calls `publishThread` per target; this phase passes the *full* segments array (removing Phase 5's skip-guard), adds per-target result toasts with thread counts, and per-target retry bookkeeping scoped to the current composer session. Cross-post failures never block or roll back other targets (toast-and-continue, as today).
+**Architecture:** The Phase 1 cross-post loop already calls `publishThread` per target; this phase passes the *full* segments array (removing Phase 5's skip-guard) and adds per-target progress + result toasts with thread counts. Cross-post failures never block or roll back other targets (toast-and-continue, as today).
+
+**Design deviation (flagged for user review):** the design asked for "per-target retry tracking". In practice it's unreachable: cross-posting only runs after the primary thread fully succeeds, at which point the composer closes — there is no surface left to retry from. A cross-post thread that partially fails therefore reports what posted and what didn't via toast, exactly like today's single-post cross-post failures. Building a retry surface would mean keeping the composer open after primary success — a UX change needing user sign-off. Recorded in the morning report.
 
 **Tech Stack:** Phase 4 `publishThread`, Lingui, existing toast idiom.
 
@@ -33,60 +35,52 @@ const crossSegments = [
 
 (`poll` stays undefined: polls block cross-posting entirely via `canCrossPost` — unchanged.)
 
-**Step 2: Per-target results and retry state**
+**Step 2: Per-target progress and results**
 
-Add alongside Phase 6's state:
-
-```js
-// Per-target cross-post retry state for the current composer session:
-// Map of account id → { failedAtIndex, lastPostedId, postedCount }
-const crossPostStateRef = useRef(new Map());
-```
-
-Rework the loop body:
+Rework the loop body (no retry bookkeeping — see the flagged deviation above; the loop only ever runs once per submit because cross-posting happens strictly after primary success):
 
 ```js
 for (const account of crossPostAccounts) {
-  const acctKey = account.info.id || account.info.did || account.info.acct;
-  const prior = crossPostStateRef.current.get(acctKey);
-  if (prior?.done) continue; // already fully cross-posted in this session
+  const acctName = account.info.acct || account.info.username;
   try {
     const { statuses: crossStatuses, failedAtIndex: crossFailedAt, error: crossError, skippedMedia } =
       await publishThread({
         account,
         segments: crossSegments,
-        shared: { spoilerText, sensitive: sensitive || sensitiveMedia, language, visibility },
-        startAt: prior?.failedAtIndex ?? 0,
-        resumeInReplyToId: prior?.lastPostedId,
+        shared: {
+          spoilerText,
+          sensitive: sensitive || sensitiveMedia,
+          language,
+          visibility: visibility || 'public',
+        },
+        onProgress: (i, state) => {
+          if (state === 'posting' && crossSegments.length > 1) {
+            states.composerState.publishingProgress = `@${acctName} ${i + 1}/${crossSegments.length}`;
+          }
+        },
       });
-    const postedCount = (prior?.postedCount || 0) + crossStatuses.length;
     if (crossFailedAt !== null) {
-      crossPostStateRef.current.set(acctKey, {
-        failedAtIndex: crossFailedAt,
-        lastPostedId: crossStatuses.at(-1)?.id || prior?.lastPostedId || null,
-        postedCount,
-      });
-      throw crossError;
+      // Partial cross-post: report precisely what made it up
+      showToast(
+        t`Cross-posted ${crossStatuses.length} of ${crossSegments.length} posts to @${acctName} — the rest failed: ${crossError?.message || crossError}`,
+      );
+      continue;
     }
-    crossPostStateRef.current.set(acctKey, { done: true, postedCount });
     showToast(
       (crossSegments.length > 1
-        ? t`Cross-posted thread (${postedCount} posts) to @${account.info.acct || account.info.username}`
-        : t`Cross-posted to @${account.info.acct || account.info.username}`) +
+        ? t`Cross-posted thread (${crossStatuses.length} posts) to @${acctName}`
+        : t`Cross-posted to @${acctName}`) +
         (skippedMedia?.length ? ` (${t`some attachments skipped`})` : ''),
     );
   } catch (e) {
     console.error(e);
-    showToast(
-      t`Unable to cross-post to @${account.info.acct || account.info.username}: ${e?.message || e}`,
-    );
+    showToast(t`Unable to cross-post to @${acctName}: ${e?.message || e}`);
   }
 }
+states.composerState.publishingProgress = null;
 ```
 
-Semantics to preserve: a cross-post failure is toast-only — it must NOT throw out of the submit handler, NOT keep the composer open by itself, and NOT affect other targets. When the *primary* thread failed (Phase 6 keeps the composer open), the user's "Retry remaining" re-enters this loop; `crossPostStateRef` then resumes each target from where it stopped instead of double-posting (that's why the Map lives in a ref: it must survive the failed attempt but die with the composer session). Reset the Map in the same places Phase 6 resets `threadPublishState` (segment structure changes).
-
-Note for Bluesky targets: resume state is trivially safe — atomic `createThread` means `failedAtIndex` is only ever the start index with nothing posted.
+Semantics to preserve: a cross-post failure is toast-only — it must NOT throw out of the submit handler, NOT keep the composer open, and NOT affect other targets. Bluesky targets are atomic (all posts or none); Mastodon targets can partially fail, which the first toast branch reports honestly.
 
 **Step 3: Verify + commit**
 

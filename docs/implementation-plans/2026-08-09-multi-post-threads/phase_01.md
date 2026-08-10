@@ -110,8 +110,12 @@ export async function publishThread({
     const { api } = await import('./api');
     client = (account ? api({ account }) : api({ instance })).masto;
   }
-  let isBluesky = false;
-  if (account) {
+  // Bluesky targets, both primary and cross-post: the facade-only
+  // createThread method (exists from Phase 3 on) identifies the client
+  // directly; the account check covers cross-post targets before Phase 3
+  // and is a robust fallback after it.
+  let isBluesky = typeof client.v1?.statuses?.createThread === 'function';
+  if (!isBluesky && account) {
     const { isBlueskyAccount } = await import('./bluesky');
     isBluesky = isBlueskyAccount(account);
   }
@@ -193,7 +197,7 @@ import { canCrossPost, publishThread } from '../utils/publish';
 
 In the submit handler, the current structure (verified 2026-08-10) is: params build (1455–1498) → `let newStatus` → edit branch (`masto.v1.statuses.$select(editStatus.id).update(params)`) / create branch (statuses.create with Idempotency-Key + fallback, 1510–1521) → cross-post block (1524–1569).
 
-Keep the **edit branch and its params build exactly as-is** (the `params` build stays, used only by the edit path). Replace the create branch AND the whole cross-post block with:
+Keep the **edit branch as-is**, but since `params` is now only used by the edit path, move the `let params = {...}` build (and its `removeNullUndefined` call) *inside* the `if (editStatus)` branch, deleting the now-dead non-edit parts of that build (the `else` block that sets `visibility`/`in_reply_to_id`/`scheduled_at`/quote fields) and the `console.log('POST', params)` line. Replace the create branch AND the whole cross-post block with:
 
 ```js
 } else {
@@ -244,7 +248,7 @@ Keep the **edit branch and its params build exactly as-is** (the `params` build 
               spoilerText,
               sensitive: sensitive || sensitiveMedia,
               language,
-              visibility,
+              visibility: visibility || 'public',
             },
           });
           if (crossFailedAt !== null) throw crossError;
@@ -303,8 +307,8 @@ git push
 
 **Step 1: Verify no remaining importers**
 
-Run: `grep -rn "cross-post\|crossPostStatus" src/`
-Expected: no matches outside comments (`crossPost` state vars in compose.jsx are fine — the grep pattern above matches whole words `crossPostStatus` and the file path only).
+Run: `grep -rn "crossPostStatus\|bluesky/cross-post" src/`
+Expected: no matches. (Do NOT grep for bare `cross-post` — user-facing toast strings like "Unable to cross-post to…" legitimately contain it.)
 
 If matches remain, fix them before deleting.
 
@@ -320,7 +324,7 @@ Run: `npm run build`
 Expected: success.
 
 Run: `npm run test:unit`
-Expected: all existing tests pass (9 pre-existing test files; none touch posting).
+Expected: all existing tests pass (12 pre-existing test files; none touch posting).
 
 **Step 4: Commit**
 
