@@ -178,6 +178,21 @@ describe('publishThread atomic delegation (Bluesky facade)', () => {
     expect(paramsList).toHaveLength(3);
     expect(paramsList[0].in_reply_to_id).toBe('root-1');
     expect(paramsList[1].in_reply_to_id).toBe(undefined);
+    expect(paramsList.map((p) => p.status)).toEqual(['one', 'two', 'three']);
+  });
+
+  it('puts quoted_status_id only on the first segment (atomic path)', async () => {
+    const client = fakeBlueskyClient();
+    await publishThread({
+      masto: client,
+      isBluesky: true,
+      segments: segments3,
+      shared: { inReplyToId: 'root-1', quotedStatusId: 'q1' },
+    });
+    const paramsList = client.threadCalls[0];
+    expect(paramsList[0].quoted_status_id).toBe('q1');
+    expect(paramsList[1].quoted_status_id).toBe(undefined);
+    expect(paramsList[2].quoted_status_id).toBe(undefined);
   });
 
   it('reports atomic failure as failedAtIndex 0 with no statuses', async () => {
@@ -192,6 +207,71 @@ describe('publishThread atomic delegation (Bluesky facade)', () => {
     });
     expect(statuses).toHaveLength(0);
     expect(failedAtIndex).toBe(0);
+  });
+
+  it('accumulates skippedMedia on atomic path (Bluesky video)', async () => {
+    const client = fakeBlueskyClient();
+    const segmentsWithMedia = [
+      { text: 'first' },
+      {
+        text: 'second',
+        mediaAttachments: [
+          { fileName: 'video.mp4', type: 'video/mp4', fileData: 'd' },
+        ],
+      },
+      { text: 'third' },
+    ];
+    const { statuses, skippedMedia } = await publishThread({
+      masto: client,
+      isBluesky: true,
+      segments: segmentsWithMedia,
+    });
+    expect(statuses).toHaveLength(3);
+    expect(skippedMedia).toContain('video.mp4');
+  });
+
+  it('collects onProgress events on atomic path', async () => {
+    const client = fakeBlueskyClient();
+    const events = [];
+    await publishThread({
+      masto: client,
+      isBluesky: true,
+      segments: segments3,
+      onProgress: (i, state) => events.push([i, state]),
+    });
+    expect(events).toEqual([
+      [0, 'posting'],
+      [0, 'done'],
+      [1, 'done'],
+      [2, 'done'],
+    ]);
+  });
+
+  it('single-segment Bluesky post uses create path, not createThread', async () => {
+    const calls = [];
+    const client = {
+      threadCalls: [],
+      v1: {
+        statuses: {
+          create: async (params) => {
+            calls.push(params);
+            return { id: `id-${calls.length - 1}`, ...params };
+          },
+          createThread: async () => {
+            throw new Error('should not be called for single segment');
+          },
+        },
+      },
+      v2: { media: { create: async () => ({ id: 'uploaded-1' }) } },
+    };
+    const { statuses, failedAtIndex } = await publishThread({
+      masto: client,
+      isBluesky: true,
+      segments: [{ text: 'single' }],
+    });
+    expect(failedAtIndex).toBe(null);
+    expect(statuses).toHaveLength(1);
+    expect(calls).toHaveLength(1);
   });
 
   it('NEVER routes Mastodon threads to createThread, even though masto.js proxies make every method look present', async () => {

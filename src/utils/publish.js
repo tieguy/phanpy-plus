@@ -128,7 +128,8 @@ export async function publishThread({
             media_ids: mediaIds.length ? mediaIds : undefined,
             in_reply_to_id:
               i === startAt
-                ? (startAt > 0 ? resumeInReplyToId : shared.inReplyToId) ||
+                ? // startAt > 0 arm is currently unreachable (atomic failure never advances startAt), but kept correct for future use.
+                  (startAt > 0 ? resumeInReplyToId : shared.inReplyToId) ||
                   undefined
                 : undefined,
             quoted_status_id: i === 0 ? shared.quotedStatusId : undefined,
