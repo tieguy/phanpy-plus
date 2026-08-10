@@ -689,8 +689,20 @@ export function createBlueskyClient({
     };
   }
 
-  async function createStatus(params) {
-    await ready();
+  // Builds the reply refs for a post replying to inReplyToId (a masto-shaped
+  // Bluesky id). Used by createStatus and (Phase 3) createThread.
+  async function buildReplyRefs(inReplyToId) {
+    const parentUri = idToAtUri(inReplyToId);
+    const parentPost = await fetchPost(parentUri);
+    const parentRef = { uri: parentPost.uri, cid: parentPost.cid };
+    const rootRef = parentPost.record?.reply?.root || parentRef;
+    return { root: rootRef, parent: parentRef };
+  }
+
+  // Builds a complete app.bsky.feed.post record from masto-shaped params —
+  // everything EXCEPT reply refs (callers attach those). Shared by
+  // createStatus and (Phase 3) createThread.
+  async function buildPostRecord(params) {
     const {
       status: text,
       spoiler_text: spoilerText,
@@ -698,7 +710,6 @@ export function createBlueskyClient({
       sensitive,
       poll,
       media_ids: mediaIds,
-      in_reply_to_id: inReplyToId,
       quoted_status_id: quotedStatusId,
       scheduled_at: scheduledAt,
     } = params;
@@ -719,6 +730,7 @@ export function createBlueskyClient({
     await rt.detectFacets(agent);
 
     const record = {
+      $type: 'app.bsky.feed.post',
       text: rt.text,
       facets: rt.facets,
       createdAt: new Date().toISOString(),
@@ -729,15 +741,6 @@ export function createBlueskyClient({
         $type: 'com.atproto.label.defs#selfLabels',
         values: [{ val: 'graphic-media' }],
       };
-    }
-
-    // Reply refs
-    if (inReplyToId) {
-      const parentUri = idToAtUri(inReplyToId);
-      const parentPost = await fetchPost(parentUri);
-      const parentRef = { uri: parentPost.uri, cid: parentPost.cid };
-      const rootRef = parentPost.record?.reply?.root || parentRef;
-      record.reply = { root: rootRef, parent: parentRef };
     }
 
     // Embeds: images and/or quote
@@ -788,13 +791,18 @@ export function createBlueskyClient({
       }
     }
 
-    const res = await agent.post(record);
-    for (const mid of mediaIds || []) pendingMedia.delete(mid);
-    cids.set(res.uri, res.cid);
+    return record;
+  }
+
+  // Converts a posted record (uri, cid) to a Mastodon-shaped status.
+  // Handles cid bookkeeping and fallback to local conversion if
+  // the AppView hasn't indexed the post yet.
+  async function toReturnedStatus(uri, cid, record) {
+    cids.set(uri, cid);
 
     // Return the created post as a Mastodon-shaped status
     try {
-      return await refreshedStatus(res.uri);
+      return await refreshedStatus(uri);
     } catch (e) {
       // AppView may not have indexed it yet — build locally
       const profile = {
@@ -803,8 +811,8 @@ export function createBlueskyClient({
       };
       const status = postToStatus(
         {
-          uri: res.uri,
-          cid: res.cid,
+          uri,
+          cid,
           author: profile,
           record,
           indexedAt: record.createdAt,
@@ -813,6 +821,17 @@ export function createBlueskyClient({
       );
       return status;
     }
+  }
+
+  async function createStatus(params) {
+    await ready();
+    const record = await buildPostRecord(params);
+    if (params.in_reply_to_id) {
+      record.reply = await buildReplyRefs(params.in_reply_to_id);
+    }
+    const res = await agent.post(record);
+    for (const mid of params.media_ids || []) pendingMedia.delete(mid);
+    return await toReturnedStatus(res.uri, res.cid, record);
   }
 
   async function uploadMedia(params) {
