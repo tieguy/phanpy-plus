@@ -45,7 +45,7 @@ import {
 import stringLength from '../utils/string-length';
 import supports from '../utils/supports';
 import unfurlMastodonLink from '../utils/unfurl-link';
-import urlRegexObj from '../utils/url-regex';
+import { countableText, segmentCharCount } from '../utils/compose-counting';
 import useCloseWatcher from '../utils/useCloseWatcher';
 import useInterval from '../utils/useInterval';
 import useThrottledResizeObserver from '../utils/useThrottledResizeObserver';
@@ -117,21 +117,6 @@ const DEFAULT_LANG = localeMatch(
   supportedLanguages.map((l) => l[0]),
   'en',
 );
-
-// https://github.com/mastodon/mastodon/blob/c4a429ed47e85a6bbf0d470a41cc2f64cf120c19/app/javascript/mastodon/features/compose/util/counter.js
-const usernameRegex = /(^|[^\/\w])[@＠](([a-z0-9_]+)@[a-z0-9\.\-]+[a-z0-9]+)/gi;
-const urlPlaceholder = '$2xxxxxxxxxxxxxxxxxxxxxxx';
-function countableText(inputText) {
-  return inputText
-    .replace(urlRegexObj, urlPlaceholder)
-    .replace(usernameRegex, '$1@$3');
-}
-
-// Segment character count under the strictest active network's rules:
-// when any Bluesky target is active, Bluesky's literal-text counting wins.
-function segmentCharCount(text, { blueskyRules }) {
-  return stringLength(blueskyRules ? text : countableText(text));
-}
 
 // const rtf = new Intl.RelativeTimeFormat();
 const LF = mem((locale) => new Intl.ListFormat(locale || undefined));
@@ -827,7 +812,7 @@ function Compose({
     const count = getCharCount();
     states.composerCharacterCount = count;
   };
-  useEffect(updateCharCount, []);
+  useEffect(updateCharCount, [charLimitBoundByBluesky]);
 
   const supportsCloseWatcher = window.CloseWatcher;
   const escDownRef = useRef(false);
@@ -1815,7 +1800,6 @@ function Compose({
               }
               processFiles={processFiles}
               stringLength={stringLength}
-              countableText={countableText}
             />
           ))}
           {!editStatus && moreSegments.length < MAX_THREAD_SEGMENTS - 1 && (
@@ -2178,12 +2162,12 @@ function Compose({
                   hidden={uiState === 'loading'}
                 />
                 {charLimitBoundByBluesky && (
-                  <span
+                  <small
                     class="ib insignificant"
                     title={t`Bluesky limit applied: 300 characters`}
                   >
                     Bluesky
-                  </span>
+                  </small>
                 )}
               </>
             )}

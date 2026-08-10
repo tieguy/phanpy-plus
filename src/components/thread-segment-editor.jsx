@@ -1,14 +1,9 @@
 import { useLingui } from '@lingui/react/macro';
 import { useEffect, useMemo, useRef } from 'preact/hooks';
 
+import { countableText, segmentCharCount } from '../utils/compose-counting';
 import CharCountMeter from './char-count-meter';
 import Icon from './icon';
-
-// Segment character count under the strictest active network's rules:
-// when any Bluesky target is active, Bluesky's literal-text counting wins.
-function segmentCharCount(text, { blueskyRules }, stringLength, countableText) {
-  return stringLength(blueskyRules ? text : countableText(text));
-}
 
 function ThreadSegmentEditor({
   segment,
@@ -20,7 +15,6 @@ function ThreadSegmentEditor({
   onRemove,
   processFiles,
   stringLength,
-  countableText,
 }) {
   const { t } = useLingui();
   const fileInputRef = useRef();
@@ -38,21 +32,25 @@ function ThreadSegmentEditor({
     // Reset input to allow same file selection
     const currentInput = fileInputRef.current;
 
+    let processedFiles;
     try {
-      const processedFiles = await processFiles(
+      processedFiles = await processFiles(
         Array.from(files),
         segment.mediaAttachments.length,
       );
-      if (processedFiles) {
-        onChange({
-          mediaAttachments: [
-            ...segment.mediaAttachments,
-            ...processedFiles,
-          ].slice(0, maxMediaAttachments),
-        });
-      }
     } catch (err) {
-      alert(t`Error processing files: ${err.message}`);
+      alert(t`Error processing files: ${err?.message || err}`);
+      currentInput.value = '';
+      return;
+    }
+
+    if (processedFiles) {
+      onChange({
+        mediaAttachments: [
+          ...segment.mediaAttachments,
+          ...processedFiles,
+        ].slice(0, maxMediaAttachments),
+      });
     }
 
     currentInput.value = '';
@@ -70,23 +68,23 @@ function ThreadSegmentEditor({
     segment.text,
     { blueskyRules },
     stringLength,
-    countableText,
   );
   const mediaCanAdd =
     !maxMediaAttachments ||
     segment.mediaAttachments.length < maxMediaAttachments;
 
   // Build URL for media preview
+  // Prioritize fileData so restored drafts get a fresh blob URL
   const mediaPreviewUrls = useMemo(() => {
     return segment.mediaAttachments.map((attachment) => {
-      // Prioritize existing URL (from processFiles or server)
-      if (attachment.url) {
-        return attachment.url;
-      }
-      // Fallback to creating blob URL from fileData
+      // Prioritize fileData for restored drafts
       if (attachment.fileData) {
         const blob = new Blob([attachment.fileData], { type: attachment.type });
         return URL.createObjectURL(blob);
+      }
+      // Fallback to existing URL (from processFiles or server)
+      if (attachment.url) {
+        return attachment.url;
       }
       return null;
     });
