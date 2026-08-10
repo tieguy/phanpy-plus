@@ -28,7 +28,15 @@ const [threadPublishState, setThreadPublishState] = useState(null);
 const [publishProgress, setPublishProgress] = useState(null); // 'n/N' string
 ```
 
-Reset `threadPublishState` to `null` whenever the draft meaningfully changes segment structure (the "+"/remove handlers from Phase 5) — a structural edit invalidates resume indexes. Text edits to *unposted* segments are fine and must NOT reset it.
+Do NOT reset `threadPublishState` on segment structure changes. (An earlier revision of this plan mandated a reset on "+"/remove because "a structural edit invalidates resume indexes" — review showed that rationale doesn't hold: posted segments have their remove buttons hidden and "+" appends at the end, so every reachable structural edit touches only indexes after the posted prefix, leaving `startAt`/`resumeInReplyToId` valid. Worse, the reset re-armed the from-zero duplicate-posting path it existed to prevent.) Text edits to *unposted* segments also must not reset it.
+
+**Drafts during partial failure:** `saveUnsavedDraft` keeps running while the composer sits errored; a browser reload would restore all segments with no record that some posted, making the Post button a from-zero duplicate trap. Skip `saveUnsavedDraft` entirely while `threadPublishState` is set (session-scoped resume state stays session-scoped; the pre-failure draft copy remains).
+
+**Shared-field locking:** visibility, CW, and language feed `shared` and apply to the *remaining* segments on resume — a mid-retry visibility change would produce a mixed public/private thread (privacy surprise). Lock (readOnly/disable-with-title) visibility, CW, and language pickers on the same `!!threadPublishState` condition as the main textarea. Note: the main textarea must use `readOnly`, not `disabled` — disabled controls drop out of FormData, and the user should be able to select/copy posted text. Disable (don't hide) the main media controls, so `sensitiveMedia` stays in FormData.
+
+**Bluesky atomic failure warning:** the atomic path has no idempotency (TID rkeys are time-based). When a Bluesky-primary thread fails with nothing posted (`isBlueskyTarget && segments.length > 1`), the failure alert must warn the user to check their profile before retrying — a network timeout on a server-side-successful `applyWrites` reports as failure, and a blind retry duplicates the whole thread.
+
+**Orphan-root guard:** never call `publishThread` with `startAt > 0` and a falsy `resumeInReplyToId` (the chain would silently restart as a detached root). If `threadPublishState.lastPostedId` is ever falsy, clear the state and start over from 0.
 
 **Step 2: Wire progress + resume into submit**
 
