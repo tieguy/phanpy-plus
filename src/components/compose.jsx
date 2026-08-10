@@ -820,7 +820,7 @@ function Compose({
     const count = getCharCount();
     states.composerCharacterCount = count;
   };
-  useEffect(updateCharCount, [charLimitBoundByBluesky]);
+  useEffect(updateCharCount, [charLimitBoundByBluesky, sensitive]);
 
   const supportsCloseWatcher = window.CloseWatcher;
   const escDownRef = useRef(false);

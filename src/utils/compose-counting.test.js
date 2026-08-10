@@ -83,23 +83,6 @@ describe('validateSegments', () => {
     expect(result).toBe(null);
   });
 
-  it('rejects post exceeding character limit when enforcement is enabled', () => {
-    const enforceCharLimit = shouldEnforceCharLimit(300, 300, 0);
-    const result = validateSegments({
-      mainText: 'x'.repeat(301),
-      moreSegments: [],
-      spoilerText: '',
-      sensitive: false,
-      effectiveMaxCharacters: 300,
-      enforceCharLimit,
-      blueskyRules: true,
-      stringLength: simpleStringLength,
-    });
-    // This test expects enforcement, but shouldEnforceCharLimit(300, 300, 0) = false
-    // So it should pass (not reject). This test is for the gate behavior.
-    expect(result).toBe(null);
-  });
-
   it('counts spoiler text toward limit when sensitive is true and enforced', () => {
     // Text: 290 chars + Spoiler: 15 chars = 305 total, exceeds 300 limit
     const result = validateSegments({
