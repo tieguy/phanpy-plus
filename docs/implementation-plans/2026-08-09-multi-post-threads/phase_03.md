@@ -53,7 +53,7 @@ git push
 
 **Step 1: Write the failing tests**
 
-Testing gotchas that fail *silently* in production (wrong CID → posts vanish). We use deterministic/differential assertions rather than golden CIDs (no authoritative vector to copy without risking a wrong fixture). Follow the repo's existing sibling-`*.test.js` Vitest pattern (cf. `src/utils/notification-filter.test.js`).
+Testing gotchas that fail *silently* in production (wrong CID → posts vanish). **[Superseded during review]** An earlier revision used only deterministic/differential assertions ("no authoritative vector exists"); review derived a genuine ground-truth vector from bsky.social's `listRecords` and the shipped suite now asserts the literal PDS-assigned CID (`thread-writes.test.js`, "matches a real PDS-assigned CID") — this is no longer an open deviation needing sign-off. Follow the repo's existing sibling-`*.test.js` Vitest pattern (cf. `src/utils/notification-filter.test.js`).
 
 ```js
 import { describe, expect, it } from 'vitest';

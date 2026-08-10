@@ -145,6 +145,10 @@ export async function publishThread({
             spoiler_text: shared.spoilerText || undefined,
             language: shared.language,
             sensitive: !!shared.sensitive,
+            // Passed through so the facade's "polls are not supported"
+            // guard covers the atomic path too (defense-in-depth: the UI
+            // can't currently produce a poll for a Bluesky target)
+            poll: segment.poll,
             media_ids: mediaIds.length ? mediaIds : undefined,
             in_reply_to_id:
               i === startAt

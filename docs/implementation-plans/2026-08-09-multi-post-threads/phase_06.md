@@ -4,6 +4,8 @@
 
 **Goal:** A Mastodon mid-thread failure leaves the composer open and resumable: posted segments lock, Post becomes "Retry remaining", retry completes the chain without duplicates.
 
+**Design deviation (flagged for user review):** the design said "publishing state kept in `states.composerState`"; the implementation keeps resume bookkeeping (`threadPublishState`) component-local and mirrors only the transient `publishingProgress` string into `states.composerState` (read by the minimized compose button). Rationale: the resume state is session-scoped by design and nothing outside the composer needs it.
+
 **Architecture:** A `threadPublishState` piece of component state records posted statuses / failure index / last posted id across attempts within one composer session. Submit consults it to call `publishThread` with `startAt` + `resumeInReplyToId` (Phase 4 semantics, already unit-tested). Bluesky targets are atomic, so this state only ever advances on Mastodon-primary targets — but the code is network-agnostic.
 
 **Tech Stack:** Preact state, Phase 4 `publishThread`, Lingui strings.
