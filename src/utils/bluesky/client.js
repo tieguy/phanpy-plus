@@ -836,6 +836,87 @@ export function createBlueskyClient({
     return await toReturnedStatus(res.uri, res.cid, record);
   }
 
+  // Atomically create an N-post self-thread via com.atproto.repo.applyWrites.
+  // All-or-nothing: on failure, nothing is posted. paramsList entries are the
+  // same masto-shaped params accepted by createStatus; only the first may
+  // carry in_reply_to_id / quoted_status_id.
+  async function createThread(paramsList) {
+    if (!Array.isArray(paramsList) || paramsList.length === 0) {
+      throw new Error('createThread: empty paramsList');
+    }
+    if (paramsList.length === 1) {
+      return [await createStatus(paramsList[0])];
+    }
+    const { computeCid, nextTid } = await import('./thread-writes');
+    await ready();
+    const did = agentDid(); // file's existing idiom (client.js ~187)
+
+    let reply;
+    if (paramsList[0].in_reply_to_id) {
+      reply = await buildReplyRefs(paramsList[0].in_reply_to_id);
+    }
+
+    const writes = [];
+    const posts = [];
+    const baseTime = Date.now();
+    for (let i = 0; i < paramsList.length; i++) {
+      const record = await buildPostRecord(paramsList[i]);
+      // Monotonic createdAt (+1ms per post): identical timestamps cause
+      // undefined feed ordering (atproto issue #3027).
+      record.createdAt = new Date(baseTime + i).toISOString();
+      if (reply) record.reply = reply;
+      const rkey = await nextTid();
+      const uri = `at://${did}/app.bsky.feed.post/${rkey}`;
+      writes.push({
+        $type: 'com.atproto.repo.applyWrites#create',
+        collection: 'app.bsky.feed.post',
+        rkey,
+        value: record,
+      });
+      // Next post replies to this one; root stays the thread's first ref
+      const cid = await computeCid(record);
+      posts.push({ uri, cid, record });
+      const ref = { uri, cid };
+      reply = { root: reply?.root ?? ref, parent: ref };
+    }
+
+    const res = await agent.com.atproto.repo.applyWrites({
+      repo: did,
+      writes,
+      validate: true,
+    });
+
+    // Ground-truth check: the server's applyWrites results carry the real
+    // CIDs. A mismatch means our local computeCid is wrong — the thread's
+    // internal reply refs are then broken (posts reference nonexistent CIDs)
+    // and would silently vanish from thread views. Warn loudly and prefer
+    // the server's values for everything downstream.
+    const results = res?.data?.results || [];
+    for (let i = 0; i < posts.length; i++) {
+      const serverCid = results[i]?.cid;
+      if (serverCid && serverCid !== posts[i].cid) {
+        console.warn(
+          'createThread: computed CID mismatch — reply refs may be broken',
+          { index: i, computed: posts[i].cid, server: serverCid },
+        );
+        posts[i].cid = serverCid;
+      }
+    }
+
+    // Post-success bookkeeping, mirroring createStatus: consumed media ids
+    // must leave pendingMedia (replicate whatever cleanup createStatus does
+    // after agent.post — see Phase 2 extraction notes).
+    for (const params of paramsList) {
+      for (const mid of params.media_ids || []) pendingMedia.delete(mid);
+    }
+
+    const statuses = [];
+    for (const { uri, cid, record } of posts) {
+      statuses.push(await toReturnedStatus(uri, cid, record));
+    }
+    return statuses;
+  }
+
   async function uploadMedia(params) {
     await ready();
     const { file, description } = params;
@@ -1252,6 +1333,7 @@ export function createBlueskyClient({
       },
       statuses: {
         create: createStatus,
+        createThread,
         $select: statusEndpoints,
       },
       timelines: {
