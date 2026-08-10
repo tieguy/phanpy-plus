@@ -18,7 +18,6 @@ import {
   isBlueskyInstance,
 } from '../utils/bluesky';
 import { blueskyInstanceInfo } from '../utils/bluesky/convert';
-import { crossPostStatus } from '../utils/bluesky/cross-post';
 import db from '../utils/db';
 import { getDtfLocale } from '../utils/dtf-locale';
 import haptics from '../utils/haptics';
@@ -26,6 +25,7 @@ import localeMatch from '../utils/locale-match';
 import localeCode2Text from '../utils/localeCode2Text';
 import mem from '../utils/mem';
 import openCompose from '../utils/open-compose';
+import { canCrossPost, publishThread } from '../utils/publish';
 import {
   getPostQuoteApprovalPolicy,
   supportsNativeQuote,
@@ -1452,19 +1452,20 @@ function Compose({
 
                 // TODO: Note above is no longer true in Masto.js v6. Revisit this.
               */
-                let params = {
-                  status,
-                  // spoilerText,
-                  spoiler_text: spoilerText,
-                  language,
-                  sensitive: sensitive || sensitiveMedia,
-                  poll,
-                  // mediaIds: mediaAttachments.map((attachment) => attachment.id),
-                  media_ids: mediaAttachments.map(
-                    (attachment) => attachment.id,
-                  ),
-                };
+                let newStatus;
                 if (editStatus) {
+                  let params = {
+                    status,
+                    // spoilerText,
+                    spoiler_text: spoilerText,
+                    language,
+                    sensitive: sensitive || sensitiveMedia,
+                    poll,
+                    // mediaIds: mediaAttachments.map((attachment) => attachment.id),
+                    media_ids: mediaAttachments.map(
+                      (attachment) => attachment.id,
+                    ),
+                  };
                   if (supportsNativeQuote(instance)) {
                     params.quote_approval_policy = quoteApprovalPolicy;
                   }
@@ -1483,23 +1484,7 @@ function Compose({
                       },
                     );
                   }
-                } else {
-                  if (supportsNativeQuote(instance)) {
-                    params.quote_approval_policy = quoteApprovalPolicy;
-                    if (currentQuoteStatus?.id) {
-                      params.quoted_status_id = currentQuoteStatus.id;
-                    }
-                  }
-                  params.visibility = visibility;
-                  // params.inReplyToId = replyToStatus?.id || undefined;
-                  params.in_reply_to_id = replyToStatus?.id || undefined;
-                  params.scheduled_at = scheduledAt;
-                }
-                params = removeNullUndefined(params);
-                console.log('POST', params);
-
-                let newStatus;
-                if (editStatus) {
+                  params = removeNullUndefined(params);
                   newStatus = await masto.v1.statuses
                     .$select(editStatus.id)
                     .update(params);
@@ -1507,65 +1492,88 @@ function Compose({
                     skipThreading: true,
                   });
                 } else {
-                  try {
-                    newStatus = await masto.v1.statuses.create(params, {
-                      requestInit: {
-                        headers: {
-                          'Idempotency-Key': UID.current,
-                        },
-                      },
-                    });
-                  } catch (_) {
-                    // If idempotency key fails, try again without it
-                    newStatus = await masto.v1.statuses.create(params);
+                  const shared = {
+                    visibility,
+                    language,
+                    spoilerText,
+                    sensitive: sensitive || sensitiveMedia,
+                    inReplyToId: replyToStatus?.id || undefined,
+                    scheduledAt,
+                  };
+                  if (supportsNativeQuote(instance)) {
+                    shared.quoteApprovalPolicy = quoteApprovalPolicy;
+                    if (currentQuoteStatus?.id) {
+                      shared.quotedStatusId = currentQuoteStatus.id;
+                    }
                   }
+                  const segments = [
+                    {
+                      text: status,
+                      mediaIds: mediaAttachments.map(
+                        (attachment) => attachment.id,
+                      ),
+                      poll,
+                    },
+                  ];
+                  const { statuses, failedAtIndex, error } =
+                    await publishThread({
+                      masto,
+                      instance,
+                      isBluesky: isBlueskyTarget, // compose.jsx:201 — explicit, never duck-typed
+                      segments,
+                      shared,
+                      idempotencyPrefix: UID.current,
+                    });
+                  if (failedAtIndex !== null) throw error;
+                  newStatus = statuses[0];
 
                   // Cross-post to other-network accounts (e.g. Bluesky)
-                  if (
-                    crossPost &&
-                    crossPostAccounts.length &&
-                    !scheduledAt &&
-                    !poll &&
-                    (visibility === 'public' || visibility === 'unlisted')
-                  ) {
-                    for (const account of crossPostAccounts) {
-                      try {
-                        const { skippedMedia } = await crossPostStatus({
-                          account,
-                          status,
-                          spoilerText,
-                          sensitive: sensitive || sensitiveMedia,
-                          language,
-                          visibility,
-                          mediaAttachments,
-                        });
-                        showToast(
-                          t`Cross-posted to @${
-                            account.info.acct || account.info.username
-                          }` +
-                            (skippedMedia?.length
-                              ? ` (${t`some attachments skipped`})`
-                              : ''),
-                        );
-                      } catch (e) {
-                        console.error(e);
-                        showToast(
-                          t`Unable to cross-post to @${
-                            account.info.acct || account.info.username
-                          }: ${e?.message || e}`,
-                        );
+                  if (crossPost && crossPostAccounts.length) {
+                    if (canCrossPost({ poll, scheduledAt, visibility })) {
+                      for (const account of crossPostAccounts) {
+                        try {
+                          const {
+                            failedAtIndex: crossFailedAt,
+                            error: crossError,
+                            skippedMedia,
+                          } = await publishThread({
+                            account,
+                            segments: [
+                              {
+                                text: status,
+                                mediaAttachments,
+                              },
+                            ],
+                            shared: {
+                              spoilerText,
+                              sensitive: sensitive || sensitiveMedia,
+                              language,
+                              visibility: visibility || 'public',
+                            },
+                          });
+                          if (crossFailedAt !== null) throw crossError;
+                          showToast(
+                            t`Cross-posted to @${
+                              account.info.acct || account.info.username
+                            }` +
+                              (skippedMedia?.length
+                                ? ` (${t`some attachments skipped`})`
+                                : ''),
+                          );
+                        } catch (e) {
+                          console.error(e);
+                          showToast(
+                            t`Unable to cross-post to @${
+                              account.info.acct || account.info.username
+                            }: ${e?.message || e}`,
+                          );
+                        }
                       }
+                    } else {
+                      showToast(
+                        t`Cross-posting skipped (not supported for polls, scheduled or non-public posts)`,
+                      );
                     }
-                  } else if (
-                    crossPost &&
-                    crossPostAccounts.length &&
-                    (scheduledAt ||
-                      poll ||
-                      !(visibility === 'public' || visibility === 'unlisted'))
-                  ) {
-                    showToast(
-                      t`Cross-posting skipped (not supported for polls, scheduled or non-public posts)`,
-                    );
                   }
                 }
                 states.composerState.minimized = false;
