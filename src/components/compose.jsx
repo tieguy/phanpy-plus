@@ -1099,7 +1099,8 @@ function Compose({
   });
 
   const showScheduledAt = !editStatus;
-  const scheduledAtButtonDisabled = uiState === 'loading' || !!scheduledAt;
+  const scheduledAtButtonDisabled =
+    uiState === 'loading' || !!scheduledAt || moreSegments.length > 0;
   const onScheduledAtClick = () => {
     const date = new Date(Date.now() + DEFAULT_SCHEDULED_AT);
     setScheduledAt(date);
@@ -1774,6 +1775,47 @@ function Compose({
               </label>
             </div>
           )}
+          {moreSegments.map((segment, i) => (
+            <ThreadSegmentEditor
+              key={segment.uid}
+              index={i}
+              segment={segment}
+              maxCharacters={effectiveMaxCharacters}
+              blueskyRules={
+                charLimitBoundByBluesky ||
+                maxCharacters === BLUESKY_MAX_CHARACTERS
+              }
+              maxMediaAttachments={maxMediaAttachments}
+              disabled={uiState === 'loading'}
+              onChange={(patch) =>
+                setMoreSegments((segs) =>
+                  segs.map((s) =>
+                    s.uid === segment.uid ? { ...s, ...patch } : s,
+                  ),
+                )
+              }
+              onRemove={() =>
+                setMoreSegments((segs) =>
+                  segs.filter((s) => s.uid !== segment.uid),
+                )
+              }
+            />
+          ))}
+          {!editStatus && moreSegments.length < MAX_THREAD_SEGMENTS - 1 && (
+            <button
+              type="button"
+              class="light add-thread-segment"
+              disabled={uiState === 'loading' || !!scheduledAt}
+              onClick={() =>
+                setMoreSegments((segs) => [
+                  ...segs,
+                  { uid: uid(), text: '', mediaAttachments: [] },
+                ])
+              }
+            >
+              <Icon icon="plus" /> <Trans>Add to thread</Trans>
+            </button>
+          )}
           {!!poll && (
             <ComposePoll
               lang={language}
@@ -2403,6 +2445,135 @@ function Compose({
           />
         </Modal>
       )}
+    </div>
+  );
+}
+
+function ThreadSegmentEditor({
+  segment,
+  maxCharacters,
+  blueskyRules,
+  maxMediaAttachments,
+  disabled,
+  onChange,
+  onRemove,
+}) {
+  const fileInputRef = useRef();
+
+  const handleTextChange = (e) => {
+    onChange({ text: e.target.value });
+  };
+
+  const handleAddMedia = async () => {
+    if (!fileInputRef.current) return;
+
+    const files = fileInputRef.current.files;
+    if (!files?.length) return;
+
+    // Reset input to allow same file selection
+    const currentInput = fileInputRef.current;
+
+    try {
+      const processedFiles = await processFiles(Array.from(files));
+      if (processedFiles) {
+        onChange({
+          mediaAttachments: [
+            ...segment.mediaAttachments,
+            ...processedFiles,
+          ].slice(0, maxMediaAttachments),
+        });
+      }
+    } catch (err) {
+      console.error('Error processing files:', err);
+    }
+
+    currentInput.value = '';
+  };
+
+  const handleRemoveMedia = (indexToRemove) => {
+    onChange({
+      mediaAttachments: segment.mediaAttachments.filter(
+        (_, i) => i !== indexToRemove,
+      ),
+    });
+  };
+
+  const charCount = segmentCharCount(segment.text, { blueskyRules });
+  const mediaCanAdd =
+    !maxMediaAttachments ||
+    segment.mediaAttachments.length < maxMediaAttachments;
+
+  return (
+    <div class="thread-segment">
+      <textarea
+        class="segment-textarea"
+        placeholder={t`Continue your thread...`}
+        value={segment.text}
+        disabled={disabled}
+        onInput={handleTextChange}
+      />
+
+      {segment.mediaAttachments?.length > 0 && (
+        <div class="media-attachments segment-media">
+          {segment.mediaAttachments.map((attachment, i) => {
+            const { id, file } = attachment;
+            const fileID = file?.size + file?.type + file?.name;
+            return (
+              <div key={id || fileID || i} class="segment-media-item">
+                <div class="media-preview">
+                  {file && (
+                    <img
+                      src={URL.createObjectURL(file)}
+                      alt=""
+                      class="media-preview-img"
+                    />
+                  )}
+                </div>
+                <button
+                  type="button"
+                  class="remove-media"
+                  title={t`Remove`}
+                  onClick={() => handleRemoveMedia(i)}
+                >
+                  <Icon icon="x" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <div class="segment-controls">
+        <button
+          type="button"
+          class="toolbar-button"
+          disabled={disabled || !mediaCanAdd}
+          onClick={() => fileInputRef.current?.click()}
+          title={t`Add media`}
+        >
+          <Icon icon="attachment" alt={t`Add media`} />
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,video/*"
+          hidden
+          onChange={handleAddMedia}
+        />
+
+        <CharCountMeter maxCharacters={maxCharacters} charCount={charCount} />
+
+        <button
+          type="button"
+          class="remove-segment"
+          disabled={disabled}
+          title={t`Remove this segment`}
+          onClick={onRemove}
+        >
+          <Icon icon="x" />
+        </button>
+      </div>
     </div>
   );
 }
