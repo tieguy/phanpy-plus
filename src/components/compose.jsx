@@ -20,8 +20,7 @@ import {
 import { blueskyInstanceInfo } from '../utils/bluesky/convert';
 import {
   countableText,
-  getSegmentCharCount,
-  segmentCharCount,
+  shouldEnforceCharLimit,
   validateSegments,
 } from '../utils/compose-counting';
 import db from '../utils/db';
@@ -813,7 +812,9 @@ function Compose({
     // When cross-posting to Bluesky, use Bluesky's strictest counting rules.
     const useBlueskyRules = isBlueskyTarget || charLimitBoundByBluesky;
     const text = useBlueskyRules ? value : countableText(value);
-    return stringLength(text) + stringLength(spoilerText);
+    // Only count spoilerText when sensitive is active (both meter and validator must agree)
+    const spoilerCount = sensitive ? stringLength(spoilerText) : 0;
+    return stringLength(text) + spoilerCount;
   };
   const updateCharCount = () => {
     const count = getCharCount();
@@ -1345,7 +1346,8 @@ function Compose({
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
               // Validate that main post is not empty when posting a thread
-              if (moreSegments.length > 0) {
+              // Media-only posts are legal via the button (no text required)
+              if (moreSegments.length > 0 && mediaAttachments.length === 0) {
                 const mainText = (textareaRef.current?.value || '').trim();
                 if (!mainText) {
                   alert(t`The first post can't be empty`);
@@ -1415,12 +1417,18 @@ function Compose({
               charLimitBoundByBluesky ||
               maxCharacters === BLUESKY_MAX_CHARACTERS;
 
+            const enforceCharLimit = shouldEnforceCharLimit(
+              effectiveMaxCharacters,
+              maxCharacters,
+              moreSegments.length,
+            );
             const validationError = validateSegments({
               mainText: status || '',
               moreSegments,
               spoilerText,
               sensitive,
               effectiveMaxCharacters,
+              enforceCharLimit,
               blueskyRules,
               stringLength,
             });
@@ -1608,7 +1616,8 @@ function Compose({
                       const partialMsg = t`Posted ${statuses.length} of ${segments.length} posts — the rest failed: ${error?.message}`;
                       alert(partialMsg);
                       // Mark error so catch block knows we already alerted
-                      error._alerted = true;
+                      if (error && typeof error === 'object')
+                        error._alerted = true;
                     }
                     throw error;
                   }

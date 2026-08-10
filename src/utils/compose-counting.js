@@ -33,14 +33,15 @@ export function shouldEnforceCharLimit(
 }
 
 /**
- * Calculates character count for a segment, including spoiler text if applicable.
- * Mirrors getCharCount() logic from compose.jsx to ensure validator and meter agree.
+ * Calculates character count for a segment, including spoiler text when sensitive is true.
+ * Must match getCharCount() logic from compose.jsx to ensure meter and validator agree.
+ * Spoiler text is only counted when the sensitive flag is active.
  * @param {string} text - The segment text
  * @param {string} spoilerText - Content warning text (may be empty)
- * @param {boolean} sensitive - Whether content warning is active
+ * @param {boolean} sensitive - Whether content warning is active (gates spoiler counting)
  * @param {boolean} blueskyRules - Whether to use Bluesky counting (no URL shortening)
  * @param {Function} stringLength - Function to count string length
- * @returns {number} Total character count including spoiler if applicable
+ * @returns {number} Total character count (text + spoiler only if sensitive is true)
  */
 export function getSegmentCharCount(
   text,
@@ -65,6 +66,7 @@ export function getSegmentCharCount(
  * @param {string} params.spoilerText - Content warning (may be empty)
  * @param {boolean} params.sensitive - Whether content warning is active
  * @param {number} params.effectiveMaxCharacters - Character limit
+ * @param {boolean} params.enforceCharLimit - Whether to enforce character limit (false = backend validates)
  * @param {boolean} params.blueskyRules - Whether to use Bluesky counting
  * @param {Function} params.stringLength - Function to count string length
  * @returns {Object|null} Error object {segmentIndex, reason} or null if valid
@@ -75,11 +77,12 @@ export function validateSegments({
   spoilerText,
   sensitive,
   effectiveMaxCharacters,
+  enforceCharLimit,
   blueskyRules,
   stringLength,
 }) {
   // Check main segment
-  if (effectiveMaxCharacters < Infinity) {
+  if (enforceCharLimit) {
     const mainCount = getSegmentCharCount(
       mainText || '',
       spoilerText,
@@ -101,7 +104,7 @@ export function validateSegments({
       return { segmentIndex: i + 1, reason: 'empty' };
     }
 
-    if (effectiveMaxCharacters < Infinity) {
+    if (enforceCharLimit) {
       // Thread segments don't have separate spoiler text, but Bluesky prepends CW
       // to each segment if spoilerText is set
       const segCount = getSegmentCharCount(
