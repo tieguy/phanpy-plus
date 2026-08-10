@@ -30,7 +30,11 @@ import localeMatch from '../utils/locale-match';
 import localeCode2Text from '../utils/localeCode2Text';
 import mem from '../utils/mem';
 import openCompose from '../utils/open-compose';
-import { canCrossPost, publishThread } from '../utils/publish';
+import {
+  buildCrossSegments,
+  canCrossPost,
+  publishThread,
+} from '../utils/publish';
 import {
   getPostQuoteApprovalPolicy,
   supportsNativeQuote,
@@ -1706,45 +1710,55 @@ function Compose({
                   }
 
                   // Cross-post to other-network accounts (e.g. Bluesky)
-                  // Skip for threads (Phase 7 makes cross-posted threads whole)
-                  if (isThread) {
-                    if (
-                      crossPost &&
-                      crossPostAccounts.length &&
-                      canCrossPost({ poll, scheduledAt, visibility })
-                    ) {
-                      showToast(
-                        t`Cross-posting threads coming soon — posted to primary account only`,
-                      );
-                    }
-                  } else if (crossPost && crossPostAccounts.length) {
+                  if (crossPost && crossPostAccounts.length) {
                     if (canCrossPost({ poll, scheduledAt, visibility })) {
+                      const crossSegments = buildCrossSegments({
+                        status,
+                        mediaAttachments,
+                        moreSegments,
+                      });
                       for (const account of crossPostAccounts) {
+                        const acctName =
+                          account.info.acct || account.info.username;
                         try {
                           const {
+                            statuses: crossStatuses,
                             failedAtIndex: crossFailedAt,
                             error: crossError,
                             skippedMedia,
                           } = await publishThread({
                             account,
-                            segments: [
-                              {
-                                text: status,
-                                mediaAttachments,
-                              },
-                            ],
+                            segments: crossSegments,
                             shared: {
                               spoilerText,
                               sensitive: sensitive || sensitiveMedia,
                               language,
                               visibility: visibility || 'public',
                             },
+                            onProgress: (i, state) => {
+                              if (
+                                state === 'posting' &&
+                                crossSegments.length > 1
+                              ) {
+                                states.composerState.publishingProgress = `@${acctName} ${
+                                  i + 1
+                                }/${crossSegments.length}`;
+                              }
+                            },
                           });
-                          if (crossFailedAt !== null) throw crossError;
+                          if (crossFailedAt !== null) {
+                            // Partial cross-post: report precisely what made it up
+                            showToast(
+                              t`Cross-posted ${crossStatuses.length} of ${crossSegments.length} posts to @${acctName} — the rest failed: ${
+                                crossError?.message || crossError
+                              }`,
+                            );
+                            continue;
+                          }
                           showToast(
-                            t`Cross-posted to @${
-                              account.info.acct || account.info.username
-                            }` +
+                            (crossSegments.length > 1
+                              ? t`Cross-posted thread (${crossStatuses.length} posts) to @${acctName}`
+                              : t`Cross-posted to @${acctName}`) +
                               (skippedMedia?.length
                                 ? ` (${t`some attachments skipped`})`
                                 : ''),
@@ -1752,9 +1766,9 @@ function Compose({
                         } catch (e) {
                           console.error(e);
                           showToast(
-                            t`Unable to cross-post to @${
-                              account.info.acct || account.info.username
-                            }: ${e?.message || e}`,
+                            t`Unable to cross-post to @${acctName}: ${
+                              e?.message || e
+                            }`,
                           );
                         }
                       }
@@ -1764,6 +1778,7 @@ function Compose({
                       );
                     }
                   }
+                  states.composerState.publishingProgress = null;
                 }
                 states.composerState.minimized = false;
                 states.composerState.publishing = false;

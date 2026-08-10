@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { canCrossPost, publishThread } from './publish';
+import { buildCrossSegments, canCrossPost, publishThread } from './publish';
 
 function fakeClient({ failAtCall } = {}) {
   const calls = [];
@@ -312,5 +312,52 @@ describe('publishThread atomic delegation (Bluesky facade)', () => {
     expect(failedAtIndex).toBe(null);
     expect(statuses).toHaveLength(3);
     expect(calls).toHaveLength(3); // sequential path, one create per segment
+  });
+});
+
+describe('buildCrossSegments', () => {
+  it('builds cross-post segments from primary status and additional segments', () => {
+    const media1 = { fileName: 'img1.jpg', fileData: 'data1' };
+    const media2 = { fileName: 'img2.jpg', fileData: 'data2' };
+    const media3 = { fileName: 'img3.jpg', fileData: 'data3' };
+
+    const result = buildCrossSegments({
+      status: 'first post',
+      mediaAttachments: [media1],
+      moreSegments: [
+        { text: 'second post', mediaAttachments: [media2] },
+        { text: 'third post', mediaAttachments: [media3] },
+      ],
+    });
+
+    expect(result).toEqual([
+      { text: 'first post', mediaAttachments: [media1], poll: undefined },
+      { text: 'second post', mediaAttachments: [media2] },
+      { text: 'third post', mediaAttachments: [media3] },
+    ]);
+  });
+
+  it('handles empty moreSegments (single post)', () => {
+    const media = { fileName: 'img.jpg', fileData: 'data' };
+    const result = buildCrossSegments({
+      status: 'single post',
+      mediaAttachments: [media],
+      moreSegments: [],
+    });
+
+    expect(result).toEqual([
+      { text: 'single post', mediaAttachments: [media], poll: undefined },
+    ]);
+  });
+
+  it('includes undefined poll in first segment only', () => {
+    const result = buildCrossSegments({
+      status: 'post with poll',
+      mediaAttachments: [],
+      moreSegments: [{ text: 'follow-up' }],
+    });
+
+    expect(result[0]).toHaveProperty('poll', undefined);
+    expect(result[1]).not.toHaveProperty('poll');
   });
 });

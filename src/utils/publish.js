@@ -13,6 +13,26 @@ export function canCrossPost({ poll, scheduledAt, visibility }) {
   );
 }
 
+// Build cross-post segments from primary status and additional segments.
+// Polls are excluded (canCrossPost checks this), and we set poll: undefined
+// on the first segment to match the contract.
+export function buildCrossSegments({ status, mediaAttachments, moreSegments }) {
+  const crossSegments = [
+    {
+      text: status,
+      mediaAttachments,
+      poll: undefined,
+    },
+  ];
+  for (const segment of moreSegments || []) {
+    crossSegments.push({
+      text: segment.text,
+      mediaAttachments: segment.mediaAttachments,
+    });
+  }
+  return crossSegments;
+}
+
 function removeNullUndefined(obj) {
   for (const key in obj) {
     if (obj[key] === null || obj[key] === undefined) {
