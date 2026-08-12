@@ -1053,7 +1053,7 @@ msgstr "Exit"
 #: src/components/status.jsx:3190
 #: src/components/status.jsx:3193
 #: src/pages/account-statuses.jsx:693
-#: src/pages/accounts.jsx:159
+#: src/pages/accounts.jsx:183
 #: src/pages/collection.jsx:284
 #: src/pages/hashtag.jsx:232
 #: src/pages/list.jsx:181
@@ -1066,13 +1066,13 @@ msgstr ""
 
 #: src/components/edit-profile-sheet.jsx:94
 #: src/components/shortcuts-settings.jsx:368
-#: src/pages/accounts.jsx:229
+#: src/pages/accounts.jsx:253
 msgid "Move up"
 msgstr ""
 
 #: src/components/edit-profile-sheet.jsx:100
 #: src/components/shortcuts-settings.jsx:384
-#: src/pages/accounts.jsx:244
+#: src/pages/accounts.jsx:268
 msgid "Move down"
 msgstr ""
 
@@ -1858,7 +1858,7 @@ msgstr ""
 
 #: src/components/nav-menu.jsx:341
 #: src/pages/login.jsx:36
-#: src/pages/login.jsx:289
+#: src/pages/login.jsx:291
 #: src/pages/status.jsx:1119
 msgid "Log in"
 msgstr ""
@@ -2729,7 +2729,7 @@ msgstr ""
 #: src/components/shortcuts-settings.jsx:78
 #: src/components/shortcuts-settings.jsx:87
 #: src/components/shortcuts-settings.jsx:125
-#: src/pages/login.jsx:293
+#: src/pages/login.jsx:295
 msgid "Server"
 msgstr "Server"
 
@@ -2817,7 +2817,7 @@ msgid "Max {SHORTCUTS_LIMIT} shortcuts"
 msgstr ""
 
 #: src/components/shortcuts-settings.jsx:475
-#: src/pages/accounts.jsx:370
+#: src/pages/accounts.jsx:394
 msgid "Import/export"
 msgstr ""
 
@@ -3452,7 +3452,7 @@ msgstr "Login required."
 #: src/compose.jsx:96
 #: src/pages/annual-report.jsx:186
 #: src/pages/http-route.jsx:94
-#: src/pages/login.jsx:481
+#: src/pages/login.jsx:485
 msgid "Go home"
 msgstr ""
 
@@ -3585,64 +3585,64 @@ msgstr "Switch to my server (<0>{currentInstance}</0>)"
 msgid "Month"
 msgstr ""
 
-#: src/pages/accounts.jsx:96
+#: src/pages/accounts.jsx:112
 msgid "Current"
 msgstr ""
 
-#: src/pages/accounts.jsx:145
-msgid "Logged out"
-msgstr "Logged out"
+#: src/pages/accounts.jsx:167
+msgid "Log back in"
+msgstr "Log back in"
 
-#: src/pages/accounts.jsx:151
+#: src/pages/accounts.jsx:175
 msgid "Default"
 msgstr ""
 
-#: src/pages/accounts.jsx:173
+#: src/pages/accounts.jsx:197
 msgid "Switch to this account"
 msgstr "Switch to this account"
 
-#: src/pages/accounts.jsx:182
+#: src/pages/accounts.jsx:206
 msgid "Switch in new tab/window"
 msgstr "Switch in new tab/window"
 
-#: src/pages/accounts.jsx:196
+#: src/pages/accounts.jsx:220
 msgid "View profile…"
 msgstr ""
 
-#: src/pages/accounts.jsx:214
+#: src/pages/accounts.jsx:238
 msgid "Set as default"
 msgstr ""
 
-#: src/pages/accounts.jsx:257
+#: src/pages/accounts.jsx:281
 msgid "Log out <0>@{unicodeAcct}</0>?"
 msgstr "Log out <0>@{unicodeAcct}</0>?"
 
-#: src/pages/accounts.jsx:285
+#: src/pages/accounts.jsx:309
 msgid "Log out and remove <0>@{unicodeAcct}</0>"
 msgstr "Log out and remove <0>@{unicodeAcct}</0>"
 
-#: src/pages/accounts.jsx:297
+#: src/pages/accounts.jsx:321
 msgid "Log out…"
 msgstr ""
 
-#: src/pages/accounts.jsx:307
+#: src/pages/accounts.jsx:331
 msgid "Remove <0>@{unicodeAcct}</0>?"
 msgstr "Remove <0>@{unicodeAcct}</0>?"
 
-#: src/pages/accounts.jsx:325
+#: src/pages/accounts.jsx:349
 msgid "Remove account…"
 msgstr "Remove account…"
 
 #. placeholder {0}: niceDateTime(account.createdAt)
-#: src/pages/accounts.jsx:333
+#: src/pages/accounts.jsx:357
 msgid "Connected on {0} (<0/>)"
 msgstr "Connected on {0} (<0/>)"
 
-#: src/pages/accounts.jsx:350
+#: src/pages/accounts.jsx:374
 msgid "Add an existing account"
 msgstr ""
 
-#: src/pages/accounts.jsx:357
+#: src/pages/accounts.jsx:381
 msgid "Note: <0>Default</0> account will always be used for first load. Switched accounts will persist during the session."
 msgstr ""
 
@@ -4369,70 +4369,70 @@ msgstr ""
 msgid "No lists yet."
 msgstr ""
 
-#: src/pages/login.jsx:143
-#: src/pages/login.jsx:155
+#: src/pages/login.jsx:145
+#: src/pages/login.jsx:157
 msgid "Failed to register application"
 msgstr "Failed to register application"
 
-#: src/pages/login.jsx:308
+#: src/pages/login.jsx:310
 msgid "server domain"
 msgstr "server domain"
 
-#: src/pages/login.jsx:333
+#: src/pages/login.jsx:335
 msgid "e.g. “mastodon.social”"
 msgstr ""
 
-#: src/pages/login.jsx:344
+#: src/pages/login.jsx:346
 msgid "Failed to log in. Please try again or try another server."
 msgstr "Failed to log in. Please try again or try another server."
 
-#: src/pages/login.jsx:356
+#: src/pages/login.jsx:358
 msgid "Continue with {selectedInstanceText}"
 msgstr ""
 
-#: src/pages/login.jsx:357
+#: src/pages/login.jsx:359
 msgid "Continue"
 msgstr ""
 
-#: src/pages/login.jsx:372
-#: src/pages/login.jsx:412
+#: src/pages/login.jsx:374
+#: src/pages/login.jsx:415
 msgid "Handle"
 msgstr "Handle"
 
-#: src/pages/login.jsx:390
+#: src/pages/login.jsx:393
 msgid "Failed to log in to Bluesky."
 msgstr "Failed to log in to Bluesky."
 
-#: src/pages/login.jsx:395
+#: src/pages/login.jsx:398
 msgid "Continue with Bluesky"
 msgstr "Continue with Bluesky"
 
-#: src/pages/login.jsx:399
+#: src/pages/login.jsx:402
 msgid "You'll be sent to your Bluesky server to authorize this app."
 msgstr "You'll be sent to your Bluesky server to authorize this app."
 
-#: src/pages/login.jsx:407
+#: src/pages/login.jsx:410
 msgid "Use an app password instead"
 msgstr "Use an app password instead"
 
-#: src/pages/login.jsx:430
+#: src/pages/login.jsx:434
 msgid "App password"
 msgstr "App password"
 
-#: src/pages/login.jsx:448
+#: src/pages/login.jsx:452
 msgid "Create an app password on Bluesky"
 msgstr "Create an app password on Bluesky"
 
-#: src/pages/login.jsx:453
+#: src/pages/login.jsx:457
 msgid "Log in with app password"
 msgstr "Log in with app password"
 
-#: src/pages/login.jsx:466
+#: src/pages/login.jsx:470
 #: src/pages/welcome.jsx:61
 msgid "Log in with Bluesky"
 msgstr "Log in with Bluesky"
 
-#: src/pages/login.jsx:475
+#: src/pages/login.jsx:479
 msgid "Don't have an account? Create one!"
 msgstr ""
 

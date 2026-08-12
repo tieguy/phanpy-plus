@@ -64,6 +64,22 @@ function Accounts({ onClose }) {
                 ? punycode.toUnicode(account.info.acct)
                 : account.info.acct;
 
+              // Send Bluesky accounts to the Bluesky half of the login page,
+              // pre-filled with the handle; Mastodon accounts to their server.
+              const logInAgain = () => {
+                const params = isBlueskyAccount(account)
+                  ? new URLSearchParams({
+                      network: 'bluesky',
+                      handle:
+                        account.blueskySession?.handle ||
+                        account.info.acct ||
+                        '',
+                    })
+                  : new URLSearchParams({ instance: account.instanceURL });
+                location.href = `/#/login?${params}`;
+                onClose?.();
+              };
+
               const removeAccount = () => {
                 accounts.splice(i, 1);
                 saveAccounts(accounts);
@@ -128,8 +144,7 @@ function Accounts({ onClose }) {
                       onClick={() => {
                         haptics.trigger('medium');
                         if (isLoggedOut) {
-                          location.href = `/#/login?instance=${account.instanceURL}`;
-                          onClose();
+                          logInAgain();
                         } else if (isCurrent) {
                           states.showAccount = `${account.info.username}@${account.instanceURL}`;
                         } else {
@@ -141,9 +156,18 @@ function Accounts({ onClose }) {
                   </div>
                   <div class="actions">
                     {isLoggedOut && (
-                      <span class="tag">
-                        <Trans>Logged out</Trans>
-                      </span>
+                      <>
+                        <button
+                          type="button"
+                          class="plain2 small login-again-button"
+                          onClick={logInAgain}
+                        >
+                          <Icon icon="arrow-right" />{' '}
+                          <span>
+                            <Trans>Log back in</Trans>
+                          </span>
+                        </button>{' '}
+                      </>
                     )}
                     {isDefault && moreThanOneAccount && (
                       <>
