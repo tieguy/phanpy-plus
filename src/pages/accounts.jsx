@@ -24,7 +24,7 @@ import store from '../utils/store';
 import {
   getAccounts,
   getCurrentAccountID,
-  saveAccounts,
+  mutateAccounts,
   setCurrentAccountID,
 } from '../utils/store-utils';
 
@@ -59,14 +59,42 @@ function Accounts({ onClose }) {
             {accounts.map((account, i) => {
               const isCurrent = account.info.id === currentAccount;
               const isDefault = i === 0; // first account is always default
-              const isLoggedOut = !account.accessToken;
+              // authExpired = Bluesky session died server-side; the stored
+              // tokens are useless so treat it exactly like logged out
+              const isLoggedOut = !account.accessToken || account.authExpired;
               const unicodeAcct = account.info.acct
                 ? punycode.toUnicode(account.info.acct)
                 : account.info.acct;
 
+              // Send Bluesky accounts to the Bluesky half of the login page,
+              // pre-filled with the handle; Mastodon accounts to their server.
+              const logInAgain = () => {
+                const params = isBlueskyAccount(account)
+                  ? new URLSearchParams({
+                      network: 'bluesky',
+                      handle:
+                        account.blueskySession?.handle ||
+                        account.info.acct ||
+                        '',
+                    })
+                  : new URLSearchParams({ instance: account.instanceURL });
+                location.href = `/#/login?${params}`;
+                onClose?.();
+              };
+
+              // NOTE: every store write below re-reads the accounts array via
+              // mutateAccounts and re-finds this account by ID. Bluesky token
+              // refreshes rewrite the store at any moment, so writing back the
+              // render-time `accounts` array (or index `i`) could revert a
+              // token rotation and kill that session.
               const removeAccount = () => {
-                accounts.splice(i, 1);
-                saveAccounts(accounts);
+                mutateAccounts((accts) => {
+                  const index = accts.findIndex(
+                    (a) => a.info.id === account.info.id,
+                  );
+                  if (index === -1) return false;
+                  accts.splice(index, 1);
+                });
                 try {
                   if (store.session.get('currentAccount') === account.info.id) {
                     store.session.del('currentAccount');
@@ -76,7 +104,6 @@ function Accounts({ onClose }) {
 
               const logOutAccount = async () => {
                 if (isBlueskyAccount(account)) {
-                  delete account.blueskySession;
                   logoutBluesky(account.info.id);
                   return;
                 }
@@ -85,6 +112,16 @@ function Accounts({ onClose }) {
                   client_id: account.clientId,
                   client_secret: account.clientSecret,
                   token: account.accessToken,
+                });
+              };
+
+              const markLoggedOut = () => {
+                mutateAccounts((accts) => {
+                  const acc = accts.find((a) => a.info.id === account.info.id);
+                  if (!acc) return false;
+                  delete acc.accessToken;
+                  delete acc.blueskySession;
+                  delete acc.authExpired;
                 });
               };
 
@@ -106,8 +143,13 @@ function Accounts({ onClose }) {
                               .$select(account.info.id)
                               .fetch();
                             console.log('fetched account info', info);
-                            account.info = info;
-                            saveAccounts(accounts);
+                            mutateAccounts((accts) => {
+                              const acc = accts.find(
+                                (a) => a.info.id === account.info.id,
+                              );
+                              if (!acc) return false;
+                              acc.info = info;
+                            });
                             reload();
                           } catch (e) {}
                         }
@@ -128,8 +170,7 @@ function Accounts({ onClose }) {
                       onClick={() => {
                         haptics.trigger('medium');
                         if (isLoggedOut) {
-                          location.href = `/#/login?instance=${account.instanceURL}`;
-                          onClose();
+                          logInAgain();
                         } else if (isCurrent) {
                           states.showAccount = `${account.info.username}@${account.instanceURL}`;
                         } else {
@@ -141,9 +182,18 @@ function Accounts({ onClose }) {
                   </div>
                   <div class="actions">
                     {isLoggedOut && (
-                      <span class="tag">
-                        <Trans>Logged out</Trans>
-                      </span>
+                      <>
+                        <button
+                          type="button"
+                          class="plain2 small login-again-button"
+                          onClick={logInAgain}
+                        >
+                          <Icon icon="arrow-right" />{' '}
+                          <span>
+                            <Trans>Log back in</Trans>
+                          </span>
+                        </button>{' '}
+                      </>
                     )}
                     {isDefault && moreThanOneAccount && (
                       <>
@@ -203,9 +253,14 @@ function Accounts({ onClose }) {
                             disabled={isDefault || isLoggedOut}
                             onClick={() => {
                               // Move account to the top of the list
-                              accounts.splice(i, 1);
-                              accounts.unshift(account);
-                              saveAccounts(accounts);
+                              mutateAccounts((accts) => {
+                                const index = accts.findIndex(
+                                  (a) => a.info.id === account.info.id,
+                                );
+                                if (index < 1) return false;
+                                const [acc] = accts.splice(index, 1);
+                                accts.unshift(acc);
+                              });
                               reload();
                             }}
                           >
@@ -218,9 +273,14 @@ function Accounts({ onClose }) {
                             disabled={i <= 1}
                             onClick={() => {
                               // Move account one position up
-                              accounts.splice(i, 1);
-                              accounts.splice(i - 1, 0, account);
-                              saveAccounts(accounts);
+                              mutateAccounts((accts) => {
+                                const index = accts.findIndex(
+                                  (a) => a.info.id === account.info.id,
+                                );
+                                if (index <= 1) return false;
+                                const [acc] = accts.splice(index, 1);
+                                accts.splice(index - 1, 0, acc);
+                              });
                               reload();
                             }}
                           >
@@ -233,9 +293,16 @@ function Accounts({ onClose }) {
                             disabled={i === 0 || i === accounts.length - 1}
                             onClick={() => {
                               // Move account one position down
-                              accounts.splice(i, 1);
-                              accounts.splice(i + 1, 0, account);
-                              saveAccounts(accounts);
+                              mutateAccounts((accts) => {
+                                const index = accts.findIndex(
+                                  (a) => a.info.id === account.info.id,
+                                );
+                                if (index < 1 || index >= accts.length - 1) {
+                                  return false;
+                                }
+                                const [acc] = accts.splice(index, 1);
+                                accts.splice(index + 1, 0, acc);
+                              });
                               reload();
                             }}
                           >
@@ -267,8 +334,7 @@ function Accounts({ onClose }) {
                           menuItemClassName="danger"
                           onClick={async () => {
                             await logOutAccount();
-                            delete account.accessToken;
-                            saveAccounts(accounts);
+                            markLoggedOut();
                             reload();
                           }}
                           menuExtras={

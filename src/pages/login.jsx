@@ -47,6 +47,8 @@ function Login() {
   const [showBluesky, setShowBluesky] = useState(
     searchParams.get('network') === 'bluesky',
   );
+  // Pre-filled when coming from "Log back in" on a logged-out Bluesky account
+  const blueskyHandle = searchParams.get('handle') || '';
   const [bskyUIState, setBskyUIState] = useState('default');
   const [bskyError, setBskyError] = useState(null);
 
@@ -375,6 +377,7 @@ function Login() {
                   type="text"
                   class="large"
                   name="bskyIdentifier"
+                  defaultValue={blueskyHandle}
                   required
                   autocorrect="off"
                   autocapitalize="off"
@@ -415,6 +418,7 @@ function Login() {
                     type="text"
                     class="large"
                     name="bskyPwIdentifier"
+                    defaultValue={blueskyHandle}
                     required
                     autocorrect="off"
                     autocapitalize="off"

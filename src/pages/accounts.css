@@ -48,6 +48,11 @@
   margin-top: 8px;
 }
 
+#accounts-container section > ul > li .login-again-button {
+  white-space: nowrap;
+  margin-inline-end: 4px;
+}
+
 #accounts-container .avatar {
   margin-inline-end: 8px;
 }

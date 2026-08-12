@@ -55,10 +55,20 @@ function ImportAccountsSelection({ accounts: importedAccounts, onClose }) {
 
   const handleImportSelection = () => {
     setUIState('importing');
+    // Re-read at write time — the mount-time copy may be stale (e.g. a
+    // Bluesky token refresh persisted while this sheet was open), and
+    // writing it back would revert the newer tokens
+    const currentAccounts = getAccounts();
     const newAccounts = [
-      ...existingAccounts,
+      ...currentAccounts,
       ...importedAccounts.filter(
-        (account) => selectedAccounts[account.info.id + account.instanceURL],
+        (account) =>
+          selectedAccounts[account.info.id + account.instanceURL] &&
+          !currentAccounts.some(
+            (a) =>
+              a.info.id === account.info.id &&
+              a.instanceURL === account.instanceURL,
+          ),
       ),
     ];
     saveAccounts(newAccounts);

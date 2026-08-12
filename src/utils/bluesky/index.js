@@ -4,6 +4,7 @@ import {
   getAccount,
   getAccounts,
   getCurrentAccountID,
+  mutateAccounts,
   saveAccounts,
   setCurrentAccountID,
 } from '../store-utils';
@@ -24,10 +25,14 @@ export function isBlueskyAccount(account) {
 
 // Logged-in check that works for both auth modes: app-password sessions
 // keep a refresh JWT in the account; OAuth sessions keep tokens in the
-// OAuth client's own store and only mark the account with blueskyAuth
+// OAuth client's own store and only mark the account with blueskyAuth.
+// `authExpired` marks a terminally-dead session (set below in
+// markBlueskyAuthExpired) — treat it as logged out so merged-timeline and
+// cross-post fan-outs skip the account instead of erroring on every call.
 export function isBlueskyLoggedIn(account) {
   return (
     isBlueskyAccount(account) &&
+    !account.authExpired &&
     (account.blueskyAuth === 'oauth' || !!account.blueskySession?.refreshJwt)
   );
 }
@@ -68,9 +73,9 @@ export function getBlueskyAccountForInstance(instance) {
 }
 
 function persistSessionForAccount(did, session) {
-  const accounts = getAccounts();
-  const acc = accounts.find((a) => a.info.id === did);
-  if (acc) {
+  mutateAccounts((accounts) => {
+    const acc = accounts.find((a) => a.info.id === did);
+    if (!acc) return false;
     acc.blueskySession = {
       did: session.did,
       handle: session.handle,
@@ -79,8 +84,21 @@ function persistSessionForAccount(did, session) {
       active: session.active !== false,
     };
     acc.accessToken = session.accessJwt;
-    saveAccounts(accounts);
-  }
+    // A live token refresh proves the session works again
+    delete acc.authExpired;
+  });
+}
+
+// Terminal session death (refresh token revoked/expired and nothing newer in
+// the store): flag the account so the UI can offer "Log back in" and merged
+// views stop fanning out to it. Cleared by persistSessionForAccount or a
+// fresh login.
+function markBlueskyAuthExpired(did) {
+  mutateAccounts((accounts) => {
+    const acc = accounts.find((a) => a.info.id === did);
+    if (!acc || acc.authExpired) return false;
+    acc.authExpired = true;
+  });
 }
 
 export function getBlueskyClient(account) {
@@ -96,9 +114,35 @@ export function getBlueskyClient(account) {
     onSessionDeleted: () => {
       delete blueskyClients[did];
     },
+    getStoredSession: () =>
+      getAccounts().find((a) => a.info.id === did)?.blueskySession || null,
+    onAuthExpired: () => markBlueskyAuthExpired(did),
   });
   blueskyClients[did] = client;
   return client;
+}
+
+// Other tabs/windows rotate the (single-use) refresh tokens and persist them
+// to localStorage; adopt those rotations into any live agents here so this
+// context doesn't later refresh with a revoked token. `storage` fires only in
+// contexts other than the writer, so this never loops.
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (e) => {
+    if (e.key !== 'accounts' || !e.newValue) return;
+    let accounts;
+    try {
+      accounts = JSON.parse(e.newValue);
+    } catch (err) {
+      return;
+    }
+    if (!Array.isArray(accounts)) return;
+    for (const did of Object.keys(blueskyClients)) {
+      const acc = accounts.find((a) => a?.info?.id === did);
+      if (acc?.blueskySession) {
+        blueskyClients[did].adoptSession?.(acc.blueskySession);
+      }
+    }
+  });
 }
 
 // api()-compatible result for a Bluesky account
@@ -169,6 +213,7 @@ export async function loginBluesky({ service, identifier, password }) {
   };
   if (existing) {
     Object.assign(existing, accountData, { updatedAt: Date.now() });
+    delete existing.authExpired;
   } else {
     accounts.push({ ...accountData, createdAt: Date.now() });
   }
@@ -228,6 +273,7 @@ export async function completeBlueskyOAuth() {
   };
   if (existing) {
     Object.assign(existing, accountData, { updatedAt: Date.now() });
+    delete existing.authExpired;
   } else {
     accounts.push({ ...accountData, createdAt: Date.now() });
   }

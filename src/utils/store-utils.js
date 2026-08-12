@@ -9,6 +9,18 @@ export function saveAccounts(accounts) {
   store.local.setJSON('accounts', accounts);
 }
 
+// Read-modify-write helper for the accounts store. Bluesky token refreshes
+// persist rotated (single-use) tokens into this store at any time, so writing
+// back an array captured at render/mount time can revert a rotation and
+// strand the account with a revoked refresh token. Mutations must re-read at
+// write time: `fn` gets a freshly-read array; return false to skip saving.
+export function mutateAccounts(fn) {
+  const accounts = getAccounts();
+  if (fn(accounts) === false) return accounts;
+  saveAccounts(accounts);
+  return accounts;
+}
+
 const MINS_5 = 5 * 60 * 1000;
 export function getAccount(id) {
   const accounts = getAccounts();
