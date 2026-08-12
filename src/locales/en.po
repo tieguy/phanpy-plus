@@ -284,7 +284,7 @@ msgstr "View post stats"
 #: src/components/embed-modal.jsx:13
 #: src/components/generic-accounts.jsx:151
 #: src/components/gif-picker-modal.jsx:71
-#: src/components/import-accounts-selection.jsx:81
+#: src/components/import-accounts-selection.jsx:91
 #: src/components/import-export-accounts.jsx:108
 #: src/components/keyboard-shortcuts-help.jsx:53
 #: src/components/list-add-edit.jsx:37
@@ -789,7 +789,7 @@ msgstr "Locked while retrying a partially-posted thread"
 #: src/components/compose.jsx:1894
 #: src/components/compose.jsx:2101
 #: src/components/edit-profile-sheet.jsx:692
-#: src/components/import-accounts-selection.jsx:175
+#: src/components/import-accounts-selection.jsx:185
 #: src/components/open-link-sheet.jsx:74
 #: src/components/private-note-sheet.jsx:92
 #: src/components/quote-suggestion.jsx:35
@@ -1053,7 +1053,7 @@ msgstr "Exit"
 #: src/components/status.jsx:3190
 #: src/components/status.jsx:3193
 #: src/pages/account-statuses.jsx:693
-#: src/pages/accounts.jsx:183
+#: src/pages/accounts.jsx:209
 #: src/pages/collection.jsx:284
 #: src/pages/hashtag.jsx:232
 #: src/pages/list.jsx:181
@@ -1066,13 +1066,13 @@ msgstr ""
 
 #: src/components/edit-profile-sheet.jsx:94
 #: src/components/shortcuts-settings.jsx:368
-#: src/pages/accounts.jsx:253
+#: src/pages/accounts.jsx:289
 msgid "Move up"
 msgstr ""
 
 #: src/components/edit-profile-sheet.jsx:100
 #: src/components/shortcuts-settings.jsx:384
-#: src/pages/accounts.jsx:268
+#: src/pages/accounts.jsx:311
 msgid "Move down"
 msgstr ""
 
@@ -1226,19 +1226,19 @@ msgstr ""
 msgid "Error loading GIFs"
 msgstr ""
 
-#: src/components/import-accounts-selection.jsx:86
+#: src/components/import-accounts-selection.jsx:96
 msgid "Select accounts to import"
 msgstr "Select accounts to import"
 
-#: src/components/import-accounts-selection.jsx:117
+#: src/components/import-accounts-selection.jsx:127
 msgid "Select all"
 msgstr "Select all"
 
-#: src/components/import-accounts-selection.jsx:158
+#: src/components/import-accounts-selection.jsx:168
 msgid "Existing"
 msgstr "Existing"
 
-#: src/components/import-accounts-selection.jsx:183
+#: src/components/import-accounts-selection.jsx:193
 msgid "{selectedCount, plural, one {Import # account} other {Import # accounts}}"
 msgstr "{selectedCount, plural, one {Import # account} other {Import # accounts}}"
 
@@ -2817,7 +2817,7 @@ msgid "Max {SHORTCUTS_LIMIT} shortcuts"
 msgstr ""
 
 #: src/components/shortcuts-settings.jsx:475
-#: src/pages/accounts.jsx:394
+#: src/pages/accounts.jsx:436
 msgid "Import/export"
 msgstr ""
 
@@ -3585,64 +3585,64 @@ msgstr "Switch to my server (<0>{currentInstance}</0>)"
 msgid "Month"
 msgstr ""
 
-#: src/pages/accounts.jsx:112
+#: src/pages/accounts.jsx:133
 msgid "Current"
 msgstr ""
 
-#: src/pages/accounts.jsx:167
+#: src/pages/accounts.jsx:193
 msgid "Log back in"
 msgstr "Log back in"
 
-#: src/pages/accounts.jsx:175
+#: src/pages/accounts.jsx:201
 msgid "Default"
 msgstr ""
 
-#: src/pages/accounts.jsx:197
+#: src/pages/accounts.jsx:223
 msgid "Switch to this account"
 msgstr "Switch to this account"
 
-#: src/pages/accounts.jsx:206
+#: src/pages/accounts.jsx:232
 msgid "Switch in new tab/window"
 msgstr "Switch in new tab/window"
 
-#: src/pages/accounts.jsx:220
+#: src/pages/accounts.jsx:246
 msgid "View profile…"
 msgstr ""
 
-#: src/pages/accounts.jsx:238
+#: src/pages/accounts.jsx:269
 msgid "Set as default"
 msgstr ""
 
-#: src/pages/accounts.jsx:281
+#: src/pages/accounts.jsx:324
 msgid "Log out <0>@{unicodeAcct}</0>?"
 msgstr "Log out <0>@{unicodeAcct}</0>?"
 
-#: src/pages/accounts.jsx:309
+#: src/pages/accounts.jsx:351
 msgid "Log out and remove <0>@{unicodeAcct}</0>"
 msgstr "Log out and remove <0>@{unicodeAcct}</0>"
 
-#: src/pages/accounts.jsx:321
+#: src/pages/accounts.jsx:363
 msgid "Log out…"
 msgstr ""
 
-#: src/pages/accounts.jsx:331
+#: src/pages/accounts.jsx:373
 msgid "Remove <0>@{unicodeAcct}</0>?"
 msgstr "Remove <0>@{unicodeAcct}</0>?"
 
-#: src/pages/accounts.jsx:349
+#: src/pages/accounts.jsx:391
 msgid "Remove account…"
 msgstr "Remove account…"
 
 #. placeholder {0}: niceDateTime(account.createdAt)
-#: src/pages/accounts.jsx:357
+#: src/pages/accounts.jsx:399
 msgid "Connected on {0} (<0/>)"
 msgstr "Connected on {0} (<0/>)"
 
-#: src/pages/accounts.jsx:374
+#: src/pages/accounts.jsx:416
 msgid "Add an existing account"
 msgstr ""
 
-#: src/pages/accounts.jsx:381
+#: src/pages/accounts.jsx:423
 msgid "Note: <0>Default</0> account will always be used for first load. Switched accounts will persist during the session."
 msgstr ""
 
