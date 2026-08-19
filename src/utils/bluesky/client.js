@@ -21,6 +21,7 @@ import {
   profileToAccount,
   profileToRelationship,
 } from './convert';
+import { repairMentionFacets } from './facets';
 import {
   areSameAuthor,
   getFeedItemAuthors,
@@ -786,11 +787,20 @@ export function createBlueskyClient({
     const { RichText } = await loadAtproto();
     const rt = new RichText({ text: fullText });
     await rt.detectFacets(agent);
+    // detectFacets leaves `did: ''` on every mention it could not resolve, and
+    // the PDS rejects the whole record over it. Retry, then drop the rest.
+    const { facets, unresolved } = await repairMentionFacets(
+      rt.text,
+      rt.facets,
+    );
+    if (unresolved.length) {
+      console.warn('Posting without unresolvable mentions:', unresolved);
+    }
 
     const record = {
       $type: 'app.bsky.feed.post',
       text: rt.text,
-      facets: rt.facets,
+      facets,
       createdAt: new Date().toISOString(),
     };
     if (language) record.langs = [language];
@@ -842,7 +852,7 @@ export function createBlueskyClient({
     // any failure just posts without a card. Skipped for image/quote posts,
     // since an external embed can't coexist with them in the same slot.
     if (!record.embed) {
-      const linkUrl = firstLinkFacetUri(rt.facets);
+      const linkUrl = firstLinkFacetUri(facets);
       if (linkUrl) {
         const externalEmbed = await buildExternalEmbed(agent, linkUrl);
         if (externalEmbed) record.embed = externalEmbed;
@@ -1807,10 +1817,14 @@ export function createBlueskyClient({
   async function buildMessageInput(text) {
     const { RichText } = await loadAtproto();
     const rt = new RichText({ text });
+    let facets;
     try {
       await rt.detectFacets(agent); // resolves mentions + links to facets
+      // Same unresolved-mention hazard as buildPostRecord: an empty `did`
+      // would make the chat service reject the message.
+      ({ facets } = await repairMentionFacets(rt.text, rt.facets));
     } catch (e) {}
-    return { text: rt.text, facets: rt.facets };
+    return { text: rt.text, facets };
   }
   const chat = {
     listConversations: ({ limit = 40 } = {}) =>
