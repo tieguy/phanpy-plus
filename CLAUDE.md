@@ -1,6 +1,6 @@
 # fleeting-social — developer notes
 
-Last verified: 2026-08-10
+Last verified: 2026-08-20
 
 fleeting-social is a fork of [Phanpy](https://github.com/cheeaun/phanpy) (a Mastodon web client) that adds native Bluesky (AT Protocol) support and interweaves the two networks. Most of the codebase is stock Phanpy; the fork-specific machinery lives under `src/utils/bluesky/` plus a handful of merge/filter helpers.
 
@@ -13,12 +13,13 @@ A small adapter layer (`src/utils/bluesky/`) wraps [`@atproto/api`](https://gith
 - `src/utils/bluesky/convert.js` — pure converters from AT Protocol shapes to Mastodon shapes (`postToStatus`, `profileToAccount`, `notificationToMasto`, `textToHTML`, etc.).
 - `src/utils/bluesky/client.js` — the `masto`-compatible facade: `masto.v1.*` / `masto.v2.*` methods backed by an `@atproto/api` agent.
 - `src/utils/bluesky/index.js` — account plumbing: `blueskyApi(account)`, `getOtherNetworkAccounts()`, `getBlueskyAccounts()`, `hasMultipleNetworks()`.
-- `src/utils/bluesky/link-card.js` — outgoing **link cards**. Bluesky (unlike Mastodon) unfurls links client-side, so `createStatus` builds the `app.bsky.embed.external` embed itself: `firstLinkFacetUri` finds the first link facet, `buildExternalEmbed` unfurls it via Bluesky's hosted CardyB service (`cardyb.bsky.app`) and uploads the thumbnail blob. It's **best-effort** (any failure just posts without a card) and only fires when the post has no other embed — an external card can't coexist with images/quote in the same slot.
+- `src/utils/bluesky/link-card.js` — outgoing **link cards**. Bluesky (unlike Mastodon) unfurls links client-side, so `createStatus` builds the `app.bsky.embed.external` embed itself: `linkFacetUris` lists the post's link facets, `buildExternalEmbed` unfurls one via Bluesky's hosted CardyB service (`cardyb.bsky.app`) and uploads the thumbnail blob. It's **best-effort** (any failure just posts without a card) and only fires when the post has no other embed — an external card can't coexist with images/quote in the same slot.
+- `src/utils/bluesky/quote-link.js` — a pasted **bsky.app post URL becomes a native quote**, not a link card. `parseBskyPostUrl` / `firstQuotedPostLink` recognise the URL in the facets; `quoteEmbedFromLinks` in `client.js` resolves it to an AT-URI + CID and emits `app.bsky.embed.record`, which takes the embed slot before the link-card path sees it. This distinction is load-bearing: only a `record` embed increments the target's `quoteCount` and puts the post in its quote list, so a post URL sent as an external card is a quote that renders like one and that the network cannot see. Resolution is best-effort — an unresolvable URL falls through to the link card. The URL stays in the post text, matching the link-card path.
 - `src/utils/api.js` — `api()` resolves the current account to either the Bluesky facade or a real Mastodon client. Passing `api({ account })` yields a per-account client, which is what the merge paths use.
 
 `@atproto/api` is **lazy-loaded**, so Mastodon-only users don't pay the bundle cost.
 
-The facade deliberately over-loads some Mastodon concepts. `v1.lists.list()` returns not only the user's Bluesky lists but also their subscribed **feed generators**, shaped as lists and tagged `_feed`. Per-list metadata and timeline calls branch on the AT-URI collection (`app.bsky.feed.generator` → `getFeedGenerator`/`getFeed`; `app.bsky.graph.list` → `getList`/`getListFeed`). Consumers must treat `_feed` entries as read-only — no edit / manage-members — see `src/pages/lists.jsx` and `src/pages/list.jsx`.
+The facade deliberately over-loads some Mastodon concepts. `v1.statuses.$select(id).quotes.list()` — Mastodon's own quotes endpoint, API v7+ — is backed by `app.bsky.feed.getQuotes` and, like masto.js, yields **statuses** rather than accounts (unlike the sibling `favouritedBy` / `rebloggedBy` listings). `v1.lists.list()` returns not only the user's Bluesky lists but also their subscribed **feed generators**, shaped as lists and tagged `_feed`. Per-list metadata and timeline calls branch on the AT-URI collection (`app.bsky.feed.generator` → `getFeedGenerator`/`getFeed`; `app.bsky.graph.list` → `getList`/`getListFeed`). Consumers must treat `_feed` entries as read-only — no edit / manage-members — see `src/pages/lists.jsx` and `src/pages/list.jsx`.
 
 ### Publishing and threading
 

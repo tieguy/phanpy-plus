@@ -18,7 +18,10 @@ export default function QuotesModal({
   onClose = () => {},
 }) {
   const { t } = useLingui();
-  const { masto } = api();
+  // The post may live on the other network from the active account (a Bluesky
+  // post read while a Mastodon account is current, or the reverse), so resolve
+  // the client from the post's instance, not from whoever is signed in.
+  const { masto } = api({ instance });
 
   const [posts, setPosts] = useState([]);
   const [uiState, setUIState] = useState('default');
@@ -28,19 +31,20 @@ export default function QuotesModal({
   const firstLoad = useRef(true);
 
   const loadQuotes = (isFirstLoad = false) => {
-    if (isFirstLoad || !quotesIterator.current) {
-      quotesIterator.current = masto.v1.statuses
-        .$select(statusId)
-        .quotes.list({
-          limit: LIMIT,
-        })
-        .values();
-    }
-
     setUIState('loading');
 
     (async () => {
       try {
+        // Inside the try: building the iterator touches the API client, which
+        // throws outright when the network behind it has no quotes endpoint.
+        if (isFirstLoad || !quotesIterator.current) {
+          quotesIterator.current = masto.v1.statuses
+            .$select(statusId)
+            .quotes.list({
+              limit: LIMIT,
+            })
+            .values();
+        }
         let { done, value } = await quotesIterator.current.next();
 
         if (Array.isArray(value)) {

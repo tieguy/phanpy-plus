@@ -27,7 +27,10 @@ export default function QuoteChainModal({
   onClose = () => {},
 }) {
   const { t } = useLingui();
-  const { masto } = api();
+  // Route fetches through the chain's own instance — the posts being walked
+  // may sit on the other network from the active account. `getStatus` below
+  // already keys its cache by `instance`.
+  const { masto } = api({ instance });
 
   const [posts, setPosts] = useState([]);
   const [uiState, setUIState] = useState('default');

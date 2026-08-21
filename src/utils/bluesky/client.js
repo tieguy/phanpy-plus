@@ -21,13 +21,14 @@ import {
   profileToAccount,
   profileToRelationship,
 } from './convert';
-import { repairMentionFacets } from './facets';
+import { repairMentionFacets, resolveHandleDid } from './facets';
 import {
   areSameAuthor,
   getFeedItemAuthors,
   shouldDisplayReplyInFollowing,
 } from './following-reply-filter';
 import { buildExternalEmbed, firstLinkFacetUri } from './link-card';
+import { firstQuotedPostLink } from './quote-link';
 
 const MAX_IMAGE_SIZE = 950_000; // Bluesky blob limit is ~976KB
 
@@ -730,6 +731,24 @@ export function createBlueskyClient({
             };
           }),
       },
+      // Mastodon's quotes endpoint (API v7+); on Bluesky quotes are native and
+      // app.bsky.feed.getQuotes returns the quoting posts themselves, so this
+      // yields statuses rather than accounts — same as masto.js.
+      quotes: {
+        list: ({ limit = 20 } = {}) =>
+          paginator(async (cursor) => {
+            await ready();
+            const res = await agent.app.bsky.feed.getQuotes({
+              uri,
+              limit,
+              cursor,
+            });
+            return {
+              items: (res.data.posts || []).map(toStatus).filter(Boolean),
+              cursor: res.data.cursor,
+            };
+          }),
+      },
       history: {
         list: async () => [],
       },
@@ -754,6 +773,34 @@ export function createBlueskyClient({
     const parentRef = { uri: parentPost.uri, cid: parentPost.cid };
     const rootRef = parentPost.record?.reply?.root || parentRef;
     return { root: rootRef, parent: parentRef };
+  }
+
+  // A pasted bsky.app post URL means a quote. Bluesky unfurls nothing
+  // server-side, so a client that sends such a URL as an external link card
+  // (which is what the link-card path below would do with any URL) produces
+  // something that renders like a quote but is not one: the quoted post's
+  // quoteCount stays put and the post never shows up in its quote list.
+  // Best-effort — if the URL names a post we cannot resolve, return null and
+  // let the link card handle it, exactly as before.
+  async function quoteEmbedFromLinks(facets) {
+    const target = firstQuotedPostLink(facets);
+    if (!target) return null;
+    try {
+      const targetDid = target.actor.startsWith('did:')
+        ? target.actor
+        : await resolveHandleDid(target.actor);
+      if (!targetDid) return null;
+      const quoteUri = `at://${targetDid}/app.bsky.feed.post/${target.rkey}`;
+      const cid = await resolveCid(quoteUri);
+      if (!cid) return null;
+      return {
+        $type: 'app.bsky.embed.record',
+        record: { uri: quoteUri, cid },
+      };
+    } catch (e) {
+      console.warn('Posting a linked post as a link, not a quote:', e);
+      return null;
+    }
   }
 
   // Builds a complete app.bsky.feed.post record from masto-shaped params —
@@ -834,6 +881,8 @@ export function createBlueskyClient({
         $type: 'app.bsky.embed.record',
         record: { uri: quoteUri, cid },
       };
+    } else {
+      recordEmbed = await quoteEmbedFromLinks(facets);
     }
     if (mediaEmbed && recordEmbed) {
       record.embed = {
@@ -851,6 +900,8 @@ export function createBlueskyClient({
     // an external card so shared links render as a rich preview. Best-effort —
     // any failure just posts without a card. Skipped for image/quote posts,
     // since an external embed can't coexist with them in the same slot.
+    // A post URL never reaches this point: quoteEmbedFromLinks claimed it
+    // above, unless the post it names could not be resolved.
     if (!record.embed) {
       const linkUrl = firstLinkFacetUri(facets);
       if (linkUrl) {

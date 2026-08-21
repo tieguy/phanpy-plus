@@ -16,18 +16,25 @@ const CARDYB_TIMEOUT = 5_000; // ms — never hold up a post for long
 // without an image. CardyB thumbnails are normally well under this.
 const MAX_THUMB_BYTES = 950_000;
 
-// Returns the URI of the first `#link` facet in a RichText facet list, or null.
-// Pure and dependency-free so it stays unit-testable under the node runner.
-export function firstLinkFacetUri(facets) {
-  if (!Array.isArray(facets)) return null;
+// Returns the URIs of every `#link` facet in a RichText facet list, in facet
+// order. Pure and dependency-free so it stays unit-testable under the node
+// runner.
+export function linkFacetUris(facets) {
+  const uris = [];
+  if (!Array.isArray(facets)) return uris;
   for (const facet of facets) {
     for (const feature of facet?.features || []) {
       if (feature?.$type === 'app.bsky.richtext.facet#link' && feature.uri) {
-        return feature.uri;
+        uris.push(feature.uri);
       }
     }
   }
-  return null;
+  return uris;
+}
+
+// Returns the URI of the first `#link` facet, or null.
+export function firstLinkFacetUri(facets) {
+  return linkFacetUris(facets)[0] ?? null;
 }
 
 async function fetchWithTimeout(url, opts = {}) {

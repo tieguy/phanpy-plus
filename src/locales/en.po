@@ -246,7 +246,7 @@ msgid "Replies"
 msgstr ""
 
 #: src/components/account-info.jsx:1082
-#: src/components/quotes-modal.jsx:81
+#: src/components/quotes-modal.jsx:85
 #: src/components/status.jsx:2873
 #: src/pages/catchup.jsx:75
 #: src/pages/catchup.jsx:1597
@@ -300,7 +300,7 @@ msgstr "View post stats"
 #: src/components/qr-scanner-modal.jsx:257
 #: src/components/quote-chain-modal.jsx:102
 #: src/components/quote-settings-sheet.jsx:61
-#: src/components/quotes-modal.jsx:76
+#: src/components/quotes-modal.jsx:80
 #: src/components/report-collection.jsx:33
 #: src/components/report-modal.jsx:118
 #: src/components/shortcuts-settings.jsx:247
@@ -1186,7 +1186,7 @@ msgid "Accounts"
 msgstr ""
 
 #: src/components/generic-accounts.jsx:214
-#: src/components/quotes-modal.jsx:129
+#: src/components/quotes-modal.jsx:133
 #: src/components/timeline.jsx:628
 #: src/pages/account-collections.jsx:234
 #: src/pages/list.jsx:332
@@ -1199,7 +1199,7 @@ msgstr ""
 
 #: src/components/generic-accounts.jsx:219
 #: src/components/quote-chain-modal.jsx:169
-#: src/components/quotes-modal.jsx:133
+#: src/components/quotes-modal.jsx:137
 #: src/components/timeline.jsx:633
 #: src/components/timeline2.jsx:679
 #: src/pages/search.jsx:643
@@ -2315,11 +2315,11 @@ msgstr "Replace current quote"
 msgid "Turn into quote"
 msgstr "Turn into quote"
 
-#: src/components/quotes-modal.jsx:150
+#: src/components/quotes-modal.jsx:154
 msgid "Error loading quotes"
 msgstr "Error loading quotes"
 
-#: src/components/quotes-modal.jsx:154
+#: src/components/quotes-modal.jsx:158
 msgid "No quotes yet"
 msgstr "No quotes yet"
 
