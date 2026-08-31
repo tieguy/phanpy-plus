@@ -5,7 +5,6 @@ import { Trans } from '@lingui/react/macro';
 import logo from '../assets/logo.svg';
 
 import Icon from '../components/icon';
-import LangSelector from '../components/lang-selector';
 import Link from '../components/link';
 import states from '../utils/states';
 import useTitle from '../utils/useTitle';
@@ -132,7 +131,6 @@ function Welcome() {
             </small>
           </p>
         )}
-        <LangSelector />
       </footer>
     </main>
   );

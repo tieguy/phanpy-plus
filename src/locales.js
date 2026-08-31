@@ -9,11 +9,8 @@ const locales = [
 ];
 export const LOCALES = locales;
 
-let devLocales = [];
-if (import.meta.env?.DEV || import.meta.env?.FLEETING_SHOW_DEV_LOCALES) {
-  devLocales = catalogs.filter(({ listed }) => !listed).map(({ code }) => code);
-  devLocales.push('pseudo-LOCALE');
-}
-export const DEV_LOCALES = devLocales;
+// English-only build: no translation catalogs; the lingui macros render
+// their source strings.
+export const DEV_LOCALES = [];
 
-export const ALL_LOCALES = [...locales, ...devLocales];
+export const ALL_LOCALES = locales;

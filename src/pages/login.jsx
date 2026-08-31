@@ -8,7 +8,6 @@ import { useSearchParams } from 'react-router-dom';
 import logo from '../assets/logo.svg';
 
 import Icon from '../components/icon';
-import LangSelector from '../components/lang-selector';
 import Link from '../components/link';
 import Loader from '../components/loader';
 import instancesListURL from '../data/instances.json?url';
@@ -485,7 +484,6 @@ function Login() {
           <Trans>Go home</Trans>
         </Link>
       </p>
-      <LangSelector />
     </main>
   );
 }

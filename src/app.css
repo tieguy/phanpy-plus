@@ -3372,18 +3372,6 @@ ul.link-list li a .icon {
   }
 }
 
-/* LANG SELECTOR */
-
-.lang-selector {
-  display: inline-flex;
-  gap: 4px;
-  align-items: center;
-
-  select {
-    width: 10em;
-  }
-}
-
 /* DEBUG */
 
 .debug-info {

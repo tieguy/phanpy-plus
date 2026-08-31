@@ -11,7 +11,6 @@ import { useSnapshot } from 'valtio';
 import logo from '../assets/logo.svg';
 
 import Icon from '../components/icon';
-import LangSelector from '../components/lang-selector';
 import Link from '../components/link';
 import RelativeTime from '../components/relative-time';
 import languages from '../data/translang-languages';
@@ -227,23 +226,6 @@ function Settings({ onClose }) {
                 </label>
               </div>
               <TextSizeControl currentTextSize={currentTextSize} />
-            </li>
-            <li>
-              <span>
-                <label>
-                  <Trans>Display language</Trans>
-                </label>{' '}
-                <small>
-                  <a
-                    href="https://crowdin.com/project/phanpy"
-                    target="_blank"
-                    rel="noopener"
-                  >
-                    <Trans>Volunteer translations</Trans>
-                  </a>
-                </small>
-              </span>
-              <LangSelector />
             </li>
             <li class="block">
               <label>

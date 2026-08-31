@@ -119,7 +119,7 @@ Divergence from upstream Phanpy (single cross-post toggle, single Profile link) 
 
 **Components:**
 - Boost confirmation menu (in `src/components/status.jsx`) — "Boost as @…" rows from `eligibleAccounts`, executed via `api({ account })`
-- Boosted-state display — highlight reflects any-of-my-accounts; menu indicates which accounts have boosted
+- Boosted-state display — the highlight reflects only the default acting account; a boost-as reports via toast. Accepted limitation (signed off 2026-08-31): "any of my accounts boosted" would need client-side per-status bookkeeping that survives refetches, and the chooser never renders with one account per network — revisit only if two same-network accounts become real.
 
 **Dependencies:** Phase 1.
 
