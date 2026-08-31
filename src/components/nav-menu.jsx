@@ -7,6 +7,7 @@ import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useLongPress } from 'use-long-press';
 import { useSnapshot } from 'valtio';
 
+import { accountRoster } from '../utils/acting-accounts';
 import { api } from '../utils/api';
 import { isSupported as collectionsSupported } from '../utils/collections';
 import { getLists } from '../utils/lists';
@@ -16,6 +17,7 @@ import store from '../utils/store';
 import { getAccounts, getCurrentAccountID } from '../utils/store-utils';
 import supports from '../utils/supports';
 
+import { AccountRow } from './account-picker';
 import Avatar from './avatar';
 import Icon from './icon';
 import ListExclusiveBadge from './list-exclusive-badge';
@@ -34,6 +36,16 @@ function NavMenu(props) {
       accounts[0];
     return [acc, accounts.length > 1];
   }, []);
+
+  // All logged-in accounts, current first — the Profile submenu roster
+  const profileRoster = useMemo(
+    () =>
+      accountRoster({
+        accounts: getAccounts(),
+        currentID: currentAccount?.info?.id,
+      }),
+    [],
+  );
 
   // Don't show avatar in nav button if profile shortcut is already showing
   const tabMenuHasProfile =
@@ -225,14 +237,41 @@ function NavMenu(props) {
                 )}
               </MenuLink>
               <MenuDivider />
-              {currentAccount?.info?.id && (
-                <MenuLink to={`/${instance}/a/${currentAccount.info.id}`}>
-                  <Icon icon="user" size="l" />{' '}
-                  <span>
-                    <Trans>Profile</Trans>
-                  </span>
-                </MenuLink>
-              )}
+              {currentAccount?.info?.id &&
+                (profileRoster.length > 1 ? (
+                  // Every logged-in account's profile, one submenu — no
+                  // account switch needed to view any of them.
+                  <SubMenu2
+                    menuClassName="nav-submenu"
+                    overflow="auto"
+                    gap={-8}
+                    label={
+                      <>
+                        <Icon icon="user" size="l" />
+                        <span class="menu-grow">
+                          <Trans>Profile</Trans>
+                        </span>
+                        <Icon icon="chevron-right" />
+                      </>
+                    }
+                  >
+                    {profileRoster.map((account) => (
+                      <MenuLink
+                        key={account.info.id}
+                        to={`/${account.instanceURL.toLowerCase()}/a/${account.info.id}`}
+                      >
+                        <AccountRow account={account} />
+                      </MenuLink>
+                    ))}
+                  </SubMenu2>
+                ) : (
+                  <MenuLink to={`/${instance}/a/${currentAccount.info.id}`}>
+                    <Icon icon="user" size="l" />{' '}
+                    <span>
+                      <Trans>Profile</Trans>
+                    </span>
+                  </MenuLink>
+                ))}
               <ListMenu menuState={menuState} />
               <MenuLink to="/b">
                 <Icon icon="bookmark" size="l" />{' '}
