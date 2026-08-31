@@ -36,7 +36,8 @@ You can still turn the merging off (*Settings → Merged timeline*) if you'd rat
 
 - 🦋 **Log in with Bluesky** — on the Log in page, enter your handle and you'll be sent to your PDS to authorize via **AT Protocol OAuth** (custom PDS hosts work automatically). An [app password](https://bsky.app/settings/app-passwords) fallback is also available.
 - 🐘🦋 **Merged home timeline** — when you're logged in to both a Mastodon account and a Bluesky account, the Home timeline interleaves both feeds chronologically. Toggle via *Settings → Merged timeline*.
-- ✍️ **Cross-posting** — the compose box grows an "Also post to @you.bsky.social" checkbox (for new public posts). Write once, post to both networks. Images are re-uploaded to Bluesky (auto-resized under its 1 MB limit); content warnings become a `CW:` prefix.
+- ✍️ **Post to any subset of your accounts** — the compose box lists every logged-in account as a checkbox (all checked by default; your selection sticks). Uncheck freely: a post can go to both networks, or only to the account you're *not* currently "in". Images are re-uploaded per network (auto-resized under Bluesky's 1 MB limit); content warnings become a `CW:` prefix on Bluesky; the character counter enforces the strictest checked network.
+- 👤 **Act as any account, without switching** — the Profile menu lists all your accounts, and boost/like/reply offer "as @…" options whenever more than one of your accounts could act on a post. Which account you're "switched to" matters as little as possible.
 - ❤️ **Full interactions** — like, repost, reply, quote-render, bookmark, follow/unfollow, mute, block, delete — on Bluesky posts from within fleeting-social, even while browsing as your Mastodon account.
 - 🧵 **Threads, profiles, notifications, search, likes, bookmarks** for Bluesky accounts all work through the same UI.
 - 🔥 **Trending** — Bluesky's trending topics and the Discover ("What's Hot") feed show up in the Trending page.
