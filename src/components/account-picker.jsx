@@ -14,9 +14,7 @@ import Icon from './icon';
 
 export function accountLabel(account) {
   const acct = account.info?.acct || account.info?.username || '';
-  const unicodeAcct = /@/.test(acct)
-    ? acct
-    : `${acct}@${account.instanceURL}`;
+  const unicodeAcct = /@/.test(acct) ? acct : `${acct}@${account.instanceURL}`;
   try {
     return `@${punycode.toUnicode(unicodeAcct)}`;
   } catch (e) {

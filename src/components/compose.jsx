@@ -12,11 +12,7 @@ import { useSnapshot } from 'valtio';
 
 import supportedLanguages from '../data/status-supported-languages';
 import { api, getPreferences } from '../utils/api';
-import {
-  getOtherNetworkAccounts,
-  isBlueskyAccount,
-  isBlueskyInstance,
-} from '../utils/bluesky';
+import { isBlueskyAccount, isBlueskyInstance } from '../utils/bluesky';
 import { blueskyInstanceInfo } from '../utils/bluesky/convert';
 import {
   countableBlueskyText,
@@ -44,9 +40,11 @@ import RTF from '../utils/relative-time-format';
 import showToast from '../utils/show-toast';
 import states, { saveStatus } from '../utils/states';
 import store from '../utils/store';
+import { accountRoster } from '../utils/acting-accounts';
 import {
   getAPIVersions,
   getAccountByInstance,
+  getAccounts,
   getCurrentAccount,
   getCurrentAccountNS,
   getCurrentInstanceConfiguration,
@@ -62,6 +60,7 @@ import visibilityIconsMap from '../utils/visibility-icons-map';
 import visibilityText from '../utils/visibility-text';
 
 import AccountBlock from './account-block';
+import { AccountPickerCheckboxes } from './account-picker';
 // import Avatar from './avatar';
 import CameraCaptureInput, {
   supportsCameraCapture,
@@ -222,17 +221,36 @@ function Compose({
       : getCurrentInstanceConfiguration();
   console.log('⚙️ Configuration', configuration);
 
-  // Cross-posting: other-network accounts this post can also go to
-  // (only for new, non-reply, non-quote posts)
-  const crossPostAccounts = useMemo(
+  // Compose targets: for a new post, EVERY logged-in account is a peer
+  // checkbox — the active account is not special, and a post can go only
+  // to a non-active account. Replies/quotes/edits stay network-bound.
+  const composeTargetable = !editStatus && !replyToStatus && !quoteStatus;
+  const targetRoster = useMemo(
     () =>
-      !editStatus && !replyToStatus && !quoteStatus
-        ? getOtherNetworkAccounts()
+      composeTargetable
+        ? accountRoster({
+            accounts: getAccounts(),
+            currentID: currentAccount.info.id,
+          })
         : [],
     [],
   );
-  const [crossPost, setCrossPost] = useState(
-    store.local.get('crossPostEnabled') !== '0',
+  // Persisted as the UNCHECKED set so newly-added accounts default to
+  // checked (matching the all-checked default) and removed accounts
+  // vanish harmlessly.
+  const [uncheckedIDs, setUncheckedIDs] = useState(
+    () => new Set(store.local.getJSON('composeUncheckedAccounts') || []),
+  );
+  const checkedTargets = targetRoster.filter(
+    (a) => !uncheckedIDs.has(a.info.id),
+  );
+  // The mount-time account (media upload, drafts, char counting) — when
+  // unchecked, its publish is skipped and every checked account posts
+  // through the re-upload path.
+  const primaryChecked =
+    !composeTargetable || !uncheckedIDs.has(currentAccount.info.id);
+  const crossTargets = checkedTargets.filter(
+    (a) => a.info.id !== currentAccount.info.id,
   );
 
   const {
@@ -273,9 +291,8 @@ function Compose({
   const BLUESKY_MAX_CHARACTERS = 300;
   // When cross-posting to a Bluesky account, the strictest limit binds.
   const crossPostToBluesky =
-    crossPost &&
     canCrossPost({ poll, scheduledAt, visibility }) &&
-    crossPostAccounts.some((a) => isBlueskyAccount(a));
+    crossTargets.some((a) => isBlueskyAccount(a));
   const effectiveMaxCharacters =
     crossPostToBluesky && maxCharacters > BLUESKY_MAX_CHARACTERS
       ? BLUESKY_MAX_CHARACTERS
@@ -1494,8 +1511,29 @@ function Compose({
             setUIState('loading');
             (async () => {
               try {
+                // Polls, scheduling and non-public visibility can only
+                // publish through the primary account's own network. If the
+                // primary is unchecked, nothing could post — stop before
+                // uploading anything.
+                if (
+                  composeTargetable &&
+                  !primaryChecked &&
+                  !canCrossPost({ poll, scheduledAt, visibility })
+                ) {
+                  states.composerState.publishing = false;
+                  setUIState('default');
+                  alert(
+                    t`Polls, scheduled posts and non-public visibility can only be posted from @${
+                      currentAccount.info.acct || currentAccount.info.username
+                    } — select that account, or remove those options.`,
+                  );
+                  return;
+                }
                 console.log('MEDIA ATTACHMENTS', mediaAttachments);
-                if (mediaAttachments.length > 0) {
+                // Media pre-upload goes to the primary account's instance;
+                // when the primary is unchecked, skip it — every checked
+                // account re-uploads from fileData in publishThread.
+                if (primaryChecked && mediaAttachments.length > 0) {
                   // Upload media attachments first
                   const mediaPromises = mediaAttachments.map((attachment) => {
                     const { fileData, fileName, file, type, description, id } =
@@ -1591,137 +1629,149 @@ function Compose({
                     skipThreading: true,
                   });
                 } else {
-                  const shared = {
-                    visibility,
-                    language,
-                    spoilerText,
-                    sensitive: sensitive || sensitiveMedia,
-                    inReplyToId: replyToStatus?.id || undefined,
-                    scheduledAt,
-                  };
-                  if (supportsNativeQuote(instance)) {
-                    shared.quoteApprovalPolicy = quoteApprovalPolicy;
-                    if (currentQuoteStatus?.id) {
-                      shared.quotedStatusId = currentQuoteStatus.id;
+                  // The primary (mount-time) account posts through the
+                  // composer's own client; unchecked → skip, and the
+                  // checked accounts below carry the post alone.
+                  if (primaryChecked) {
+                    const shared = {
+                      visibility,
+                      language,
+                      spoilerText,
+                      sensitive: sensitive || sensitiveMedia,
+                      inReplyToId: replyToStatus?.id || undefined,
+                      scheduledAt,
+                    };
+                    if (supportsNativeQuote(instance)) {
+                      shared.quoteApprovalPolicy = quoteApprovalPolicy;
+                      if (currentQuoteStatus?.id) {
+                        shared.quotedStatusId = currentQuoteStatus.id;
+                      }
                     }
-                  }
-                  const segments = [
-                    {
-                      text: status,
-                      mediaIds: mediaAttachments.map(
-                        (attachment) => attachment.id,
-                      ),
-                      poll,
-                    },
-                    ...moreSegments.map((segment) => ({
-                      text: segment.text,
-                      // publishThread uploads these to the target (fileData path)
-                      mediaAttachments: segment.mediaAttachments,
-                    })),
-                  ];
-                  // Orphan-root guard: if lastPostedId is falsy, resuming would
-                  // silently restart the chain as a detached root. Decide from a
-                  // LOCAL before calling the setter — setThreadPublishState(null)
-                  // doesn't change this render's closure binding, so deriving
-                  // resume/startAt from threadPublishState after the setter would
-                  // still resume with the stale object.
-                  const canResume = !!threadPublishState?.lastPostedId;
-                  if (threadPublishState && !canResume) {
-                    setThreadPublishState(null);
-                  }
-                  // Resume state exists ONLY for genuine partial threads (some posts up,
-                  // some not). Plain single-post failures and index-0 thread failures keep
-                  // today's behavior exactly — no "Retry remaining", no locking.
-                  const resume = canResume;
-                  const startAt = resume
-                    ? threadPublishState.postedStatuses.length
-                    : 0;
-                  const { statuses, failedAtIndex, error } =
-                    await publishThread({
-                      masto,
-                      instance,
-                      isBluesky: isBlueskyTarget, // compose.jsx:201 — explicit, never duck-typed
-                      segments,
-                      shared,
-                      idempotencyPrefix: UID.current,
-                      startAt,
-                      resumeInReplyToId: resume
-                        ? threadPublishState.lastPostedId
-                        : undefined,
-                      onProgress: (i, state) => {
-                        if (state === 'posting' && segments.length > 1) {
-                          const progress = `${i + 1}/${segments.length}`;
-                          setPublishProgress(progress);
-                          // Mirror into global composer state so the minimized-composer
-                          // indicator can show it too (design asked for composerState here;
-                          // the resume bookkeeping itself stays component-local — recorded
-                          // as a minor deviation).
-                          states.composerState.publishingProgress = progress;
-                        }
+                    const segments = [
+                      {
+                        text: status,
+                        mediaIds: mediaAttachments.map(
+                          (attachment) => attachment.id,
+                        ),
+                        poll,
                       },
-                    });
-                  const allStatuses = [
-                    ...(threadPublishState?.postedStatuses || []),
-                    ...statuses,
-                  ];
-                  if (failedAtIndex !== null) {
-                    // Clear transient progress on every failure path too — leaving it
-                    // stale would show "Posting 2/3…" on an idle errored composer
-                    setPublishProgress(null);
-                    states.composerState.publishingProgress = null;
-                    if (segments.length > 1 && allStatuses.length > 0) {
-                      // Genuine partial thread → enable resume UX
-                      setThreadPublishState({
-                        postedStatuses: allStatuses,
-                        lastPostedId: allStatuses.at(-1)?.id || null,
-                      });
-                      // The pre-failure draft on disk still holds every segment
-                      // with no record that some posted — restoring it after a
-                      // reload would republish from zero. Delete it; resume
-                      // state is deliberately session-scoped.
-                      db.drafts.del(draftKey());
-                      const msg = error?.reason || error?.message || `${error}`;
-                      throw Object.assign(error || new Error('thread failed'), {
-                        _threadPartial: {
-                          posted: allStatuses.length,
-                          total: segments.length,
-                          msg,
+                      ...moreSegments.map((segment) => ({
+                        text: segment.text,
+                        // publishThread uploads these to the target (fileData path)
+                        mediaAttachments: segment.mediaAttachments,
+                      })),
+                    ];
+                    // Orphan-root guard: if lastPostedId is falsy, resuming would
+                    // silently restart the chain as a detached root. Decide from a
+                    // LOCAL before calling the setter — setThreadPublishState(null)
+                    // doesn't change this render's closure binding, so deriving
+                    // resume/startAt from threadPublishState after the setter would
+                    // still resume with the stale object.
+                    const canResume = !!threadPublishState?.lastPostedId;
+                    if (threadPublishState && !canResume) {
+                      setThreadPublishState(null);
+                    }
+                    // Resume state exists ONLY for genuine partial threads (some posts up,
+                    // some not). Plain single-post failures and index-0 thread failures keep
+                    // today's behavior exactly — no "Retry remaining", no locking.
+                    const resume = canResume;
+                    const startAt = resume
+                      ? threadPublishState.postedStatuses.length
+                      : 0;
+                    const { statuses, failedAtIndex, error } =
+                      await publishThread({
+                        masto,
+                        instance,
+                        isBluesky: isBlueskyTarget, // compose.jsx:201 — explicit, never duck-typed
+                        segments,
+                        shared,
+                        idempotencyPrefix: UID.current,
+                        startAt,
+                        resumeInReplyToId: resume
+                          ? threadPublishState.lastPostedId
+                          : undefined,
+                        onProgress: (i, state) => {
+                          if (state === 'posting' && segments.length > 1) {
+                            const progress = `${i + 1}/${segments.length}`;
+                            setPublishProgress(progress);
+                            // Mirror into global composer state so the minimized-composer
+                            // indicator can show it too (design asked for composerState here;
+                            // the resume bookkeeping itself stays component-local — recorded
+                            // as a minor deviation).
+                            states.composerState.publishingProgress = progress;
+                          }
                         },
                       });
+                    const allStatuses = [
+                      ...(threadPublishState?.postedStatuses || []),
+                      ...statuses,
+                    ];
+                    if (failedAtIndex !== null) {
+                      // Clear transient progress on every failure path too — leaving it
+                      // stale would show "Posting 2/3…" on an idle errored composer
+                      setPublishProgress(null);
+                      states.composerState.publishingProgress = null;
+                      if (segments.length > 1 && allStatuses.length > 0) {
+                        // Genuine partial thread → enable resume UX
+                        setThreadPublishState({
+                          postedStatuses: allStatuses,
+                          lastPostedId: allStatuses.at(-1)?.id || null,
+                        });
+                        // The pre-failure draft on disk still holds every segment
+                        // with no record that some posted — restoring it after a
+                        // reload would republish from zero. Delete it; resume
+                        // state is deliberately session-scoped.
+                        db.drafts.del(draftKey());
+                        const msg =
+                          error?.reason || error?.message || `${error}`;
+                        throw Object.assign(
+                          error || new Error('thread failed'),
+                          {
+                            _threadPartial: {
+                              posted: allStatuses.length,
+                              total: segments.length,
+                              msg,
+                            },
+                          },
+                        );
+                      }
+                      // Nothing posted (or not a thread): behave exactly like today
+                      setThreadPublishState(null);
+                      // Bluesky atomic failure warning: if connection dropped mid-post on
+                      // the server side, a blind retry duplicates the whole thread
+                      if (isBlueskyTarget && segments.length > 1) {
+                        throw Object.assign(
+                          error || new Error('thread failed'),
+                          {
+                            _blueskyAtomicWarning: true,
+                          },
+                        );
+                      }
+                      throw error;
                     }
-                    // Nothing posted (or not a thread): behave exactly like today
                     setThreadPublishState(null);
-                    // Bluesky atomic failure warning: if connection dropped mid-post on
-                    // the server side, a blind retry duplicates the whole thread
-                    if (isBlueskyTarget && segments.length > 1) {
-                      throw Object.assign(error || new Error('thread failed'), {
-                        _blueskyAtomicWarning: true,
-                      });
+                    setPublishProgress(null);
+                    states.composerState.publishingProgress = null;
+                    newStatus = allStatuses[0];
+
+                    // Hoist isThread for clarity
+                    const isThread = moreSegments.length > 0;
+
+                    // Clear moreSegments on success
+                    if (isThread) {
+                      setMoreSegments([]);
                     }
-                    throw error;
-                  }
-                  setThreadPublishState(null);
-                  setPublishProgress(null);
-                  states.composerState.publishingProgress = null;
-                  newStatus = allStatuses[0];
+                  } // end primaryChecked
 
-                  // Hoist isThread for clarity
-                  const isThread = moreSegments.length > 0;
-
-                  // Clear moreSegments on success
-                  if (isThread) {
-                    setMoreSegments([]);
-                  }
-
-                  // Cross-post to other-network accounts (e.g. Bluesky)
-                  if (crossPost && crossPostAccounts.length) {
+                  // Post to every other checked account (either network)
+                  if (crossTargets.length) {
                     if (canCrossPost({ poll, scheduledAt, visibility })) {
                       const crossSegments = buildCrossSegments({
                         status,
                         mediaAttachments,
                         moreSegments,
                       });
-                      for (const account of crossPostAccounts) {
+                      for (const account of crossTargets) {
                         const acctName =
                           account.info.acct || account.info.username;
                         try {
@@ -2149,34 +2199,23 @@ function Compose({
             }}
             onCancel={() => setQuoteSuggestion(null)}
           />
-          {crossPostAccounts.length > 0 && (
+          {targetRoster.length > 1 && (
             <div class="toolbar cross-post-toolbar">
-              <label class="cross-post-option">
-                <input
-                  type="checkbox"
-                  checked={crossPost}
-                  onChange={(e) => {
-                    const { checked } = e.target;
-                    setCrossPost(checked);
-                    store.local.set('crossPostEnabled', checked ? '1' : '0');
-                  }}
-                />{' '}
-                <Icon
-                  icon={
-                    isBlueskyAccount(crossPostAccounts[0])
-                      ? 'bluesky'
-                      : 'mastodon'
+              <AccountPickerCheckboxes
+                accounts={targetRoster}
+                selectedIDs={new Set(checkedTargets.map((a) => a.info.id))}
+                disabled={uiState === 'loading' || !!threadPublishState}
+                onToggle={(account, checked) => {
+                  const next = new Set(uncheckedIDs);
+                  if (checked) {
+                    next.delete(account.info.id);
+                  } else {
+                    next.add(account.info.id);
                   }
-                  size="s"
-                  alt=""
-                />{' '}
-                <Trans>
-                  Also post to{' '}
-                  {crossPostAccounts
-                    .map((a) => `@${a.info.acct || a.info.username}`)
-                    .join(', ')}
-                </Trans>
-              </label>
+                  setUncheckedIDs(next);
+                  store.local.setJSON('composeUncheckedAccounts', [...next]);
+                }}
+              />
             </div>
           )}
           <div class="toolbar compose-footer">
@@ -2569,7 +2608,10 @@ function Compose({
             </label>{' '}
             <button
               type="submit"
-              disabled={uiState === 'loading'}
+              disabled={
+                uiState === 'loading' ||
+                (composeTargetable && checkedTargets.length === 0)
+              }
               onClick={() => haptics.trigger('medium')}
               title={
                 publishProgress ? t`Posting ${publishProgress}…` : undefined
