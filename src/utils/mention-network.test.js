@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import { getMentionInstance } from './mention-network';
 
-const bsky = { accountType: 'bluesky', instanceURL: 'https://bsky.social' };
+const bsky = {
+  accountType: 'bluesky',
+  instanceURL: 'https://bsky.social',
+  blueskySession: { refreshJwt: 'r' },
+};
 const masto = { accessToken: 'x', instanceURL: 'mastodon.social' };
 const masto2 = { accessToken: 'y', instanceURL: 'hachyderm.io' };
 
@@ -62,6 +66,16 @@ describe('getMentionInstance', () => {
         targetIsBluesky: false,
         active: { instance: 'https://bsky.social', isBluesky: true },
         accounts: [bsky],
+      }),
+    ).toBeNull();
+  });
+
+  it('does not route to an auth-expired Bluesky account', () => {
+    expect(
+      getMentionInstance({
+        targetIsBluesky: true,
+        active: { instance: 'mastodon.social', isBluesky: false },
+        accounts: [masto, { ...bsky, authExpired: true }],
       }),
     ).toBeNull();
   });

@@ -7,10 +7,7 @@
 // a profile we must compose from one of their accounts on that profile's
 // network — or, if they have none, not offer the mention at all.
 
-// Mirrors isBlueskyAccount() in ./bluesky/index.js, inlined here so this module
-// stays free of store/browser imports and remains unit-testable under vitest's
-// node runner.
-const isBlueskyAcct = (account) => account?.accountType === 'bluesky';
+import { eligibleAccounts } from './acting-accounts';
 
 // Returns the instanceURL to compose a mention of the target profile from, or
 // null when the user has no account on the target's network (in which case the
@@ -27,8 +24,6 @@ export function getMentionInstance({ targetIsBluesky, active, accounts }) {
     return active.instance;
   }
   // Otherwise fall back to any account of mine on the target's network.
-  const match = (accounts || []).find((a) =>
-    targetIsBluesky ? isBlueskyAcct(a) : !isBlueskyAcct(a) && a.accessToken,
-  );
+  const [match] = eligibleAccounts({ targetIsBluesky, accounts });
   return match?.instanceURL || null;
 }

@@ -1,0 +1,23 @@
+.account-picker {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.account-picker-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  cursor: pointer;
+}
+.account-picker-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.account-picker-acct {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

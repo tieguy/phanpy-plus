@@ -5,10 +5,9 @@ import { useEffect, useRef, useState } from 'preact/hooks';
 import punycode from 'punycode/';
 
 import { api } from '../utils/api';
+import { eligibleAccounts } from '../utils/acting-accounts';
 import {
   getBlueskyAccountForInstance,
-  getBlueskyAccounts,
-  isBlueskyAccount,
   isBlueskyInstance,
 } from '../utils/bluesky';
 import { isSupported as collectionsSupported } from '../utils/collections';
@@ -94,7 +93,8 @@ function RelatedActions({
     if (targetIsBluesky) {
       // A Bluesky profile → act through my Bluesky account, using its DID.
       const bskyAccount =
-        getBlueskyAccountForInstance(instance) || getBlueskyAccounts()[0];
+        getBlueskyAccountForInstance(instance) ||
+        eligibleAccounts({ targetIsBluesky: true, accounts: getAccounts() })[0];
       if (bskyAccount) actingApi = api({ account: bskyAccount });
     } else {
       // A Mastodon profile. Prefer an account on its own instance (native
@@ -105,9 +105,10 @@ function RelatedActions({
       if (instApi.authenticated) {
         actingApi = instApi;
       } else if (isBlueskyInstance(currentInstance)) {
-        const mastoAccount = getAccounts().find(
-          (a) => !isBlueskyAccount(a) && a.accessToken,
-        );
+        const [mastoAccount] = eligibleAccounts({
+          targetIsBluesky: false,
+          accounts: getAccounts(),
+        });
         if (mastoAccount) actingApi = api({ account: mastoAccount });
       }
     }
