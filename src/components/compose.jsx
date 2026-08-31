@@ -19,6 +19,7 @@ import {
 } from '../utils/bluesky';
 import { blueskyInstanceInfo } from '../utils/bluesky/convert';
 import {
+  countableBlueskyText,
   countableText,
   shouldEnforceCharLimit,
   validateSegments,
@@ -816,10 +817,13 @@ function Compose({
     const { value } = textareaRef.current;
     const { value: spoilerText } = spoilerTextRef.current;
     // Mastodon shortens URLs to a fixed length for counting purposes;
-    // Bluesky counts the literal text, so don't collapse URLs there.
+    // Bluesky posts get their link text shortened at publish time
+    // (shortenLinkFacets), so count that shortened form.
     // When cross-posting to Bluesky, use Bluesky's strictest counting rules.
     const useBlueskyRules = isBlueskyTarget || charLimitBoundByBluesky;
-    const text = useBlueskyRules ? value : countableText(value);
+    const text = useBlueskyRules
+      ? countableBlueskyText(value)
+      : countableText(value);
     // Only count spoilerText when sensitive is active (both meter and validator must agree)
     const spoilerCount = sensitive ? stringLength(spoilerText) : 0;
     return stringLength(text) + spoilerCount;

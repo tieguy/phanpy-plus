@@ -1,6 +1,7 @@
 // Character counting for compose, following Mastodon's rules
 // https://github.com/mastodon/mastodon/blob/c4a429ed47e85a6bbf0d470a41cc2f64cf120c19/app/javascript/mastodon/features/compose/util/counter.js
 
+import { toShortUrl } from './bluesky/shorten-links';
 import urlRegexObj from './url-regex';
 
 const usernameRegex = /(^|[^\/\w])[@＠](([a-z0-9_]+)@[a-z0-9\.\-]+[a-z0-9]+)/gi;
@@ -12,8 +13,22 @@ export function countableText(inputText) {
     .replace(usernameRegex, '$1@$3');
 }
 
+// Bluesky counts the literal post text against its 300-grapheme limit, but
+// the publish path (shortenLinkFacets in bluesky/client.js) rewrites each
+// link's display text to its shortened form first — so count that form here,
+// or long URLs would show as over-limit when the actual post fits.
+// In the url regex, $2 is the char before the URL and group 3 is the URL.
+export function countableBlueskyText(inputText) {
+  return inputText.replace(
+    urlRegexObj,
+    (match, g1, before, url) => `${before}${toShortUrl(url)}`,
+  );
+}
+
 export function segmentCharCount(text, { blueskyRules }, stringLength) {
-  return stringLength(blueskyRules ? text : countableText(text));
+  return stringLength(
+    blueskyRules ? countableBlueskyText(text) : countableText(text),
+  );
 }
 
 /**
@@ -39,7 +54,7 @@ export function shouldEnforceCharLimit(
  * @param {string} text - The segment text
  * @param {string} spoilerText - Content warning text (may be empty)
  * @param {boolean} sensitive - Whether content warning is active (gates spoiler counting)
- * @param {boolean} blueskyRules - Whether to use Bluesky counting (no URL shortening)
+ * @param {boolean} blueskyRules - Whether to use Bluesky counting (official-app URL shortening)
  * @param {Function} stringLength - Function to count string length
  * @returns {number} Total character count (text + spoiler only if sensitive is true)
  */
@@ -50,7 +65,9 @@ export function getSegmentCharCount(
   blueskyRules,
   stringLength,
 ) {
-  const countedText = blueskyRules ? text : countableText(text);
+  const countedText = blueskyRules
+    ? countableBlueskyText(text)
+    : countableText(text);
   const textCount = stringLength(countedText);
   // Only count spoilerText when sensitive is true (mirrors compose.jsx getCharCount)
   const spoilerCount = sensitive ? stringLength(spoilerText || '') : 0;

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  countableBlueskyText,
   getSegmentCharCount,
   shouldEnforceCharLimit,
   validateSegments,
@@ -263,5 +264,44 @@ describe('validateSegments', () => {
     });
     // Should find the empty one first
     expect(result).toEqual({ segmentIndex: 2, reason: 'empty' });
+  });
+});
+
+describe('countableBlueskyText', () => {
+
+  it('counts long URLs at their shortened display length', () => {
+    const url =
+      'https://www.sfchronicle.com/politics/article/tech-worker-democrat-republican-22378308.php?utm_source=marketing&utm_medium=copy-url-link';
+    expect(countableBlueskyText(`read ${url} now`)).toBe(
+      'read www.sfchronicle.com/politics/art... now',
+    );
+  });
+
+  it('counts short URLs as host + path', () => {
+    expect(countableBlueskyText('see https://lu.is/about')).toBe(
+      'see lu.is/about',
+    );
+  });
+
+  it('leaves non-URL text untouched', () => {
+    expect(countableBlueskyText('hello @alice.bsky.social')).toBe(
+      'hello @alice.bsky.social',
+    );
+  });
+
+  it('validateSegments passes a long-URL post under bluesky rules', () => {
+    const url =
+      'https://www.sfchronicle.com/politics/article/tech-worker-democrat-republican-22378308.php?utm_source=marketing&utm_medium=copy-url-link&hash=aHR0cHM6Ly93d3cuc2ZjaHJvbmljbGUuY29tL3BvbGl0aWNzL2FydGljbGUvdGVjaC13b3JrZXItZGVtb2NyYXQtcmVwdWJsaWNhbi0yMjM3ODMwOC5waHA%3D&time=MTc4ODIxMzgwNDIzOA%3D%3D';
+    const result = validateSegments({
+      mainText: `worth a read: ${url}`,
+      moreSegments: [],
+      spoilerText: '',
+      sensitive: false,
+      effectiveMaxCharacters: 300,
+      enforceCharLimit: true,
+      blueskyRules: true,
+      stringLength: simpleStringLength,
+    });
+    expect(result).toBeNull();
   });
 });

@@ -29,6 +29,7 @@ import {
 } from './following-reply-filter';
 import { buildExternalEmbed, firstLinkFacetUri } from './link-card';
 import { firstQuotedPostLink } from './quote-link';
+import { shortenLinkFacets } from './shorten-links';
 
 const MAX_IMAGE_SIZE = 950_000; // Bluesky blob limit is ~976KB
 
@@ -834,11 +835,18 @@ export function createBlueskyClient({
     const { RichText } = await loadAtproto();
     const rt = new RichText({ text: fullText });
     await rt.detectFacets(agent);
+    // Shorten each link's display text (the full URL stays in the facet's
+    // `uri`) — the 300-grapheme limit counts literal text, and this is what
+    // the official app does, so it's also what the compose counter assumes.
+    const { text: shortenedText, facets: shortenedFacets } = shortenLinkFacets(
+      rt.text,
+      rt.facets,
+    );
     // detectFacets leaves `did: ''` on every mention it could not resolve, and
     // the PDS rejects the whole record over it. Retry, then drop the rest.
     const { facets, unresolved } = await repairMentionFacets(
-      rt.text,
-      rt.facets,
+      shortenedText,
+      shortenedFacets,
     );
     if (unresolved.length) {
       console.warn('Posting without unresolvable mentions:', unresolved);
@@ -846,7 +854,7 @@ export function createBlueskyClient({
 
     const record = {
       $type: 'app.bsky.feed.post',
-      text: rt.text,
+      text: shortenedText,
       facets,
       createdAt: new Date().toISOString(),
     };
