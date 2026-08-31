@@ -22,7 +22,8 @@ import { useLongPress } from 'use-long-press';
 import { useSnapshot } from 'valtio';
 
 import { api, getPreferences } from '../utils/api';
-import { hasMultipleNetworks } from '../utils/bluesky';
+import { eligibleAccounts } from '../utils/acting-accounts';
+import { hasMultipleNetworks, isBlueskyInstance } from '../utils/bluesky';
 import { langDetector } from '../utils/browser-translator';
 import { useEditHistory } from '../utils/edit-history-context';
 import FilterContext from '../utils/filter-context';
@@ -51,6 +52,8 @@ import states, { getStatus, saveStatus, statusKey } from '../utils/states';
 import statusPeek from '../utils/status-peek';
 import {
   getAPIVersions,
+  getAccountByInstance,
+  getAccounts,
   getCurrentAccID,
   hasAccountInInstance,
   isSelfAccountID,
@@ -916,6 +919,88 @@ function Status({
     }
   };
 
+  // "Boost as…": other logged-in accounts on this status's network. The
+  // account the plain Boost acts through (the one owning `instance`) is
+  // excluded — it's the default path above.
+  const defaultActingAccount = getAccountByInstance(instance);
+  const boostAsAccounts = eligibleAccounts({
+    targetIsBluesky: status._bluesky || isBlueskyInstance(instance),
+    accounts: getAccounts(),
+  }).filter((a) => a.info.id !== defaultActingAccount?.info?.id);
+
+  // Resolve this status for another acting account: same instance (or any
+  // Bluesky account — its ids are network-global) uses the id directly; a
+  // Mastodon account on another instance must resolve the status URL on
+  // its own server first.
+  const resolveStatusAs = async (account) => {
+    const { masto: actingMasto, instance: actingInstance } = api({
+      account,
+    });
+    let targetId = id;
+    if (actingInstance !== instance) {
+      const results = await actingMasto.v2.search.list({
+        q: url || uri,
+        type: 'statuses',
+        limit: 1,
+        resolve: true,
+      });
+      targetId = results?.statuses?.[0]?.id;
+      if (!targetId) {
+        throw new Error(t`post not found on that server`);
+      }
+    }
+    return { actingMasto, actingInstance, targetId };
+  };
+
+  const boostStatusAs = async (account) => {
+    const acctName = account.info.acct || account.info.username;
+    try {
+      const { actingMasto, targetId } = await resolveStatusAs(account);
+      await actingMasto.v1.statuses.$select(targetId).reblog();
+      showToast(t`Boosted as @${acctName}`);
+      return true;
+    } catch (e) {
+      console.error(e);
+      showToast(t`Unable to boost as @${acctName}: ${e?.message || e}`);
+      return false;
+    }
+  };
+
+  const favouriteStatusAs = async (account) => {
+    const acctName = account.info.acct || account.info.username;
+    try {
+      const { actingMasto, targetId } = await resolveStatusAs(account);
+      await actingMasto.v1.statuses.$select(targetId).favourite();
+      showToast(t`Liked as @${acctName}`);
+      return true;
+    } catch (e) {
+      console.error(e);
+      showToast(t`Unable to like as @${acctName}: ${e?.message || e}`);
+      return false;
+    }
+  };
+
+  const replyStatusAs = async (account) => {
+    const acctName = account.info.acct || account.info.username;
+    try {
+      const { actingInstance, targetId } = await resolveStatusAs(account);
+      // The composer routes by replyToStatus._instance — hand it this
+      // status re-keyed for the acting account's instance.
+      showCompose({
+        replyToStatus: {
+          ...status,
+          id: targetId,
+          _instance: actingInstance,
+        },
+      });
+      return true;
+    } catch (e) {
+      console.error(e);
+      showToast(t`Unable to reply as @${acctName}: ${e?.message || e}`);
+      return false;
+    }
+  };
+
   const favouriteStatus = async () => {
     if (!sameInstance || !authenticated) {
       alert(unauthInteractionErrorMessage);
@@ -1263,6 +1348,21 @@ function Status({
                       )}
                     </MenuItem>
                   )}
+                  {boostAsAccounts.map((account) => {
+                    const acctName = account.info.acct || account.info.username;
+                    return (
+                      <MenuItem
+                        key={account.info.id}
+                        onClick={async () => {
+                          haptics.trigger('light');
+                          await boostStatusAs(account);
+                        }}
+                      >
+                        <Icon icon="rocket" />
+                        <span>{t`Boost as @${acctName}`}</span>
+                      </MenuItem>
+                    );
+                  })}
                 </>
               }
               menuFooter={menuFooter}
@@ -1324,6 +1424,31 @@ function Status({
               </MenuItem>
             )}
           </div>
+          {boostAsAccounts.map((account) => {
+            const acctName = account.info.acct || account.info.username;
+            return (
+              <div key={account.info.id}>
+                <MenuItem
+                  onClick={() => {
+                    haptics.trigger('light');
+                    favouriteStatusAs(account);
+                  }}
+                >
+                  <Icon icon="heart" />
+                  <span>{t`Like as @${acctName}`}</span>
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    haptics.trigger('light');
+                    replyStatusAs(account);
+                  }}
+                >
+                  <Icon icon="comment" />
+                  <span>{t`Reply as @${acctName}`}</span>
+                </MenuItem>
+              </div>
+            );
+          })}
         </>
       )}
       {!isSizeLarge && sameInstance && (isSizeLarge || showActionsBar) && (
