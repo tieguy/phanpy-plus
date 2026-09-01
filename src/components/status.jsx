@@ -1201,7 +1201,9 @@ function Status({
     const allMentions = new Set([accountId, ...mentions.map((m) => m.id)]);
     return [...allMentions].filter((m) => m !== currentAccount).length;
   }, [accountId, mentions?.length, currentAccount]);
-  const tooManyMentions = mentionsCount > 3;
+  // Reply modes only steer the Mastodon mention prefill; Bluesky replies
+  // never prefill mentions, so the mode submenu would be a no-op there.
+  const tooManyMentions = mentionsCount > 3 && !status._bluesky;
   const ReplyMenuContent = () => (
     <>
       <Icon icon="comment" />

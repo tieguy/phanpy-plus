@@ -552,7 +552,11 @@ function Compose({
         (m) => m !== currentAccountInfo.acct,
       );
 
-      if (allMentions.length > 0) {
+      // Bluesky replies carry the reply relationship in the record itself
+      // (clients show "Replying to @x" from reply.parent), and the network
+      // convention is no leading @-mention — prefilling one would render as
+      // a redundant mention AND send a duplicate mention notification.
+      if (allMentions.length > 0 && !isBlueskyTarget) {
         const authorMention = `@${replyToStatus.account.acct}`;
         const otherMentions = allMentions
           .filter((m) => m !== replyToStatus.account.acct)
