@@ -85,6 +85,20 @@ describe('shouldRepairStaleShell', () => {
     ).toBe(true);
   });
 
+  it('refuses when the bundle was served from cache, so the page is fine', () => {
+    // StaleWhileRevalidate served a cached copy and only the background
+    // revalidation saw the 404. Reloading here would interrupt a working page
+    // and discard an in-progress compose draft.
+    expect(
+      shouldRepairStaleShell({
+        hasCachedShell: true,
+        assetServedFromCache: true,
+        lastRepairAt: null,
+        now: 1000,
+      }),
+    ).toBe(false);
+  });
+
   it('refuses when no shell is cached, so the 404 has another cause', () => {
     expect(
       shouldRepairStaleShell({
@@ -176,6 +190,22 @@ describe('repairStaleShell', () => {
       }),
     ).toBe(false);
     expect(second.navigated).toEqual([]);
+    expect(caches.store.has(PAGES_CACHE_NAME)).toBe(true);
+  });
+
+  it('does not reload when the bundle came from cache', async () => {
+    const caches = fakeCaches(SHELL);
+    const clients = fakeClients(['https://example.test/']);
+
+    expect(
+      await repairStaleShell({
+        caches,
+        clients,
+        assetServedFromCache: true,
+        now: 5000,
+      }),
+    ).toBe(false);
+    expect(clients.navigated).toEqual([]);
     expect(caches.store.has(PAGES_CACHE_NAME)).toBe(true);
   });
 

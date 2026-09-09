@@ -10,6 +10,7 @@ import {
 } from 'workbox-strategies';
 
 import {
+  ASSETS_CACHE_NAME,
   isMissingBundleResponse,
   repairStaleShell,
 } from '../src/utils/sw-shell-recovery.js';
@@ -205,12 +206,20 @@ registerRoute(iconsRoute);
 // cannot fix itself — its own scripts never ran. Drop the cached shell and
 // reload. See src/utils/sw-shell-recovery.js for the reasoning and the guards.
 class StaleShellRecoveryPlugin {
-  fetchDidSucceed = async ({ response }) => {
+  fetchDidSucceed = async ({ request, response }) => {
     if (isMissingBundleResponse(response)) {
       try {
+        // StaleWhileRevalidate reaches the network twice over: to fill a cache
+        // miss, and to revalidate a cache hit in the background. Only the miss
+        // means the page went without its bundle. A 404 on the revalidation of
+        // a bundle we still hold is expected once the deploy that served it is
+        // gone, and reloading the page over it would interrupt for nothing.
+        const assets = await self.caches.open(ASSETS_CACHE_NAME);
+        const cached = await assets.match(request);
         await repairStaleShell({
           caches: self.caches,
           clients: self.clients,
+          assetServedFromCache: !!cached,
         });
       } catch (e) {
         console.error('Stale app shell recovery failed', e);

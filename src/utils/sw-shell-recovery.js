@@ -21,6 +21,9 @@
 // The cache that pageCache() writes the app shell into (workbox's default).
 export const PAGES_CACHE_NAME = 'pages';
 
+// The cache the hashed JS and CSS bundles live in (see assetsRoute in sw.js).
+export const ASSETS_CACHE_NAME = 'assets';
+
 // Where the last repair's timestamp is kept. A service worker has no
 // localStorage, and it can be terminated between events, so the loop guard has
 // to survive in storage the worker can reach: the Cache API.
@@ -45,10 +48,18 @@ export function isMissingBundleResponse(response) {
 // Whether to run a repair now.
 export function shouldRepairStaleShell({
   hasCachedShell,
+  assetServedFromCache,
   lastRepairAt,
   now,
   cooldownMs = REPAIR_COOLDOWN_MS,
 }) {
+  // The asset cache still holds this bundle, so StaleWhileRevalidate already
+  // handed the page a working copy and only the background revalidation saw
+  // the 404. The page is fine. Reloading it would be pure interruption — and
+  // would discard an in-progress compose draft. This is the common case once
+  // maxHashes keeps several deploys' bundles: a shell can be stale for days
+  // and still run perfectly from cache.
+  if (assetServedFromCache) return false;
   // No cached shell means no stale shell to blame. The 404 has some other
   // cause, and deleting an empty cache and reloading would not help.
   if (!hasCachedShell) return false;
@@ -96,14 +107,20 @@ async function hasCachedShell(caches) {
 export async function repairStaleShell({
   caches,
   clients,
+  assetServedFromCache = false,
   now = Date.now(),
   cooldownMs = REPAIR_COOLDOWN_MS,
 }) {
+  // Checked first, and cheaply: it short-circuits the common case where a
+  // cached bundle means there is nothing wrong with the page.
+  if (assetServedFromCache) return false;
+
   const shellCached = await hasCachedShell(caches);
   const lastRepairAt = await readLastRepairAt(caches);
   if (
     !shouldRepairStaleShell({
       hasCachedShell: shellCached,
+      assetServedFromCache,
       lastRepairAt,
       now,
       cooldownMs,

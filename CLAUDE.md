@@ -63,15 +63,26 @@ So the repair lives in the worker. `StaleShellRecoveryPlugin` on the assets
 route calls into `src/utils/sw-shell-recovery.js`, which deletes the `pages`
 cache and reloads the window clients via `client.navigate()`.
 
-Two invariants, both load-bearing:
+Three invariants, all load-bearing:
 
 - **Only a 404/410 triggers a repair, never a network error.** Offline is the
   case the cache exists to serve; repairing on any failed request would delete
   the app shell every time the user loses signal.
+- **Only a cache *miss* triggers a repair.** StaleWhileRevalidate reaches the
+  network twice over — to fill a miss, and to revalidate a hit in the
+  background. A 404 on the revalidation of a bundle still held locally is
+  expected once its deploy is gone, and the page is running fine off that
+  cached copy; reloading there would interrupt for nothing and discard an
+  in-progress compose draft. This case gets commoner as `maxHashes` rises.
 - **A repair timestamp is persisted in the Cache API**, not in memory. A worker
   has no localStorage and can be terminated between events, and a repair
   triggers a reload — so without a durable cooldown a repair that does not fix
   the page would reload forever.
+
+Unit tests cover the decision logic, but the failure itself lives in service
+worker state, so it is verified in a browser instead:
+`node scripts/verify-sw-recovery.mjs` against a production build drives the real
+worker through the whole sequence. Run it after changing either file.
 
 `maxHashes` on the `assets` cache and that cache's `maxEntries` move together:
 a build emits ~24 hashed JS and CSS files, so an entry cap below roughly
