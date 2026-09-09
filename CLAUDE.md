@@ -1,6 +1,6 @@
 # fleeting-social — developer notes
 
-Last verified: 2026-08-20
+Last verified: 2026-09-09
 
 fleeting-social is a fork of [Phanpy](https://github.com/cheeaun/phanpy) (a Mastodon web client) that adds native Bluesky (AT Protocol) support and interweaves the two networks. Most of the codebase is stock Phanpy; the fork-specific machinery lives under `src/utils/bluesky/` plus a handful of merge/filter helpers.
 
@@ -47,6 +47,36 @@ When adding a feature that fetches per-account data, remember that the current a
 The same routing rule applies to **per-profile actions** (follow / mute / block, and the relationship load that gates their UI): send them to a client on the *target profile's* network — detected via the converter's `info._bluesky` flag — not the currently-active account, which may be on the other network. See `src/components/related-actions.jsx`, which resolves an acting client by the profile's network rather than by instance-string matching. Correspondingly, the Bluesky facade's account actions return a *full* relationship object (they re-read the profile and apply the change), because callers replace their entire relationship state with the return value — a partial object would wipe the other flags.
 
 **Mentions follow the same network rule.** A @-mention only links and notifies when posted from an account on the *mentioned profile's* network — a Bluesky handle is inert in a Mastodon post and vice-versa. `src/utils/mention-network.js`'s `getMentionInstance` picks an account on the target's network (or `null` if there is none), which the mention entry points (`related-actions.jsx`, `account-statuses.jsx`) pass into the composer as `draftStatus._instance`; `compose.jsx` posts from that instance. When it returns `null`, the mention affordance is hidden rather than producing a dead mention.
+
+## Service worker: stale app shell recovery
+
+`public/sw.js` is otherwise upstream Phanpy's file verbatim; the one fork
+addition is a recovery path for a cached app shell that outlived its bundles.
+The failure it removes: `pageCache()` is NetworkFirst, so a slow navigation is
+answered from the `pages` cache; the host serves only the newest deploy, so a
+hashed bundle named by an older cached `index.html` 404s as `text/html`; and a
+browser silently refuses to run a `type="module"` script with that content
+type. The page goes blank and cannot repair itself, because its own scripts are
+what failed to load — and the strict CSP rules out an inline bootstrap script.
+
+So the repair lives in the worker. `StaleShellRecoveryPlugin` on the assets
+route calls into `src/utils/sw-shell-recovery.js`, which deletes the `pages`
+cache and reloads the window clients via `client.navigate()`.
+
+Two invariants, both load-bearing:
+
+- **Only a 404/410 triggers a repair, never a network error.** Offline is the
+  case the cache exists to serve; repairing on any failed request would delete
+  the app shell every time the user loses signal.
+- **A repair timestamp is persisted in the Cache API**, not in memory. A worker
+  has no localStorage and can be terminated between events, and a repair
+  triggers a reload — so without a durable cooldown a repair that does not fix
+  the page would reload forever.
+
+`maxHashes` on the `assets` cache and that cache's `maxEntries` move together:
+a build emits ~24 hashed JS and CSS files, so an entry cap below roughly
+`maxHashes × 24` lets LRU eviction discard old hashes before `AssetHashPlugin`
+counts them, and `maxHashes` stops meaning anything.
 
 ## Naming
 
