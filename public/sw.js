@@ -9,16 +9,36 @@ import {
   StaleWhileRevalidate,
 } from 'workbox-strategies';
 
+import {
+  isMissingBundleResponse,
+  repairStaleShell,
+} from '../src/utils/sw-shell-recovery.js';
+
 navigationPreload.enable();
 
 self.__WB_DISABLE_DEV_LOGS = true;
+
+// Activate a new worker immediately instead of leaving it in the waiting state
+// until every client closes. An installed home-screen web app is rarely closed,
+// so without this an outdated worker — and the outdated app shell it caches —
+// can stay in charge for weeks.
+self.addEventListener('install', () => {
+  self.skipWaiting();
+});
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Cache HTML pages
+// Cache HTML pages.
+//
+// This is NetworkFirst: a navigation that does not finish within the timeout is
+// answered from the cache instead. The timeout is therefore what decides how
+// often a stale app shell gets served, and workbox's 3-second default is short
+// for a mobile connection. See StaleShellRecoveryPlugin below for what happens
+// when the shell served this way is too old to run.
 pageCache({
+  networkTimeoutSeconds: 6,
   warmCache: ['./compose/'],
 });
 
@@ -178,6 +198,29 @@ const iconsRoute = new Route(
 );
 registerRoute(iconsRoute);
 
+// Recover from an app shell that outlived its bundles.
+//
+// A 404 on a same-origin hashed bundle means the cached index.html that asked
+// for it is older than the newest deploy, and the page it produced is blank and
+// cannot fix itself — its own scripts never ran. Drop the cached shell and
+// reload. See src/utils/sw-shell-recovery.js for the reasoning and the guards.
+class StaleShellRecoveryPlugin {
+  fetchDidSucceed = async ({ response }) => {
+    if (isMissingBundleResponse(response)) {
+      try {
+        await repairStaleShell({
+          caches: self.caches,
+          clients: self.clients,
+        });
+      } catch (e) {
+        console.error('Stale app shell recovery failed', e);
+      }
+    }
+    // Hand the 404 back either way; the reload, if any, supersedes this page.
+    return response;
+  };
+}
+
 const assetsRoute = new Route(
   ({ request, sameOrigin }) => {
     const isAsset =
@@ -188,16 +231,24 @@ const assetsRoute = new Route(
   new StaleWhileRevalidate({
     cacheName: 'assets',
     plugins: [
+      new StaleShellRecoveryPlugin(),
       // Only enable AssetHashPlugin in production
       ...(import.meta.env.PROD
         ? [
+            // Keep the 5 most recent hashes of each file. A shell older than
+            // the newest deploy can then still be served entirely from cache,
+            // because the bundles it names are still here even though the
+            // server has dropped them.
             new AssetHashPlugin({
-              maxHashes: 2, // Keep only 2 most recent hashes of each file
+              maxHashes: 5,
             }),
           ]
         : []),
       new ExpirationPlugin({
-        maxEntries: 40,
+        // Headroom for maxHashes above: a build emits ~24 hashed JS and CSS
+        // files, so a cap below ~120 would let LRU eviction discard old hashes
+        // before AssetHashPlugin ever counted them, making maxHashes moot.
+        maxEntries: 150,
         ...expirationPluginOptions,
       }),
       new CacheableResponsePlugin({
