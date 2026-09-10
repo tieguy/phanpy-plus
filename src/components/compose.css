@@ -1390,13 +1390,13 @@
   aspect-ratio: 1 / 1;
 }
 
-#compose-container .media-preview {
+#compose-container .segment-media-item .media-preview {
   width: 100%;
   height: 100%;
   overflow: hidden;
 }
 
-#compose-container .media-preview-img {
+#compose-container .segment-media-item .media-preview-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
