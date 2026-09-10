@@ -24,7 +24,8 @@
     "git:po-filter": "git config --local diff.po-filter.textconv \"sed 's/:[0-9]*$//'\"",
     "postinstall": "node scripts/generate-icons.js && npx exifreader build",
     "generate-icons": "node scripts/generate-icons.js",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "extract": "lingui extract"
   },
   "dependencies": {
     "@atproto/api": "^0.20.27",

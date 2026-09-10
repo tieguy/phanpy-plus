@@ -64,6 +64,20 @@ Two invariants, both load-bearing:
 
 On a post the user cannot boost (`!canBoost`), the action is unreachable on both surfaces. This is a code reading on 2026-09-10, not a browser observation. In the action bar, the rocket `StatusButton` is the menu trigger and carries `disabled={!canBoost}`, so the menu does not open. In the kebab, the Boost entry is a `SubMenu` that receives the same `disabled` prop, so its submenu does not open.
 
+## UI strings
+
+Every user-visible string goes through the lingui macros (`<Trans>` and the `t`
+template tag), which compile to a lookup keyed by a **hash of the source
+string**. The app is English-only; `src/locales/en.po` is the one catalog,
+loaded in `src/utils/lang.js`.
+
+The production build strips the source text from the compiled lookup, so a
+string that is not in `en.po` renders as its raw hash — the user sees
+`0D0OPY` where the sentence should be. **After adding or editing any macro
+string, run `npm run extract` and commit `src/locales/en.po`.** Extraction also
+rewrites the `#:` line references throughout the file; `npm run git:po-filter`
+configures a textconv that hides that churn in diffs.
+
 ## Service worker: stale app shell recovery
 
 `public/sw.js` is otherwise upstream Phanpy's file verbatim; the one fork
