@@ -759,7 +759,7 @@ function Status({
         import('../utils/post-card-render'),
         import('../utils/post-card-attachment'),
       ]);
-      const { blob, altText } = await renderCardBlob(status);
+      const { blob, altText, truncated } = await renderCardBlob(status);
       const attachment = await blobToAttachment(blob, altText);
       showCompose({
         draftStatus: {
@@ -767,6 +767,11 @@ function Status({
           mediaAttachments: [attachment],
         },
       });
+      if (truncated) {
+        showToast(
+          t`This post is long, so the card shows only its beginning.`,
+        );
+      }
     } catch (e) {
       console.error(e);
       showToast(t`Could not render the post`);

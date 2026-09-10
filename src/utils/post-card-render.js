@@ -18,13 +18,35 @@ const FONTS = {
   handle: `13px ${FONT_FAMILY}`,
   glyph: `22px ${FONT_FAMILY}`,
 };
-const COLORS = {
-  background: '#ffffff',
-  border: '#e2e2e2',
-  placeholder: '#c8c8c8',
-  text: '#1a1a1a',
-  note: '#6b6b6b',
+// One palette per theme. The card follows the app: a manual choice is the
+// `is-dark` / `is-light` class on <html> (set in app.jsx); otherwise the
+// system preference applies.
+const PALETTES = {
+  light: {
+    background: '#ffffff',
+    border: '#e2e2e2',
+    placeholder: '#c8c8c8',
+    text: '#1a1a1a',
+    note: '#6b6b6b',
+  },
+  dark: {
+    background: '#1c1c1e',
+    border: '#3a3a3c',
+    placeholder: '#48484a',
+    text: '#f2f2f2',
+    note: '#a1a1a6',
+  },
 };
+
+export function currentTheme() {
+  const root = document.documentElement.classList;
+  if (root.contains('is-dark')) return 'dark';
+  if (root.contains('is-light')) return 'light';
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
+}
+
 const CORNER_RADIUS = 16;
 const MIN_WIDTH = 240; // Guard against degenerate card widths
 
@@ -42,7 +64,7 @@ function roundedRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
-function draw(ctx, layout) {
+function draw(ctx, layout, COLORS) {
   const { width, height, header, lines } = layout;
   // Clamp corner radius to prevent it from exceeding half the card dimensions
   const r = Math.min(CORNER_RADIUS, width / 2, height / 2);
@@ -115,7 +137,7 @@ export async function renderCardBlob(status, opts = {}) {
   canvas.height = Math.ceil(layout.height * scale);
   // Setting width/height resets the context state, so scale after sizing.
   ctx.scale(scale, scale);
-  draw(ctx, layout);
+  draw(ctx, layout, PALETTES[opts.theme] || PALETTES[currentTheme()]);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
