@@ -111,7 +111,7 @@ function layoutCard(model: CardModel, measureText: (text: string, style: string)
                     opts?: { width?: number; maxLines?: number }): CardLayout;
 
 // post-card-render.js
-function renderCardBlob(status: MastodonStatus): Promise<Blob>;  // rejects on toBlob failure
+function renderCardBlob(status: MastodonStatus): Promise<{ blob: Blob, altText: string, truncated: boolean }>;  // rejects on toBlob failure
 
 // composer attachment (existing shape, src/components/compose.jsx)
 { fileData: ArrayBuffer, fileName: string, type: 'image/png', size: number,
