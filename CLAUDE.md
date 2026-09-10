@@ -54,7 +54,7 @@ A quote action in both boost/quote menus (action bar and kebab, `src/components/
 
 - `post-card-model.js` (pure) — `buildCardModel(status)` turns a Mastodon-shaped status (Bluesky posts already arrive in this shape) into card content: content warning, plain-text paragraphs via `getHTMLText`, an omitted-content note (`[2 images not shown]`, `[poll not shown]`, `[quoted post not shown]`, `[link preview not shown]`), and alt text capped at the composer's 1500-char `descriptionLimit`. Its test runs under `// @vitest-environment happy-dom` because `getHTMLText` needs a DOM.
 - `post-card-layout.js` (pure) — `layoutCard(model, measureText, opts)` wraps the content into positioned lines (word wrap, hard break for over-wide tokens, paragraph gaps, a line cap with a trailing `[…]` line). The measurer is injected so the layout is unit-tested in Node.
-- `post-card-render.js` (browser only, lazy-imported) — `renderCardBlob(status)` draws the layout on a Canvas 2D surface at the device pixel ratio, floored at 2x, and resolves `{ blob, altText, truncated }`. The card width is clamped to `MIN_WIDTH`.
+- `post-card-render.js` (browser only, lazy-imported) — `renderCardBlob(status)` draws the layout on a Canvas 2D surface at the device pixel ratio, floored at 2x, and resolves `{ blob, altText, truncated }`. The card is `DEFAULT_WIDTH` (600px) wide; a caller-supplied `opts.width` is floored at `MIN_WIDTH` (240px).
 - `post-card-attachment.js` — `blobToAttachment(blob, altText)` wraps that blob in the composer's attachment shape. The composer's existing `draftStatus` restore path attaches it.
 
 Two invariants, both load-bearing:
