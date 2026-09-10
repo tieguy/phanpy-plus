@@ -7,33 +7,28 @@ export const PADDING = 24;
 export const AVATAR_RADIUS = 20;
 export const HEADER_GAP = 16;
 export const PARAGRAPH_GAP = 12;
-export const LINE_HEIGHT = { spoiler: 26, body: 26, note: 22, footer: 18 };
+export const LINE_HEIGHT = { spoiler: 26, body: 26, note: 22 };
 export const ELLIPSIS_LINE = '[…]';
-// Drawn under every card, outside the line cap, so the reader knows why
-// the author is missing.
-export const FOOTER_GAP = 16;
-export const FOOTER_TEXT = 'Quoted post anonymized to avoid pile-ons';
 
-// Placeholder geometry: gray circle for the avatar, a bar for the display
-// name and a lighter, shorter bar for the handle.
-function headerGeometry(width) {
+// The header stands in for the author: a mask in the avatar circle, and
+// text where the display name and handle would be, saying why they are
+// missing. All of it is drawn locally; nothing comes from the original.
+export const AVATAR_GLYPH = '🎭';
+export const HEADER_NAME = 'Anonymized post';
+export const HEADER_HANDLE = 'Quoted without attribution to avoid pile-ons';
+
+function headerGeometry() {
   const cx = PADDING + AVATAR_RADIUS;
   const textX = PADDING + AVATAR_RADIUS * 2 + 12;
-  const maxBarWidth = width - PADDING - textX;
   return {
-    avatar: { x: cx, y: PADDING + AVATAR_RADIUS, r: AVATAR_RADIUS },
-    nameBar: {
-      x: textX,
-      y: PADDING + 4,
-      w: Math.max(0, Math.min(140, maxBarWidth)),
-      h: 14,
+    avatar: {
+      x: cx,
+      y: PADDING + AVATAR_RADIUS,
+      r: AVATAR_RADIUS,
+      glyph: AVATAR_GLYPH,
     },
-    handleBar: {
-      x: textX,
-      y: PADDING + 24,
-      w: Math.max(0, Math.min(100, maxBarWidth)),
-      h: 12,
-    },
+    name: { x: textX, y: PADDING + 2, text: HEADER_NAME, style: 'name' },
+    handle: { x: textX, y: PADDING + 22, text: HEADER_HANDLE, style: 'handle' },
   };
 }
 
@@ -122,7 +117,7 @@ export function layoutCard(model, measureText, opts = {}) {
   }
 
   // 3. Assign positions top-down.
-  const header = headerGeometry(width);
+  const header = headerGeometry();
   let y = PADDING + AVATAR_RADIUS * 2 + HEADER_GAP;
   const lines = [];
   for (const item of items) {
@@ -130,15 +125,7 @@ export function layoutCard(model, measureText, opts = {}) {
     lines.push({ text: item.text, x: PADDING, y, style: item.style });
     y += LINE_HEIGHT[item.style];
   }
-
-  // 4. Footer, after the body (or straight after the header when empty).
-  y = (lines.length ? y : PADDING + AVATAR_RADIUS * 2) + FOOTER_GAP;
-  const footerMeasure = (t) => measureText(t, 'footer');
-  for (const text of wrap(FOOTER_TEXT, contentWidth, footerMeasure)) {
-    lines.push({ text, x: PADDING, y, style: 'footer' });
-    y += LINE_HEIGHT.footer;
-  }
-  const height = y + PADDING;
+  const height = (lines.length ? y : PADDING + AVATAR_RADIUS * 2) + PADDING;
 
   return { width, height, header, lines, truncated };
 }

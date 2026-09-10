@@ -14,13 +14,14 @@ const FONTS = {
   spoiler: `bold 17px ${FONT_FAMILY}`,
   body: `17px ${FONT_FAMILY}`,
   note: `italic 15px ${FONT_FAMILY}`,
-  footer: `13px ${FONT_FAMILY}`,
+  name: `bold 15px ${FONT_FAMILY}`,
+  handle: `13px ${FONT_FAMILY}`,
+  glyph: `22px ${FONT_FAMILY}`,
 };
 const COLORS = {
   background: '#ffffff',
   border: '#e2e2e2',
   placeholder: '#c8c8c8',
-  placeholderLight: '#e0e0e0',
   text: '#1a1a1a',
   note: '#6b6b6b',
 };
@@ -56,33 +57,32 @@ function draw(ctx, layout) {
   roundedRect(ctx, 0.5, 0.5, width - 1, height - 1, r);
   ctx.stroke();
 
-  // Header placeholders: avatar circle, name bar, handle bar.
+  // Header: gray avatar circle with a mask glyph, then the explanatory
+  // name and handle text where the author's would be.
+  const { avatar, name, handle } = header;
   ctx.fillStyle = COLORS.placeholder;
   ctx.beginPath();
-  ctx.arc(header.avatar.x, header.avatar.y, header.avatar.r, 0, Math.PI * 2);
+  ctx.arc(avatar.x, avatar.y, avatar.r, 0, Math.PI * 2);
   ctx.fill();
-  const { nameBar, handleBar } = header;
-  roundedRect(ctx, nameBar.x, nameBar.y, nameBar.w, nameBar.h, nameBar.h / 2);
-  ctx.fill();
-  ctx.fillStyle = COLORS.placeholderLight;
-  roundedRect(
-    ctx,
-    handleBar.x,
-    handleBar.y,
-    handleBar.w,
-    handleBar.h,
-    handleBar.h / 2,
-  );
-  ctx.fill();
+  ctx.font = FONTS.glyph;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = COLORS.text;
+  ctx.fillText(avatar.glyph, avatar.x, avatar.y + 1);
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'top';
+  ctx.font = FONTS[name.style];
+  ctx.fillStyle = COLORS.text;
+  ctx.fillText(name.text, name.x, name.y);
+  ctx.font = FONTS[handle.style];
+  ctx.fillStyle = COLORS.note;
+  ctx.fillText(handle.text, handle.x, handle.y);
 
   // Text lines. Layout y is the top of each line.
   ctx.textBaseline = 'top';
   for (const line of lines) {
     ctx.font = FONTS[line.style];
-    ctx.fillStyle =
-      line.style === 'note' || line.style === 'footer'
-        ? COLORS.note
-        : COLORS.text;
+    ctx.fillStyle = line.style === 'note' ? COLORS.note : COLORS.text;
     ctx.fillText(line.text, line.x, line.y);
   }
 }

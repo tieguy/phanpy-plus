@@ -43,7 +43,7 @@ You can still turn the merging off (*Settings → Merged timeline*) if you'd rat
 - 🔥 **Trending** — Bluesky's trending topics and the Discover ("What's Hot") feed show up in the Trending page.
 - 📋 **Lists** — view, create, rename, delete Bluesky lists; add/remove members; browse list timelines.
 - 🙈 **Filters** — the Filters page manages your Bluesky **muted words** (add/edit/remove), and muted words are applied to Bluesky timelines client-side, just like the official app.
-- 🫥 **Quote without attribution** — the boost menu offers a second quote option that shares a post's text as an image with the author redacted: a card with a gray avatar circle and two gray name bars, the text verbatim, and a note for any omitted media, poll, quoted post, or link preview. Alt text is prefilled from the post, prefixed "Screenshot of a post, author hidden:". The new post carries no link, ID, or handle of the original, so it cannot be traced back and does not notify the author. Works on posts from either network.
+- 🫥 **Quote without attribution** — the boost menu offers a second quote option that shares a post's text as an image with the author redacted: a card whose header is a mask avatar labelled "Anonymized post" with the reason underneath, then the text verbatim, and a note for any omitted media, poll, quoted post, or link preview. Alt text is prefilled from the post, prefixed "Screenshot of a post, author hidden:". The new post carries no link, ID, or handle of the original, so it cannot be traced back and does not notify the author. Works on posts from either network.
 
 <sub>💻 How the Bluesky adapter works under the hood is developer documentation — see [`CLAUDE.md`](CLAUDE.md#bluesky-support-architecture).</sub>
 
