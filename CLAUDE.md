@@ -50,18 +50,19 @@ The same routing rule applies to **per-profile actions** (follow / mute / block,
 
 ## Quote without attribution
 
-A third quote action in both boost/quote menus (action bar and kebab, `src/components/status.jsx`) shares a post's text as a PNG card with the author redacted, attached to a new post with alt text prefilled. Three layers under `src/utils/`:
+A quote action in both boost/quote menus (action bar and kebab, `src/components/status.jsx`), alongside the instance's native quote or link-quote item, shares a post's text as a PNG card with the author redacted, attached to a new post with alt text prefilled. Four modules under `src/utils/`:
 
 - `post-card-model.js` (pure) — `buildCardModel(status)` turns a Mastodon-shaped status (Bluesky posts already arrive in this shape) into card content: content warning, plain-text paragraphs via `getHTMLText`, an omitted-content note (`[2 images not shown]`, `[poll not shown]`, `[quoted post not shown]`, `[link preview not shown]`), and alt text capped at the composer's 1500-char `descriptionLimit`. Its test runs under `// @vitest-environment happy-dom` because `getHTMLText` needs a DOM.
 - `post-card-layout.js` (pure) — `layoutCard(model, measureText, opts)` wraps the content into positioned lines (word wrap, hard break for over-wide tokens, paragraph gaps, a line cap with a trailing `[…]` line). The measurer is injected so the layout is unit-tested in Node.
-- `post-card-render.js` (browser only, lazy-imported) — `renderCardBlob(status)` draws the layout on a 2x Canvas 2D surface and resolves `{ blob, altText, truncated }`. `post-card-attachment.js` wraps that blob in the composer's attachment shape; the composer's existing `draftStatus` restore path attaches it.
+- `post-card-render.js` (browser only, lazy-imported) — `renderCardBlob(status)` draws the layout on a Canvas 2D surface at the device pixel ratio, floored at 2x, and resolves `{ blob, altText, truncated }`. The card width is clamped to `MIN_WIDTH`.
+- `post-card-attachment.js` — `blobToAttachment(blob, altText)` wraps that blob in the composer's attachment shape. The composer's existing `draftStatus` restore path attaches it.
 
 Two invariants, both load-bearing:
 
-- **No remote resources.** Avatar and name are gray placeholders, post media is omitted, and custom emoji stay as `:shortcode:` text, so the canvas never loads a cross-origin image and never taints; `toBlob` keeps working and the strict CSP needs no allowance. A DOM screenshot (html2canvas and kin) was rejected for exactly those two failures.
+- **No remote resources.** Avatar and name are gray placeholders, post media is omitted, and custom emoji stay as `:shortcode:` text, so the canvas never loads a cross-origin image and never taints; `toBlob` keeps working and the strict CSP needs no allowance. A DOM screenshot (html2canvas and kin) fails on both counts, cross-origin images and the CSP, and is not used.
 - **No original-post identifiers.** Nothing derived from the original's URL, ID, handle, display name, avatar, or timestamp is drawn or attached, so the new post cannot be traced through the network and does not notify the author. @-mentions inside the body are kept verbatim by decision.
 
-On a post the user cannot boost (`!canBoost`), the action is unreachable on both surfaces, by code reading on 2026-09-10 (not yet checked in a browser): the action-bar rocket `StatusButton` itself carries `disabled={!canBoost}` and is the menu's trigger, so the menu never opens; the kebab's Boost entry is a `SubMenu` with `disabled` forwarded, so its submenu does not open.
+On a post the user cannot boost (`!canBoost`), the action is unreachable on both surfaces. This is a code reading on 2026-09-10, not a browser observation. In the action bar, the rocket `StatusButton` is the menu trigger and carries `disabled={!canBoost}`, so the menu does not open. In the kebab, the Boost entry is a `SubMenu` that receives the same `disabled` prop, so its submenu does not open.
 
 ## Service worker: stale app shell recovery
 
