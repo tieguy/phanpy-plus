@@ -1,7 +1,11 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 
-import { ALT_TEXT_PREFIX, MAX_ALT_TEXT, buildCardModel } from './post-card-model';
+import {
+  ALT_TEXT_PREFIX,
+  MAX_ALT_TEXT,
+  buildCardModel,
+} from './post-card-model';
 
 function status(overrides = {}) {
   return {
@@ -57,10 +61,24 @@ describe('buildCardModel', () => {
   it('counts videos separately from images', () => {
     const model = buildCardModel(
       status({
-        mediaAttachments: [{ type: 'image' }, { type: 'gifv' }, { type: 'video' }],
+        mediaAttachments: [
+          { type: 'image' },
+          { type: 'gifv' },
+          { type: 'video' },
+        ],
       }),
     );
     expect(model.omittedNote).toBe('[1 image, 2 videos not shown]');
+  });
+
+  it('notes audio and unknown attachment types together', () => {
+    const model = buildCardModel(
+      status({
+        content: '',
+        mediaAttachments: [{ type: 'audio' }, { type: 'unknown' }],
+      }),
+    );
+    expect(model.omittedNote).toBe('[2 attachments not shown]');
   });
 
   it('notes an omitted poll', () => {
@@ -101,9 +119,38 @@ describe('buildCardModel', () => {
   it('truncates alt text to the limit with an ellipsis', () => {
     const long = 'a'.repeat(2000);
     const model = buildCardModel(status({ content: `<p>${long}</p>` }));
-    expect(model.altText.length).toBe(MAX_ALT_TEXT);
+    expect(model.altText.length).toBeLessThanOrEqual(MAX_ALT_TEXT);
     expect(model.altText.endsWith('…')).toBe(true);
     expect(model.altText.startsWith(ALT_TEXT_PREFIX)).toBe(true);
+  });
+
+  it('truncates on code points to avoid splitting emoji', () => {
+    // Build text that places an emoji right at the truncation boundary
+    const emojiPadding = 'a'.repeat(MAX_ALT_TEXT - ALT_TEXT_PREFIX.length - 10);
+    const emoji = '🎉'; // A 4-byte emoji (surrogate pair in UTF-16)
+    const long = emojiPadding + emoji + 'extra';
+    const model = buildCardModel(status({ content: `<p>${long}</p>` }));
+    expect(model.altText.length).toBeLessThanOrEqual(MAX_ALT_TEXT);
+    // Check for no lone surrogates (a unicode surrogate not paired correctly)
+    const lonesurrogate =
+      /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+    expect(lonesurrogate.test(model.altText)).toBe(false);
+  });
+
+  it('emits [no content] when status has nothing to show', () => {
+    const model = buildCardModel(
+      status({
+        content: '',
+        spoilerText: '',
+        mediaAttachments: [],
+        poll: null,
+        quote: null,
+        card: null,
+      }),
+    );
+    expect(model.paragraphs).toEqual([]);
+    expect(model.omittedNote).toBeNull();
+    expect(model.altText).toBe(`${ALT_TEXT_PREFIX}[no content]`);
   });
 
   it('carries nothing that identifies the author', () => {

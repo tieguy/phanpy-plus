@@ -58,9 +58,10 @@ export function buildCardModel(status) {
   ]
     .filter(Boolean)
     .join('\n\n');
-  let altText = ALT_TEXT_PREFIX + altBody;
+  let altText = ALT_TEXT_PREFIX + (altBody || '[no content]');
   if (altText.length > MAX_ALT_TEXT) {
-    altText = altText.slice(0, MAX_ALT_TEXT - 1) + '…';
+    // Truncate on code points, not UTF-16 code units, to avoid splitting emoji
+    altText = [...altText].slice(0, MAX_ALT_TEXT - 1).join('') + '…';
   }
 
   return { spoilerText, paragraphs, omittedNote, altText };
