@@ -1,11 +1,11 @@
 // Browser-only: draws the "quote without attribution" card with Canvas 2D
-// and returns a PNG Blob. Lazy-import this module from UI code.
+// and returns a PNG Blob plus metadata. Lazy-import this module from UI code.
 //
 // The card contains no remote resources on purpose: avatar and name are
 // gray placeholders, post media is omitted, custom emoji stay as
 // :shortcode: text. That keeps it free of CORS and CSP concerns.
 
-import { layoutCard } from './post-card-layout';
+import { layoutCard, DEFAULT_WIDTH } from './post-card-layout';
 import { buildCardModel } from './post-card-model';
 
 const FONT_FAMILY =
@@ -24,6 +24,7 @@ const COLORS = {
   note: '#6b6b6b',
 };
 const CORNER_RADIUS = 16;
+const MIN_WIDTH = 240; // Guard against degenerate card widths
 
 function roundedRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -41,15 +42,17 @@ function roundedRect(ctx, x, y, w, h, r) {
 
 function draw(ctx, layout) {
   const { width, height, header, lines } = layout;
+  // Clamp corner radius to prevent it from exceeding half the card dimensions
+  const r = Math.min(CORNER_RADIUS, width / 2, height / 2);
 
   // Card background with rounded corners and a subtle border. The corners
   // outside the rounded path stay transparent in the PNG.
   ctx.fillStyle = COLORS.background;
-  roundedRect(ctx, 0, 0, width, height, CORNER_RADIUS);
+  roundedRect(ctx, 0, 0, width, height, r);
   ctx.fill();
   ctx.strokeStyle = COLORS.border;
   ctx.lineWidth = 1;
-  roundedRect(ctx, 0.5, 0.5, width - 1, height - 1, CORNER_RADIUS);
+  roundedRect(ctx, 0.5, 0.5, width - 1, height - 1, r);
   ctx.stroke();
 
   // Header placeholders: avatar circle, name bar, handle bar.
@@ -80,8 +83,9 @@ function draw(ctx, layout) {
   }
 }
 
-// Resolves a PNG Blob of the card for `status`. Rejects when the canvas
-// cannot produce a blob (e.g. a tainted or zero-size canvas).
+// Resolves { blob, altText, truncated } for the card of `status`.
+// Rejects when the canvas cannot produce a blob (e.g. a tainted or
+// zero-size canvas).
 export async function renderCardBlob(status, opts = {}) {
   const scale = Math.max(2, window.devicePixelRatio || 1);
   const model = buildCardModel(status);
@@ -92,7 +96,12 @@ export async function renderCardBlob(status, opts = {}) {
     ctx.font = FONTS[style];
     return ctx.measureText(text).width;
   };
-  const layout = layoutCard(model, measureText, opts);
+  // Guard against degenerate widths by enforcing a minimum
+  const guardedOpts = {
+    ...opts,
+    width: Math.max(MIN_WIDTH, opts.width ?? DEFAULT_WIDTH),
+  };
+  const layout = layoutCard(model, measureText, guardedOpts);
 
   canvas.width = Math.ceil(layout.width * scale);
   canvas.height = Math.ceil(layout.height * scale);
@@ -102,7 +111,8 @@ export async function renderCardBlob(status, opts = {}) {
 
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
-      if (blob) resolve(blob);
+      if (blob)
+        resolve({ blob, altText: model.altText, truncated: layout.truncated });
       else reject(new Error('Canvas produced no image'));
     }, 'image/png');
   });
