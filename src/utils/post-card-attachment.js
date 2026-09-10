@@ -12,6 +12,9 @@ export async function blobToAttachment(blob, altText, opts = {}) {
     fileName: CARD_FILE_NAME,
     type: blob.type || 'image/png',
     size: blob.size,
+    // Kept for parity with processFiles. The media component builds its own
+    // object URL from fileData and only reads this one when fileData is
+    // absent, so it is never rendered and (like processFiles') never revoked.
     url: createObjectURL(blob),
     id: null,
     description: altText,
