@@ -746,6 +746,34 @@ function Status({
   const [showQuoteSettings, setShowQuoteSettings] = useState(false);
   const [showQuotes, setShowQuotes] = useState(false);
   const [showQuoteChain, setShowQuoteChain] = useState(false);
+  const [renderingCard, setRenderingCard] = useState(false);
+
+  // "Quote without attribution": render the post as a redacted PNG card and
+  // open the composer with it attached. Nothing that identifies the original
+  // (URL, ID, handle, name, avatar, time) reaches the new post.
+  const quoteWithoutAttribution = async () => {
+    if (renderingCard) return;
+    setRenderingCard(true);
+    try {
+      const [{ renderCardBlob }, { blobToAttachment }] = await Promise.all([
+        import('../utils/post-card-render'),
+        import('../utils/post-card-attachment'),
+      ]);
+      const { blob, altText } = await renderCardBlob(status);
+      const attachment = await blobToAttachment(blob, altText);
+      showCompose({
+        draftStatus: {
+          status: '',
+          mediaAttachments: [attachment],
+        },
+      });
+    } catch (e) {
+      console.error(e);
+      showToast(t`Could not render the post`);
+    } finally {
+      setRenderingCard(false);
+    }
+  };
 
   const spoilerContentRef = useTruncated();
   const contentRef = useTruncated();
@@ -1350,6 +1378,15 @@ function Status({
                       )}
                     </MenuItem>
                   )}
+                  <MenuItem
+                    disabled={renderingCard}
+                    onClick={quoteWithoutAttribution}
+                  >
+                    <Icon icon="quote" />
+                    <span>
+                      <Trans>Quote without attribution</Trans>
+                    </span>
+                  </MenuItem>
                   {boostAsAccounts.map((account) => {
                     const acctName = account.info.acct || account.info.username;
                     return (
@@ -3248,6 +3285,15 @@ function Status({
                             )}
                           </MenuItem>
                         )}
+                        <MenuItem
+                          disabled={renderingCard}
+                          onClick={quoteWithoutAttribution}
+                        >
+                          <Icon icon="quote" />
+                          <span>
+                            <Trans>Quote without attribution</Trans>
+                          </span>
+                        </MenuItem>
                       </>
                     }
                     menuFooter={menuFooter}
