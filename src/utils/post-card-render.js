@@ -14,6 +14,7 @@ const FONTS = {
   spoiler: `bold 17px ${FONT_FAMILY}`,
   body: `17px ${FONT_FAMILY}`,
   note: `italic 15px ${FONT_FAMILY}`,
+  footer: `13px ${FONT_FAMILY}`,
 };
 const COLORS = {
   background: '#ffffff',
@@ -78,7 +79,10 @@ function draw(ctx, layout) {
   ctx.textBaseline = 'top';
   for (const line of lines) {
     ctx.font = FONTS[line.style];
-    ctx.fillStyle = line.style === 'note' ? COLORS.note : COLORS.text;
+    ctx.fillStyle =
+      line.style === 'note' || line.style === 'footer'
+        ? COLORS.note
+        : COLORS.text;
     ctx.fillText(line.text, line.x, line.y);
   }
 }

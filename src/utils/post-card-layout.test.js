@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import {
   AVATAR_RADIUS,
+  FOOTER_GAP,
+  FOOTER_TEXT,
   DEFAULT_MAX_LINES,
   DEFAULT_WIDTH,
   LINE_HEIGHT,
@@ -23,6 +25,9 @@ function model(overrides = {}) {
   };
 }
 
+// The footer is always present; most tests look only at the post's own lines.
+const body = (layout) => layout.lines.filter((l) => l.style !== 'footer');
+
 // width 200 - 2*PADDING(24) = 152px of content = 15 characters per line.
 const NARROW = { width: 200 };
 
@@ -33,9 +38,9 @@ describe('layoutCard', () => {
       measure,
       NARROW,
     );
-    expect(layout.lines.map((l) => l.text)).toEqual(['aaaa bbbb cccc', 'dddd']);
-    expect(layout.lines.every((l) => l.style === 'body')).toBe(true);
-    expect(layout.lines.every((l) => l.x === PADDING)).toBe(true);
+    expect(body(layout).map((l) => l.text)).toEqual(['aaaa bbbb cccc', 'dddd']);
+    expect(body(layout).every((l) => l.style === 'body')).toBe(true);
+    expect(body(layout).every((l) => l.x === PADDING)).toBe(true);
     expect(layout.width).toBe(200);
   });
 
@@ -45,7 +50,7 @@ describe('layoutCard', () => {
       measure,
       NARROW,
     );
-    expect(layout.lines.map((l) => l.text)).toEqual([
+    expect(body(layout).map((l) => l.text)).toEqual([
       'x'.repeat(15),
       'x'.repeat(15),
       'x'.repeat(10),
@@ -58,7 +63,7 @@ describe('layoutCard', () => {
       measure,
       NARROW,
     );
-    expect(layout.lines.map((l) => l.text)).toEqual(['one', 'two']);
+    expect(body(layout).map((l) => l.text)).toEqual(['one', 'two']);
   });
 
   it('lays out a note-only card', () => {
@@ -67,8 +72,8 @@ describe('layoutCard', () => {
       measure,
       { width: 600 },
     );
-    expect(layout.lines).toHaveLength(1);
-    expect(layout.lines[0]).toMatchObject({
+    expect(body(layout)).toHaveLength(1);
+    expect(body(layout)[0]).toMatchObject({
       text: '[poll not shown]',
       style: 'note',
     });
@@ -81,7 +86,7 @@ describe('layoutCard', () => {
       measure,
       { width: 600 },
     );
-    expect(layout.lines.map((l) => [l.text, l.style])).toEqual([
+    expect(body(layout).map((l) => [l.text, l.style])).toEqual([
       ['cw', 'spoiler'],
       ['body', 'body'],
     ]);
@@ -91,9 +96,9 @@ describe('layoutCard', () => {
     const layout = layoutCard(model({ paragraphs: ['a', 'b'] }), measure, {
       width: 600,
     });
-    const [a, b] = layout.lines;
+    const [a, b] = body(layout);
     expect(b.y - a.y).toBe(LINE_HEIGHT.body + PARAGRAPH_GAP);
-    expect(layout.height).toBe(b.y + LINE_HEIGHT.body + PADDING);
+    expect(layout.lines.at(-1).y).toBe(b.y + LINE_HEIGHT.body + FOOTER_GAP);
   });
 
   it('caps the line count and ends with an ellipsis line', () => {
@@ -102,16 +107,18 @@ describe('layoutCard', () => {
       measure,
       { width: 600, maxLines: 3 },
     );
-    expect(layout.lines.map((l) => l.text)).toEqual(['a', 'b', '[…]']);
+    expect(body(layout).map((l) => l.text)).toEqual(['a', 'b', '[…]']);
     expect(layout.truncated).toBe(true);
   });
 
   it('returns a header-only card for an empty model', () => {
     const layout = layoutCard(model(), measure, { width: 600 });
-    expect(layout.lines).toEqual([]);
+    expect(body(layout)).toEqual([]);
     expect(layout.header.avatar.r).toBeGreaterThan(0);
-    // Exact height: PADDING (top) + AVATAR_RADIUS * 2 + PADDING (bottom) = 24 + 40 + 24 = 88
-    expect(layout.height).toBe(PADDING * 2 + AVATAR_RADIUS * 2);
+    // Header block, then the footer line, then bottom padding.
+    expect(layout.height).toBe(
+      PADDING + AVATAR_RADIUS * 2 + FOOTER_GAP + LINE_HEIGHT.footer + PADDING,
+    );
   });
 
   it('uses default width and max lines when no opts provided', () => {
@@ -120,8 +127,8 @@ describe('layoutCard', () => {
     const layout = layoutCard(model({ paragraphs }), measure);
     expect(layout.width).toBe(DEFAULT_WIDTH);
     // Should cap at DEFAULT_MAX_LINES with ellipsis on the last line
-    expect(layout.lines).toHaveLength(DEFAULT_MAX_LINES);
-    expect(layout.lines[DEFAULT_MAX_LINES - 1].text).toBe('[…]');
+    expect(body(layout)).toHaveLength(DEFAULT_MAX_LINES);
+    expect(body(layout)[DEFAULT_MAX_LINES - 1].text).toBe('[…]');
     expect(layout.truncated).toBe(true);
   });
 
@@ -130,7 +137,7 @@ describe('layoutCard', () => {
       width: 600,
       maxLines: 3,
     });
-    expect(layout.lines.map((l) => l.text)).toEqual(['a', 'b', 'c']);
+    expect(body(layout).map((l) => l.text)).toEqual(['a', 'b', 'c']);
     expect(layout.truncated).toBe(false);
   });
 
@@ -139,7 +146,7 @@ describe('layoutCard', () => {
       width: 600,
       maxLines: 0,
     });
-    expect(layout.lines).toEqual([]);
+    expect(body(layout)).toEqual([]);
     expect(layout.truncated).toBe(true);
   });
 
@@ -151,13 +158,13 @@ describe('layoutCard', () => {
       measure,
       { width: 600, maxLines: 3 },
     );
-    expect(layout.lines).toHaveLength(3);
-    expect(layout.lines[2]).toMatchObject({
+    expect(body(layout)).toHaveLength(3);
+    expect(body(layout)[2]).toMatchObject({
       text: '[…]',
       style: 'note',
     });
     // Ellipsis should inherit the gap that precedes a note line
-    expect(layout.lines[2].y - layout.lines[1].y).toBe(
+    expect(body(layout)[2].y - body(layout)[1].y).toBe(
       LINE_HEIGHT.body + PARAGRAPH_GAP,
     );
     expect(layout.truncated).toBe(true);
@@ -182,11 +189,34 @@ describe('layoutCard', () => {
       measure,
       { width: 600 },
     );
-    expect(layout.lines).toHaveLength(2);
-    const [bodyLine, noteLine] = layout.lines;
+    expect(body(layout)).toHaveLength(2);
+    const [bodyLine, noteLine] = body(layout);
     // The note line should be positioned with a gap after the body line
     expect(noteLine.y - bodyLine.y).toBe(LINE_HEIGHT.body + PARAGRAPH_GAP);
-    // Check that the note line's height is accounted for in total height
-    expect(layout.height).toBe(noteLine.y + LINE_HEIGHT.note + PADDING);
+    // The footer sits one note line plus the footer gap below the note.
+    expect(layout.lines.at(-1).y).toBe(
+      noteLine.y + LINE_HEIGHT.note + FOOTER_GAP,
+    );
+  });
+
+  it('always ends with the footer, below the body and outside the line cap', () => {
+    const layout = layoutCard(model({ paragraphs: ['a', 'b', 'c'] }), measure, {
+      width: 600,
+      maxLines: 2,
+    });
+    const texts = layout.lines.map((l) => l.text);
+    expect(texts).toEqual(['a', '[…]', FOOTER_TEXT]);
+    const footer = layout.lines.at(-1);
+    const last = layout.lines.at(-2);
+    expect(footer.style).toBe('footer');
+    expect(footer.y - last.y).toBe(LINE_HEIGHT.body + FOOTER_GAP);
+    expect(layout.height).toBe(footer.y + LINE_HEIGHT.footer + PADDING);
+  });
+
+  it('wraps a footer that does not fit the width', () => {
+    const layout = layoutCard(model(), measure, NARROW);
+    const footerLines = layout.lines.filter((l) => l.style === 'footer');
+    expect(footerLines.length).toBeGreaterThan(1);
+    expect(footerLines.map((l) => l.text).join(' ')).toBe(FOOTER_TEXT);
   });
 });

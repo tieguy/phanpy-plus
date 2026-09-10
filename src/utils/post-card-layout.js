@@ -7,8 +7,12 @@ export const PADDING = 24;
 export const AVATAR_RADIUS = 20;
 export const HEADER_GAP = 16;
 export const PARAGRAPH_GAP = 12;
-export const LINE_HEIGHT = { spoiler: 26, body: 26, note: 22 };
+export const LINE_HEIGHT = { spoiler: 26, body: 26, note: 22, footer: 18 };
 export const ELLIPSIS_LINE = '[…]';
+// Drawn under every card, outside the line cap, so the reader knows why
+// the author is missing.
+export const FOOTER_GAP = 16;
+export const FOOTER_TEXT = 'Quoted post anonymized to avoid pile-ons';
 
 // Placeholder geometry: gray circle for the avatar, a bar for the display
 // name and a lighter, shorter bar for the handle.
@@ -126,7 +130,15 @@ export function layoutCard(model, measureText, opts = {}) {
     lines.push({ text: item.text, x: PADDING, y, style: item.style });
     y += LINE_HEIGHT[item.style];
   }
-  const height = (lines.length ? y : PADDING + AVATAR_RADIUS * 2) + PADDING;
+
+  // 4. Footer, after the body (or straight after the header when empty).
+  y = (lines.length ? y : PADDING + AVATAR_RADIUS * 2) + FOOTER_GAP;
+  const footerMeasure = (t) => measureText(t, 'footer');
+  for (const text of wrap(FOOTER_TEXT, contentWidth, footerMeasure)) {
+    lines.push({ text, x: PADDING, y, style: 'footer' });
+    y += LINE_HEIGHT.footer;
+  }
+  const height = y + PADDING;
 
   return { width, height, header, lines, truncated };
 }
