@@ -214,7 +214,7 @@ function Login() {
         ? instancesList.find((instance) => instance.includes(instanceText))
         : null;
 
-  // Primary: AT Protocol OAuth — redirects to the account's PDS
+  // Alternative: AT Protocol OAuth — redirects to the account's PDS
   const onBlueskyOAuthSubmit = (e) => {
     e.preventDefault();
     const { elements } = e.target;
@@ -234,7 +234,7 @@ function Login() {
     })();
   };
 
-  // Fallback: app password
+  // Primary: app password
   const onBlueskyPasswordSubmit = (e) => {
     e.preventDefault();
     const { elements } = e.target;
@@ -257,6 +257,13 @@ function Login() {
       }
     })();
   };
+
+  // One error surface for both Bluesky forms — they share bskyUIState.
+  const blueskyError = bskyUIState === 'error' && (
+    <p class="error">
+      <Trans>Failed to log in to Bluesky.</Trans> {bskyError}
+    </p>
+  );
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -364,7 +371,7 @@ function Login() {
       <div id="bluesky-login">
         {showBluesky ? (
           <>
-            <form onSubmit={onBlueskyOAuthSubmit}>
+            <form onSubmit={onBlueskyPasswordSubmit}>
               <h2>
                 <Icon icon="bluesky" alt="" /> Bluesky
               </h2>
@@ -375,7 +382,7 @@ function Login() {
                 <input
                   type="text"
                   class="large"
-                  name="bskyIdentifier"
+                  name="bskyPwIdentifier"
                   defaultValue={blueskyHandle}
                   required
                   autocorrect="off"
@@ -387,28 +394,45 @@ function Login() {
                   dir="auto"
                 />
               </label>
-              {bskyUIState === 'error' && (
-                <p class="error">
-                  <Trans>Failed to log in to Bluesky.</Trans> {bskyError}
+              <label>
+                <p>
+                  <Trans>App password</Trans>
                 </p>
-              )}
+                <input
+                  type="password"
+                  class="large"
+                  name="bskyPassword"
+                  required
+                  autocomplete="current-password"
+                  placeholder="xxxx-xxxx-xxxx-xxxx"
+                  disabled={bskyUIState === 'loading'}
+                />
+              </label>
+              {blueskyError}
               <div>
                 <button disabled={bskyUIState === 'loading'}>
-                  <Trans>Continue with Bluesky</Trans>
+                  <Trans>Log in with app password</Trans>
                 </button>
               </div>
               <p style={{ fontSize: '90%' }}>
+                <a
+                  href="https://bsky.app/settings/app-passwords"
+                  target="_blank"
+                  rel="noopener"
+                >
+                  <Trans>Create an app password on Bluesky</Trans>
+                </a>{' '}
                 <Trans>
-                  You'll be sent to your Bluesky server to authorize this app.
+                  — tick "Allow access to your direct messages" if you want DMs.
                 </Trans>
               </p>
               <Loader hidden={bskyUIState !== 'loading'} />
             </form>
-            <details class="bluesky-app-password">
+            <details class="bluesky-oauth">
               <summary style={{ cursor: 'pointer', fontSize: '90%' }}>
-                <Trans>Use an app password instead</Trans>
+                <Trans>Use OAuth instead</Trans>
               </summary>
-              <form onSubmit={onBlueskyPasswordSubmit}>
+              <form onSubmit={onBlueskyOAuthSubmit}>
                 <label>
                   <p>
                     <Trans>Handle</Trans>
@@ -416,7 +440,7 @@ function Login() {
                   <input
                     type="text"
                     class="large"
-                    name="bskyPwIdentifier"
+                    name="bskyIdentifier"
                     defaultValue={blueskyHandle}
                     required
                     autocorrect="off"
@@ -428,34 +452,19 @@ function Login() {
                     dir="auto"
                   />
                 </label>
-                <label>
-                  <p>
-                    <Trans>App password</Trans>
-                  </p>
-                  <input
-                    type="password"
-                    class="large"
-                    name="bskyPassword"
-                    required
-                    autocomplete="current-password"
-                    placeholder="xxxx-xxxx-xxxx-xxxx"
-                    disabled={bskyUIState === 'loading'}
-                  />
-                </label>
-                <p style={{ fontSize: '90%' }}>
-                  <a
-                    href="https://bsky.app/settings/app-passwords"
-                    target="_blank"
-                    rel="noopener"
-                  >
-                    <Trans>Create an app password on Bluesky</Trans>
-                  </a>
-                </p>
+                {blueskyError}
                 <div>
                   <button disabled={bskyUIState === 'loading'}>
-                    <Trans>Log in with app password</Trans>
+                    <Trans>Continue with Bluesky</Trans>
                   </button>
                 </div>
+                <p style={{ fontSize: '90%' }}>
+                  <Trans>
+                    You'll be sent to your Bluesky server to authorize this app.
+                    No password is stored, but the session has to be renewed
+                    every two weeks.
+                  </Trans>
+                </p>
               </form>
             </details>
           </>

@@ -34,7 +34,7 @@ You can still turn the merging off (*Settings → Merged timeline*) if you'd rat
 
 ## What works today
 
-- 🦋 **Log in with Bluesky** — on the Log in page, enter your handle and you'll be sent to your PDS to authorize via **AT Protocol OAuth** (custom PDS hosts work automatically). An [app password](https://bsky.app/settings/app-passwords) fallback is also available.
+- 🦋 **Log in with Bluesky** — on the Log in page, enter your handle and an [app password](https://bsky.app/settings/app-passwords) (tick "Allow access to your direct messages" when creating it if you want DMs). **AT Protocol OAuth** is offered as an alternative: it stores no password and works with custom PDS hosts, but as a browser app Fleeting is a public OAuth client, so those sessions expire after two weeks and need re-authorizing.
 - 🐘🦋 **Merged home timeline** — when you're logged in to both a Mastodon account and a Bluesky account, the Home timeline interleaves both feeds chronologically. Toggle via *Settings → Merged timeline*.
 - ✍️ **Post to any subset of your accounts** — the compose box lists every logged-in account as a checkbox (all checked by default; your selection sticks). Uncheck freely: a post can go to both networks, or only to the account you're *not* currently "in". Images are re-uploaded per network (auto-resized under Bluesky's 1 MB limit); content warnings become a `CW:` prefix on Bluesky; the character counter enforces the strictest checked network.
 - 👤 **Act as any account, without switching** — the Profile menu lists all your accounts, and boost/like/reply offer "as @…" options whenever more than one of your accounts could act on a post. Which account you're "switched to" matters as little as possible.
@@ -52,7 +52,7 @@ Current limitations:
 - Video cross-posting to Bluesky is not supported yet (images only). Bluesky videos in the timeline show a poster; playback works best in Safari (HLS).
 - Bluesky notifications appear in the same Notifications page, but push notifications are Mastodon-only.
 - Mastodon filters have titles and multiple keywords; Bluesky muted words are flat. A multi-keyword filter becomes multiple muted words (one "filter" per word).
-- OAuth on a deployed domain requires building with `FLEETING_WEBSITE` set to that origin (see below) so `/oauth/client-metadata.json` is generated — the AT Protocol authorization server fetches it. On `localhost` dev, a loopback OAuth client is used and no file is needed. App-password sessions are stored in localStorage (like Mastodon tokens); OAuth tokens are managed by the OAuth client in IndexedDB with auto-refresh.
+- App-password sessions are stored in localStorage (like Mastodon tokens) and their refresh tokens rotate on use. OAuth tokens instead live in the OAuth client's IndexedDB store with auto-refresh, capped at a two-week session lifetime for public clients like this one. OAuth on a deployed domain requires building with `FLEETING_WEBSITE` set to that origin (see below) so `/oauth/client-metadata.json` is generated — the AT Protocol authorization server fetches it. On `localhost` dev, a loopback OAuth client is used and no file is needed.
 
 ### Hosting your own (e.g. Fly.io)
 
@@ -63,7 +63,7 @@ npm install
 FLEETING_WEBSITE=https://your-domain.example npm run build   # outputs to dist/
 ```
 
-Setting `FLEETING_WEBSITE` to your deployed origin is required for Bluesky OAuth login (it generates `dist/oauth/client-metadata.json`, which Bluesky's authorization servers fetch to verify this app). Without it, the app-password login still works.
+Setting `FLEETING_WEBSITE` to your deployed origin is required for the optional Bluesky OAuth login (it generates `dist/oauth/client-metadata.json`, which Bluesky's authorization servers fetch to verify this app). Without it, app-password login — the default — still works.
 
 For [Fly.io](https://fly.io), the simplest setup is their static-site pattern:
 
@@ -90,7 +90,7 @@ with a `Dockerfile` like:
 FROM node:22-slim AS build
 WORKDIR /app
 COPY . .
-# Set to your app's public URL — required for Bluesky OAuth login
+# Set to your app's public URL — required for the optional Bluesky OAuth login
 ARG FLEETING_WEBSITE=https://your-fleeting-social.fly.dev
 ENV FLEETING_WEBSITE=$FLEETING_WEBSITE
 RUN npm ci && npm run build

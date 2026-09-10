@@ -201,6 +201,11 @@ export async function loginBluesky({ service, identifier, password }) {
     instanceURL: instance,
     accessToken: session.accessJwt,
     accountType: 'bluesky',
+    // Set explicitly: this account may have been on OAuth before, and the
+    // marker decides which token store the client resumes from. Object.assign
+    // below would otherwise leave the stale 'oauth' value in place and the
+    // fresh app-password session would never be used.
+    blueskyAuth: 'password',
     blueskyService: service,
     blueskySession: {
       did: session.did,
@@ -212,6 +217,12 @@ export async function loginBluesky({ service, identifier, password }) {
     vapidKey: null,
   };
   if (existing) {
+    // Don't leave a live OAuth session behind on the PDS
+    if (existing.blueskyAuth === 'oauth') {
+      import('./oauth')
+        .then(({ revokeOAuthSession }) => revokeOAuthSession(session.did))
+        .catch(() => {});
+    }
     Object.assign(existing, accountData, { updatedAt: Date.now() });
     delete existing.authExpired;
   } else {
