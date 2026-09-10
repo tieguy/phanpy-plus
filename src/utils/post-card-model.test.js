@@ -119,16 +119,18 @@ describe('buildCardModel', () => {
   it('truncates alt text to the limit with an ellipsis', () => {
     const long = 'a'.repeat(2000);
     const model = buildCardModel(status({ content: `<p>${long}</p>` }));
-    expect(model.altText.length).toBeLessThanOrEqual(MAX_ALT_TEXT);
+    expect(model.altText.length).toBe(MAX_ALT_TEXT);
     expect(model.altText.endsWith('…')).toBe(true);
     expect(model.altText.startsWith(ALT_TEXT_PREFIX)).toBe(true);
   });
 
   it('truncates on code points to avoid splitting emoji', () => {
-    // Build text that places an emoji right at the truncation boundary
-    const emojiPadding = 'a'.repeat(MAX_ALT_TEXT - ALT_TEXT_PREFIX.length - 10);
-    const emoji = '🎉'; // A 4-byte emoji (surrogate pair in UTF-16)
-    const long = emojiPadding + emoji + 'extra';
+    // Place emoji (2 code units each) early in the text so they appear in the
+    // portion that gets truncated, allowing the code-unit budget to exclude them
+    // while a naive code-point slice would include them. Old code would produce
+    // a string longer than MAX_ALT_TEXT; new code respects the unit budget.
+    const long =
+      '🎉'.repeat(50) + 'a'.repeat(MAX_ALT_TEXT - ALT_TEXT_PREFIX.length - 99);
     const model = buildCardModel(status({ content: `<p>${long}</p>` }));
     expect(model.altText.length).toBeLessThanOrEqual(MAX_ALT_TEXT);
     // Check for no lone surrogates (a unicode surrogate not paired correctly)

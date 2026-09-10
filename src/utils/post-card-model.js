@@ -60,8 +60,15 @@ export function buildCardModel(status) {
     .join('\n\n');
   let altText = ALT_TEXT_PREFIX + (altBody || '[no content]');
   if (altText.length > MAX_ALT_TEXT) {
-    // Truncate on code points, not UTF-16 code units, to avoid splitting emoji
-    altText = [...altText].slice(0, MAX_ALT_TEXT - 1).join('') + '…';
+    // Truncate by code points while budgeting code units (each emoji = 2 units).
+    // Grapheme clusters (ZWJ sequences, flags, skin tones) may split at boundary.
+    const budget = MAX_ALT_TEXT - 1;
+    let out = '';
+    for (const ch of altText) {
+      if (out.length + ch.length > budget) break;
+      out += ch;
+    }
+    altText = out + '…';
   }
 
   return { spoilerText, paragraphs, omittedNote, altText };
