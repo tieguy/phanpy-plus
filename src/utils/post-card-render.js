@@ -97,9 +97,12 @@ export async function renderCardBlob(status, opts = {}) {
     return ctx.measureText(text).width;
   };
   // Guard against degenerate widths by enforcing a minimum
+  const requested = Number(opts.width);
   const guardedOpts = {
     ...opts,
-    width: Math.max(MIN_WIDTH, opts.width ?? DEFAULT_WIDTH),
+    width: Number.isFinite(requested)
+      ? Math.max(MIN_WIDTH, requested)
+      : DEFAULT_WIDTH,
   };
   const layout = layoutCard(model, measureText, guardedOpts);
 
