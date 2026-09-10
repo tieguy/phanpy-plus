@@ -12,17 +12,30 @@ export const ELLIPSIS_LINE = '[…]';
 
 // Placeholder geometry: gray circle for the avatar, a bar for the display
 // name and a lighter, shorter bar for the handle.
-function headerGeometry() {
+function headerGeometry(width) {
   const cx = PADDING + AVATAR_RADIUS;
   const textX = PADDING + AVATAR_RADIUS * 2 + 12;
+  const maxBarWidth = width - PADDING - textX;
   return {
     avatar: { x: cx, y: PADDING + AVATAR_RADIUS, r: AVATAR_RADIUS },
-    nameBar: { x: textX, y: PADDING + 4, w: 140, h: 14 },
-    handleBar: { x: textX, y: PADDING + 24, w: 100, h: 12 },
+    nameBar: {
+      x: textX,
+      y: PADDING + 4,
+      w: Math.max(0, Math.min(140, maxBarWidth)),
+      h: 14,
+    },
+    handleBar: {
+      x: textX,
+      y: PADDING + 24,
+      w: Math.max(0, Math.min(100, maxBarWidth)),
+      h: 12,
+    },
   };
 }
 
 // Greedy hard break for a single token wider than the line.
+// Note: iterates code points, not grapheme clusters (ZWJ sequences may split).
+// This is an accepted tradeoff for simplicity; cosmetic artifacts are rare.
 function breakToken(token, maxWidth, measure) {
   const chunks = [];
   let current = '';
@@ -63,7 +76,7 @@ function wrap(text, maxWidth, measure) {
         current = word;
       }
     }
-    // Skip the empty remainder left by a trailing or doubled space.
+    // Drop wholly-empty remainder.
     if (current) out.push(current);
   }
   return out;
@@ -91,12 +104,21 @@ export function layoutCard(model, measureText, opts = {}) {
   let truncated = false;
   if (items.length > maxLines) {
     truncated = true;
-    items.length = Math.max(maxLines - 1, 0);
-    items.push({ text: ELLIPSIS_LINE, style: 'body', gapBefore: false });
+    if (maxLines > 0) {
+      const lastKeptItem = items[maxLines - 1];
+      items.length = maxLines - 1;
+      items.push({
+        text: ELLIPSIS_LINE,
+        style: lastKeptItem.style,
+        gapBefore: lastKeptItem.gapBefore,
+      });
+    } else {
+      items.length = 0;
+    }
   }
 
   // 3. Assign positions top-down.
-  const header = headerGeometry();
+  const header = headerGeometry(width);
   let y = PADDING + AVATAR_RADIUS * 2 + HEADER_GAP;
   const lines = [];
   for (const item of items) {
