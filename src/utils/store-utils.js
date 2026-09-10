@@ -235,19 +235,28 @@ export function getCurrentInstanceConfiguration() {
   return getInstanceConfiguration(instance);
 }
 
-export function getInstanceConfigurationByDomain(domain) {
+export function getInstanceInfoByDomain(domain) {
   try {
     const instances = store.local.getJSON('instances');
-    const instance = instances?.[domain.toLowerCase().trim()];
-    return instance ? getInstanceConfiguration(instance) : {};
+    return instances?.[domain.toLowerCase().trim()] || null;
   } catch (e) {
     console.error(e);
-    return {};
+    return null;
   }
 }
 
-export function getAPIVersions() {
-  const instance = getCurrentInstance();
+export function getInstanceConfigurationByDomain(domain) {
+  const instance = getInstanceInfoByDomain(domain);
+  return instance ? getInstanceConfiguration(instance) : {};
+}
+
+// Pass a domain to ask what THAT instance supports. A capability check about a
+// specific post or profile must do so: the current account may be on the other
+// network entirely, and its apiVersions say nothing about this one.
+export function getAPIVersions(domain) {
+  const instance = domain
+    ? getInstanceInfoByDomain(domain)
+    : getCurrentInstance();
   return instance?.apiVersions || {};
 }
 

@@ -8,7 +8,7 @@ export function supportsNativeQuote(instance) {
   if (instance ? isBlueskyInstance(instance) : getCurrentInstance()?._bluesky) {
     return true;
   }
-  return getAPIVersions()?.mastodon >= 7;
+  return getAPIVersions(instance)?.mastodon >= 7;
 }
 
 export function getPostQuoteApprovalPolicy(quoteApproval) {

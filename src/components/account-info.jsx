@@ -48,7 +48,7 @@ const LIMIT = 80;
 
 const ACCOUNT_INFO_MAX_AGE = 1000 * 60 * 10; // 10 mins
 
-async function fetchPostingStats(accountID, masto) {
+async function fetchPostingStats(accountID, masto, instance) {
   const fetchStatuses = masto.v1.accounts
     .$select(accountID)
     .statuses.list({
@@ -81,7 +81,7 @@ async function fetchPostingStats(accountID, masto) {
     ) {
       stats.replies++;
     } else if (
-      supportsNativeQuote() &&
+      supportsNativeQuote(instance) &&
       (status.quote?.id || status.quote?.quotedStatus?.id)
     ) {
       stats.quotes++;
@@ -344,7 +344,7 @@ function AccountInfo({
     if (!id) return;
     setPostingStatsUIState('loading');
     try {
-      const stats = await memFetchPostingStats(id, masto);
+      const stats = await memFetchPostingStats(id, masto, instance);
       setPostingStats(stats);
       setPostingStatsUIState('default');
     } catch (e) {
@@ -961,7 +961,7 @@ function AccountInfo({
                           <div
                             class="posting-stats"
                             title={
-                              supportsNativeQuote()
+                              supportsNativeQuote(instance)
                                 ? t`${(
                                     postingStats.originals / postingStats.total
                                   ).toLocaleString(i18n.locale || undefined, {
@@ -1076,7 +1076,7 @@ function AccountInfo({
                                 <span class="posting-stats-legend-item posting-stats-bar-replies" />{' '}
                                 <Trans>Replies</Trans>
                               </span>{' '}
-                              {supportsNativeQuote() && (
+                              {supportsNativeQuote(instance) && (
                                 <span class="ib">
                                   <span class="posting-stats-legend-item posting-stats-bar-quotes" />{' '}
                                   <Trans>Quotes</Trans>
