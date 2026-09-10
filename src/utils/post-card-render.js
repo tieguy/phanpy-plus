@@ -97,8 +97,8 @@ export async function renderCardBlob(status, opts = {}) {
     return ctx.measureText(text).width;
   };
   // Guard against degenerate widths by enforcing a minimum
-  // Nullish means "not given"; Number(null) is 0, so check that first.
-  const requested = opts.width == null ? NaN : Number(opts.width);
+  // Anything but a number counts as "not given".
+  const requested = typeof opts.width === 'number' ? opts.width : NaN;
   const guardedOpts = {
     ...opts,
     width: Number.isFinite(requested)
