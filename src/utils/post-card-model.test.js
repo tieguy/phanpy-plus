@@ -124,7 +124,7 @@ describe('buildCardModel', () => {
     expect(model.altText.startsWith(ALT_TEXT_PREFIX)).toBe(true);
   });
 
-  it('truncates on code points to avoid splitting emoji', () => {
+  it('keeps the truncated alt text within the code-unit budget', () => {
     // Place emoji (2 code units each) early in the text so they appear in the
     // portion that gets truncated, allowing the code-unit budget to exclude them
     // while a naive code-point slice would include them. Old code would produce
@@ -133,6 +133,20 @@ describe('buildCardModel', () => {
       '🎉'.repeat(50) + 'a'.repeat(MAX_ALT_TEXT - ALT_TEXT_PREFIX.length - 99);
     const model = buildCardModel(status({ content: `<p>${long}</p>` }));
     expect(model.altText.length).toBeLessThanOrEqual(MAX_ALT_TEXT);
+    // Check for no lone surrogates (a unicode surrogate not paired correctly)
+    const lonesurrogate =
+      /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+    expect(lonesurrogate.test(model.altText)).toBe(false);
+  });
+
+  it('does not split an emoji at the truncation boundary', () => {
+    // Build text where the truncation budget expires mid-emoji: ASCII up to near
+    // the limit, then emoji. The truncation loop must not cut the emoji in half.
+    const asciiLength = MAX_ALT_TEXT - ALT_TEXT_PREFIX.length - 2;
+    const long = 'a'.repeat(asciiLength) + '🎉'.repeat(5);
+    const model = buildCardModel(status({ content: `<p>${long}</p>` }));
+    expect(model.altText.length).toBeLessThanOrEqual(MAX_ALT_TEXT);
+    expect(model.altText.endsWith('…')).toBe(true);
     // Check for no lone surrogates (a unicode surrogate not paired correctly)
     const lonesurrogate =
       /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/;
