@@ -47,3 +47,4 @@ src/iconify-icons/
 
 # Local Netlify folder
 .netlify
+dev-dist/
