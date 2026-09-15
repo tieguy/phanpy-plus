@@ -35,6 +35,7 @@ const TYPES = [
   'following',
   'mentions',
   'notifications',
+  'engagement',
   'list',
   'public',
   'trending',
@@ -58,6 +59,7 @@ const TYPE_TEXT = {
   hashtag: msg`Hashtag`,
   trending: msg`Trending`,
   mentions: msg`Mentions`,
+  engagement: msg`Engagement`,
   profile: msg`Profile`,
 };
 const TYPE_PARAMS = {
@@ -155,6 +157,12 @@ export const SHORTCUTS_META = {
     title: msg`Notifications`,
     path: '/notifications',
     icon: 'notification',
+  },
+  engagement: {
+    id: 'engagement',
+    title: msg`Engagement`,
+    path: '/engagement',
+    icon: 'chart',
   },
   list: {
     id: ({ id }) => (id ? 'list' : 'lists'),

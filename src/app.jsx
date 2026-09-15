@@ -41,6 +41,7 @@ import Bookmarks from './pages/bookmarks';
 import Catchup from './pages/catchup';
 import Collection from './pages/collection';
 import DMThread from './pages/dm-thread';
+import Engagement from './pages/engagement';
 import Favourites from './pages/favourites';
 import Filters from './pages/filters';
 import FollowedHashtags from './pages/followed-hashtags';
@@ -830,6 +831,14 @@ function SecondaryRoutes() {
         element={
           <AuthRoute>
             <Mentions />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/engagement"
+        element={
+          <AuthRoute>
+            <Engagement />
           </AuthRoute>
         }
       />

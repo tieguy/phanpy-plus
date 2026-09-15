@@ -4,6 +4,7 @@ import { useSnapshot } from 'valtio';
 
 import AccountStatuses from '../pages/account-statuses';
 import Bookmarks from '../pages/bookmarks';
+import Engagement from '../pages/engagement';
 import Favourites from '../pages/favourites';
 import Following from '../pages/following';
 import Hashtag from '../pages/hashtag';
@@ -38,6 +39,7 @@ function Columns() {
     const Component = {
       following: Following,
       notifications: Notifications,
+      engagement: Engagement,
       list: List,
       public: Public,
       bookmarks: Bookmarks,
