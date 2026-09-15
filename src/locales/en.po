@@ -577,7 +577,7 @@ msgid "Compose"
 msgstr ""
 
 #: src/components/compose-button.jsx:193
-#: src/components/nav-menu.jsx:319
+#: src/components/nav-menu.jsx:325
 #: src/pages/scheduled-posts.jsx:31
 #: src/pages/scheduled-posts.jsx:78
 msgid "Scheduled Posts"
@@ -862,7 +862,7 @@ msgid "Quotes can't be embedded in private mentions."
 msgstr "Quotes can't be embedded in private mentions."
 
 #: src/components/compose.jsx:2548
-#: src/components/nav-menu.jsx:406
+#: src/components/nav-menu.jsx:412
 #: src/components/shortcuts-settings.jsx:176
 #: src/utils/visibility-text.jsx:5
 msgid "Local"
@@ -1295,7 +1295,7 @@ msgid "<0>{key1}</0> then <1>{key2}</1>"
 msgstr "<0>{key1}</0> then <1>{key2}</1>"
 
 #: src/components/keyboard-shortcuts-help.jsx:57
-#: src/components/nav-menu.jsx:428
+#: src/components/nav-menu.jsx:434
 #: src/pages/catchup.jsx:1769
 msgid "Keyboard shortcuts"
 msgstr ""
@@ -1392,7 +1392,7 @@ msgid "<0>Ctrl</0> + <1>Enter</1> or <2>⌘</2> + <3>Enter</3>"
 msgstr ""
 
 #: src/components/keyboard-shortcuts-help.jsx:161
-#: src/components/nav-menu.jsx:391
+#: src/components/nav-menu.jsx:397
 #: src/components/search-form.jsx:208
 #: src/components/shortcuts-settings.jsx:55
 #: src/components/shortcuts-settings.jsx:190
@@ -1785,14 +1785,22 @@ msgstr ""
 msgid "New"
 msgstr ""
 
-#: src/components/nav-menu.jsx:252
-#: src/components/nav-menu.jsx:271
+#: src/components/nav-menu.jsx:242
+#: src/components/shortcuts-settings.jsx:62
+#: src/components/shortcuts-settings.jsx:163
+#: src/pages/engagement.jsx:30
+#: src/pages/engagement.jsx:96
+msgid "Engagement"
+msgstr "Engagement"
+
+#: src/components/nav-menu.jsx:258
+#: src/components/nav-menu.jsx:277
 #: src/components/shortcuts-settings.jsx:63
 #: src/components/shortcuts-settings.jsx:200
 msgid "Profile"
 msgstr ""
 
-#: src/components/nav-menu.jsx:279
+#: src/components/nav-menu.jsx:285
 #: src/components/shortcuts-settings.jsx:57
 #: src/components/shortcuts-settings.jsx:220
 #: src/pages/bookmarks.jsx:12
@@ -1800,12 +1808,12 @@ msgstr ""
 msgid "Bookmarks"
 msgstr ""
 
-#: src/components/nav-menu.jsx:290
+#: src/components/nav-menu.jsx:296
 #: src/components/text-expander.jsx:215
 msgid "More…"
 msgstr ""
 
-#: src/components/nav-menu.jsx:299
+#: src/components/nav-menu.jsx:305
 #: src/components/shortcuts-settings.jsx:58
 #: src/components/shortcuts-settings.jsx:226
 #: src/pages/catchup.jsx:1595
@@ -1817,7 +1825,7 @@ msgstr ""
 msgid "Likes"
 msgstr ""
 
-#: src/components/nav-menu.jsx:306
+#: src/components/nav-menu.jsx:312
 #: src/pages/account-collections.jsx:70
 #: src/pages/account-collections.jsx:149
 #: src/pages/account-collections.jsx:171
@@ -1826,13 +1834,13 @@ msgstr ""
 msgid "Collections"
 msgstr "Collections"
 
-#: src/components/nav-menu.jsx:313
+#: src/components/nav-menu.jsx:319
 #: src/pages/followed-hashtags.jsx:15
 #: src/pages/followed-hashtags.jsx:45
 msgid "Followed Hashtags"
 msgstr ""
 
-#: src/components/nav-menu.jsx:327
+#: src/components/nav-menu.jsx:333
 #: src/pages/account-statuses.jsx:427
 #: src/pages/filters.jsx:60
 #: src/pages/filters.jsx:101
@@ -1840,56 +1848,56 @@ msgstr ""
 msgid "Filters"
 msgstr ""
 
-#: src/components/nav-menu.jsx:335
+#: src/components/nav-menu.jsx:341
 msgid "Muted users"
 msgstr ""
 
-#: src/components/nav-menu.jsx:343
+#: src/components/nav-menu.jsx:349
 msgid "Muted users…"
 msgstr ""
 
-#: src/components/nav-menu.jsx:350
+#: src/components/nav-menu.jsx:356
 msgid "Blocked users"
 msgstr ""
 
-#: src/components/nav-menu.jsx:358
+#: src/components/nav-menu.jsx:364
 msgid "Blocked users…"
 msgstr ""
 
-#: src/components/nav-menu.jsx:370
+#: src/components/nav-menu.jsx:376
 msgid "Accounts…"
 msgstr ""
 
-#: src/components/nav-menu.jsx:380
+#: src/components/nav-menu.jsx:386
 #: src/pages/login.jsx:35
 #: src/pages/login.jsx:297
 #: src/pages/status.jsx:1119
 msgid "Log in"
 msgstr ""
 
-#: src/components/nav-menu.jsx:398
+#: src/components/nav-menu.jsx:404
 #: src/components/shortcuts-settings.jsx:60
 #: src/components/shortcuts-settings.jsx:183
 #: src/pages/trending.jsx:444
 msgid "Trending"
 msgstr ""
 
-#: src/components/nav-menu.jsx:414
+#: src/components/nav-menu.jsx:420
 #: src/components/shortcuts-settings.jsx:176
 msgid "Federated"
 msgstr ""
 
-#: src/components/nav-menu.jsx:438
+#: src/components/nav-menu.jsx:444
 msgid "Shortcuts / Columns…"
 msgstr ""
 
-#: src/components/nav-menu.jsx:448
-#: src/components/nav-menu.jsx:462
+#: src/components/nav-menu.jsx:454
+#: src/components/nav-menu.jsx:468
 msgid "Settings…"
 msgstr ""
 
-#: src/components/nav-menu.jsx:492
-#: src/components/nav-menu.jsx:527
+#: src/components/nav-menu.jsx:498
+#: src/components/nav-menu.jsx:533
 #: src/components/shortcuts-settings.jsx:53
 #: src/components/shortcuts-settings.jsx:169
 #: src/pages/list.jsx:135
@@ -1898,7 +1906,7 @@ msgstr ""
 msgid "Lists"
 msgstr ""
 
-#: src/components/nav-menu.jsx:500
+#: src/components/nav-menu.jsx:506
 #: src/components/shortcuts.jsx:32
 #: src/pages/list.jsx:147
 msgid "All Lists"
@@ -2722,13 +2730,6 @@ msgstr ""
 #: src/components/shortcuts-settings.jsx:59
 msgid "Hashtag"
 msgstr ""
-
-#: src/components/shortcuts-settings.jsx:62
-#: src/components/shortcuts-settings.jsx:163
-#: src/pages/engagement.jsx:30
-#: src/pages/engagement.jsx:96
-msgid "Engagement"
-msgstr "Engagement"
 
 #: src/components/shortcuts-settings.jsx:68
 msgid "List ID"
