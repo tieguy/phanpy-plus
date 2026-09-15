@@ -39,10 +39,38 @@ function isLoopbackHost(hostname) {
   );
 }
 
+// Session events from the OAuth client. Both are also relayed from other
+// tabs/windows over the library's BroadcastChannel.
+//
+// `deleted` is NOT proof that the stored session is gone. The library emits
+// it whenever it cannot *read* a stored session — its IndexedDB wrapper keeps
+// one connection for the page's lifetime and treats it as closed for good
+// once the browser closes it (iPadOS does this to suspended pages), after
+// which every read fails, is swallowed as "no session", and is reported as
+// "deleted by another process" while the tokens sit intact on disk. It is also
+// relayed from another tab that hit the same read failure. Treat it as
+// "re-check the session", never as "the session is dead" (see client.js).
+//
+// `updated` fires on every successful token refresh or (re)store — proof the
+// session works.
 const sessionDeletedCallbacks = new Set();
+const sessionUpdatedCallbacks = new Set();
 export function onOAuthSessionDeleted(cb) {
   sessionDeletedCallbacks.add(cb);
   return () => sessionDeletedCallbacks.delete(cb);
+}
+export function onOAuthSessionUpdated(cb) {
+  sessionUpdatedCallbacks.add(cb);
+  return () => sessionUpdatedCallbacks.delete(cb);
+}
+function emit(callbacks, ...args) {
+  for (const cb of callbacks) {
+    try {
+      cb(...args);
+    } catch (e) {
+      console.error(e);
+    }
+  }
 }
 
 let clientPromise;
@@ -57,17 +85,26 @@ export function getOAuthClient() {
       clientMetadata: loopback
         ? undefined
         : buildClientMetadata(location.origin),
-      onDelete: (sub, cause) => {
-        for (const cb of sessionDeletedCallbacks) {
-          try {
-            cb(sub, cause);
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      },
+      onDelete: (sub, cause) => emit(sessionDeletedCallbacks, sub, cause),
+      onUpdate: (sub) => emit(sessionUpdatedCallbacks, sub),
     });
   })());
+}
+
+// Discard the OAuth client so the next getOAuthClient() builds a fresh one,
+// with a fresh IndexedDB connection. The only recovery from the closed
+// connection described above; the session store itself is untouched, and the
+// callbacks registered here survive.
+export async function resetOAuthClient() {
+  const pending = clientPromise;
+  clientPromise = null;
+  if (!pending) return;
+  try {
+    const client = await pending;
+    await client.dispose?.();
+  } catch (e) {
+    // The old client is being thrown away anyway
+  }
 }
 
 // Returns true if the current URL looks like an AT Protocol OAuth callback

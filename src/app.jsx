@@ -589,6 +589,13 @@ function App() {
             setUIState('default');
             __BENCHMARK.end('app-init');
           }
+          // Non-blocking: give Bluesky OAuth accounts flagged as expired a
+          // chance to prove they still work and clear the flag
+          import('./utils/bluesky')
+            .then(({ reviveExpiredBlueskyAccounts }) =>
+              reviveExpiredBlueskyAccounts(),
+            )
+            .catch(() => {});
         })();
       } else {
         setUIState('default');
