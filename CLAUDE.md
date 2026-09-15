@@ -55,6 +55,21 @@ The same routing rule applies to **per-profile actions** (follow / mute / block,
 
 **Mentions follow the same network rule.** A @-mention only links and notifies when posted from an account on the *mentioned profile's* network — a Bluesky handle is inert in a Mastodon post and vice-versa. `src/utils/mention-network.js`'s `getMentionInstance` picks an account on the target's network (or `null` if there is none), which the mention entry points (`related-actions.jsx`, `account-statuses.jsx`) pass into the composer as `draftStatus._instance`; `compose.jsx` posts from that instance. When it returns `null`, the mention affordance is hidden rather than producing a dead mention.
 
+## Engagement tab
+
+`/engagement` (`src/pages/engagement.jsx`, registered in `shortcuts-settings.jsx` and `columns.jsx`) is a stateless 24-hour tally of likes and boosts on the user's posts. It fans out over the current account plus merged other-network accounts, requests `types: ['favourite', 'reblog']` from each source's v1 notifications, and computes the window from server timestamps on every open, so every device shows the same numbers.
+
+`src/utils/engagement-tally.js` holds the pure parts:
+
+- `walkUntilCutoff(iterator, { cutoff, pageCap })` pages back until an item predates the cutoff, the iterator ends, or `PAGE_CAP` (5 × 80) pages are read. It continues past empty pages: the Bluesky facade applies `types` after fetching, so a page can be empty with more pages to follow. Hitting the cap sets `capped`, and the summary line then reads "at least".
+- `tallyEngagement(sources, { cutoff })` returns per-network totals and per-post rows keyed `${instance}/${statusId}`, looking through `status.reblog`. A Bluesky notification whose subject post failed to hydrate has a null `status`; it counts toward the network total but gets no row, so a total can exceed the sum of its rows.
+
+Three invariants:
+
+- **No engager identities.** The tab never renders the notification's `account`.
+- **No responses-only filter.** `settings.notificationsResponsesOnly` does not apply here, and the notification page, bell dropdown and badge do not change.
+- **Counts are what each server knows.** A Mastodon instance sees only the likes and boosts that federated to it, so both the tally and the lifetime totals can be lower than the fediverse-wide numbers.
+
 ## Quote without attribution
 
 A quote action in both boost/quote menus (action bar and kebab, `src/components/status.jsx`), alongside the instance's native quote or link-quote item, shares a post's text as a PNG card with the author redacted, attached to a new post with alt text prefilled. Four modules under `src/utils/`:
