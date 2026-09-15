@@ -101,6 +101,19 @@ function markBlueskyAuthExpired(did) {
   });
 }
 
+// The OAuth counterpart of persistSessionForAccount's `delete authExpired`:
+// a successful restore or refresh proves the session works. Without this the
+// flag was sticky for OAuth accounts — nothing in that path ever cleared it,
+// so one spurious deletion event (see oauth.js) showed "Log back in" for good
+// while every request kept succeeding.
+function clearBlueskyAuthExpired(did) {
+  mutateAccounts((accounts) => {
+    const acc = accounts.find((a) => a.info.id === did);
+    if (!acc?.authExpired) return false;
+    delete acc.authExpired;
+  });
+}
+
 export function getBlueskyClient(account) {
   const did = account.info.id;
   if (blueskyClients[did]) return blueskyClients[did];
@@ -117,9 +130,30 @@ export function getBlueskyClient(account) {
     getStoredSession: () =>
       getAccounts().find((a) => a.info.id === did)?.blueskySession || null,
     onAuthExpired: () => markBlueskyAuthExpired(did),
+    onSessionRestored: () => clearBlueskyAuthExpired(did),
   });
   blueskyClients[did] = client;
   return client;
+}
+
+// An OAuth account flagged authExpired is skipped by every merged view, so
+// unless it is the current account nothing ever touches its client again and
+// a stale flag can never clear itself. Probe such accounts once per page load:
+// a successful restore clears the flag (onSessionRestored); a failure changes
+// nothing. Password accounts need no probe — their client re-reads the
+// accounts store on every call and revives on a newer refresh token.
+export function reviveExpiredBlueskyAccounts() {
+  for (const account of getAccounts()) {
+    if (
+      isBlueskyAccount(account) &&
+      account.authExpired &&
+      account.blueskyAuth === 'oauth'
+    ) {
+      getBlueskyClient(account)
+        ._ready()
+        .catch(() => {});
+    }
+  }
 }
 
 // Other tabs/windows rotate the (single-use) refresh tokens and persist them

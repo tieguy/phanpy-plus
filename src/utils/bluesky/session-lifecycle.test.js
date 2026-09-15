@@ -41,7 +41,9 @@ const atproto = vi.hoisted(() => {
 
 const oauth = vi.hoisted(() => ({
   deletedCallbacks: new Set(),
+  updatedCallbacks: new Set(),
   restoreImpl: null,
+  resets: 0,
 }));
 
 vi.mock('@atproto/api', () => ({
@@ -52,9 +54,16 @@ vi.mock('@atproto/api', () => ({
 
 vi.mock('./oauth', () => ({
   restoreOAuthSession: (did) => oauth.restoreImpl(did),
+  resetOAuthClient: async () => {
+    oauth.resets++;
+  },
   onOAuthSessionDeleted: (cb) => {
     oauth.deletedCallbacks.add(cb);
     return () => oauth.deletedCallbacks.delete(cb);
+  },
+  onOAuthSessionUpdated: (cb) => {
+    oauth.updatedCallbacks.add(cb);
+    return () => oauth.updatedCallbacks.delete(cb);
   },
 }));
 
@@ -86,7 +95,9 @@ beforeEach(() => {
   atproto.state.agents.length = 0;
   atproto.state.nextResumeImpl = null;
   oauth.deletedCallbacks.clear();
+  oauth.updatedCallbacks.clear();
   oauth.restoreImpl = null;
+  oauth.resets = 0;
 });
 
 describe('password session lifecycle', () => {
@@ -203,6 +214,13 @@ describe('password session lifecycle', () => {
 });
 
 describe('oauth session lifecycle', () => {
+  const emitDeleted = (did = DID) => {
+    for (const cb of oauth.deletedCallbacks) cb(did);
+  };
+  const emitUpdated = (did = DID) => {
+    for (const cb of oauth.updatedCallbacks) cb(did);
+  };
+
   it('marks auth expired when the deletion event fires during a failed restore', async () => {
     const onAuthExpired = vi.fn();
     const onSessionDeleted = vi.fn();
@@ -210,7 +228,7 @@ describe('oauth session lifecycle', () => {
       // The library announces the deletion mid-restore (revoked session /
       // deleted by another tab), then rejects — the subscription must
       // already be in place to catch it
-      for (const cb of oauth.deletedCallbacks) cb(did);
+      emitDeleted(did);
       throw new Error('The session was deleted by another process');
     };
     const client = makeClient({
@@ -223,6 +241,8 @@ describe('oauth session lifecycle', () => {
     expect(onSessionDeleted).toHaveBeenCalledTimes(1);
     // Now terminally dead: fails fast with the friendly message
     await expect(client._ready()).rejects.toThrow(/session has expired/i);
+    // A first-ever restore never rebuilds the OAuth client
+    expect(oauth.resets).toBe(0);
   });
 
   it('ignores deletion events for other accounts', async () => {
@@ -230,8 +250,142 @@ describe('oauth session lifecycle', () => {
     oauth.restoreImpl = async () => ({ did: DID });
     const client = makeClient({ authType: 'oauth', onAuthExpired });
     await client._ready();
-    for (const cb of oauth.deletedCallbacks) cb('did:plc:someone-else');
+    emitDeleted('did:plc:someone-else');
     expect(onAuthExpired).not.toHaveBeenCalled();
     await client._ready(); // still fine
+    expect(oauth.resets).toBe(0);
+  });
+
+  it('reports a working restore so a stale expired flag can clear', async () => {
+    const onSessionRestored = vi.fn();
+    oauth.restoreImpl = async () => ({ did: DID });
+    const client = makeClient({ authType: 'oauth', onSessionRestored });
+    await client._ready();
+    expect(onSessionRestored).toHaveBeenCalledTimes(1);
+  });
+
+  it('a deletion event alone does not expire a session that still restores', async () => {
+    // The library emits "deleted" when it merely failed to *read* the store
+    // (dead IndexedDB connection after the page was suspended), or relays
+    // another tab's read failure — the stored tokens are fine
+    const onAuthExpired = vi.fn();
+    const onSessionDeleted = vi.fn();
+    const onSessionRestored = vi.fn();
+    const restores = [];
+    oauth.restoreImpl = async (did) => {
+      restores.push(did);
+      return { did: DID };
+    };
+    const client = makeClient({
+      authType: 'oauth',
+      onAuthExpired,
+      onSessionDeleted,
+      onSessionRestored,
+    });
+    await client._ready();
+    expect(restores).toHaveLength(1);
+
+    emitDeleted();
+    expect(onAuthExpired).not.toHaveBeenCalled();
+    expect(onSessionDeleted).not.toHaveBeenCalled();
+
+    // Next call re-checks: fresh OAuth client (fresh IndexedDB connection),
+    // restore succeeds, account reported alive
+    await client._ready();
+    expect(oauth.resets).toBe(1);
+    expect(restores).toHaveLength(2);
+    expect(onAuthExpired).not.toHaveBeenCalled();
+    expect(onSessionDeleted).not.toHaveBeenCalled();
+    expect(onSessionRestored).toHaveBeenCalledTimes(2);
+
+    // Settled: no further re-check without another event
+    await client._ready();
+    expect(oauth.resets).toBe(1);
+    expect(restores).toHaveLength(2);
+  });
+
+  it('expires when the re-check after a deletion event fails the same way', async () => {
+    const onAuthExpired = vi.fn();
+    const onSessionDeleted = vi.fn();
+    let alive = true;
+    oauth.restoreImpl = async (did) => {
+      if (alive) return { did: DID };
+      emitDeleted(did);
+      throw new Error('The session was deleted by another process');
+    };
+    const client = makeClient({
+      authType: 'oauth',
+      onAuthExpired,
+      onSessionDeleted,
+    });
+    await client._ready();
+
+    // Genuinely revoked: the event fires, and the re-check finds no session
+    alive = false;
+    emitDeleted();
+    await expect(client._ready()).rejects.toThrow(/deleted by another/);
+    expect(oauth.resets).toBe(1);
+    expect(onAuthExpired).toHaveBeenCalledTimes(1);
+    expect(onSessionDeleted).toHaveBeenCalledTimes(1);
+    await expect(client._ready()).rejects.toThrow(/session has expired/i);
+  });
+
+  it('a transient failure during the re-check does not expire the session', async () => {
+    const onAuthExpired = vi.fn();
+    let fail = false;
+    oauth.restoreImpl = async () => {
+      if (fail) throw new Error('Load failed'); // network, no deletion event
+      return { did: DID };
+    };
+    const client = makeClient({ authType: 'oauth', onAuthExpired });
+    await client._ready();
+    emitDeleted();
+    fail = true;
+    await expect(client._ready()).rejects.toThrow('Load failed');
+    expect(onAuthExpired).not.toHaveBeenCalled();
+    // Recovers on the next call
+    fail = false;
+    await client._ready();
+    expect(onAuthExpired).not.toHaveBeenCalled();
+  });
+
+  it('a deletion event mid-restore does not start a second, parallel restore', async () => {
+    let release;
+    const restores = [];
+    oauth.restoreImpl = async (did) => {
+      restores.push(did);
+      // Only the first restore is held open
+      if (restores.length === 1) await new Promise((r) => (release = r));
+      return { did: DID };
+    };
+    const client = makeClient({ authType: 'oauth' });
+    const first = client._ready();
+    // Let the flow get past its lazy imports and into restoreOAuthSession
+    while (restores.length === 0) await new Promise((r) => setTimeout(r, 0));
+
+    emitDeleted();
+    const second = client._ready(); // joins the in-flight restore
+    expect(restores).toHaveLength(1);
+    expect(oauth.resets).toBe(0);
+
+    release();
+    await first;
+    await second;
+    // The event is honoured on the next call: one re-check, one reset
+    await client._ready();
+    expect(restores).toHaveLength(2);
+    expect(oauth.resets).toBe(1);
+  });
+
+  it('a token refresh anywhere reports the session as working', async () => {
+    const onSessionRestored = vi.fn();
+    oauth.restoreImpl = async () => ({ did: DID });
+    const client = makeClient({ authType: 'oauth', onSessionRestored });
+    await client._ready();
+    onSessionRestored.mockClear();
+    emitUpdated();
+    expect(onSessionRestored).toHaveBeenCalledTimes(1);
+    emitUpdated('did:plc:someone-else');
+    expect(onSessionRestored).toHaveBeenCalledTimes(1);
   });
 });

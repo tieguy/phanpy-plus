@@ -125,9 +125,15 @@ export function createBlueskyClient({
   onSessionDeleted,
   getStoredSession, // () => latest persisted session for this account
   onAuthExpired, // auth is terminally dead; only a fresh login can fix it
+  onSessionRestored, // OAuth only — the stored session proved to work again
 }) {
   let agent = null;
   let sessionDeleted = false; // OAuth only — password auth can self-revive
+  // OAuth only: the library announced a deletion since the last successful
+  // restore. Not trusted on its own (see oauth.js) — the next ready() rebuilds
+  // the OAuth client and re-restores; only a restore that fails while this is
+  // set proves the session dead.
+  let oauthDeletionPending = false;
 
   // Password auth: refresh tokens are single-use (rotated), so a refresh
   // token that failed terminally must not be retried on every call — but a
@@ -144,38 +150,75 @@ export function createBlueskyClient({
     );
   }
 
-  let oauthDeleteSubscribed = false;
+  let oauthEventsSubscribed = false;
   let resumePromise = null;
   async function ready() {
     if (authType === 'oauth') {
       // OAuth sessions are restored via @atproto/oauth-client-browser;
       // tokens live in its own IndexedDB store and auto-refresh
       if (sessionDeleted) throw expiredError();
-      if (agent) return;
+      if (agent && !oauthDeletionPending) return;
+      // resumePromise only dedupes concurrent callers of one in-flight
+      // restore; it is cleared when that restore settles, so a deletion event
+      // landing mid-restore leads to a re-check on the next call rather than
+      // a second, parallel restore
       if (!resumePromise) {
         resumePromise = (async () => {
-          const [{ Agent }, { restoreOAuthSession, onOAuthSessionDeleted }] =
-            await Promise.all([loadAtproto(), import('./oauth')]);
+          const [
+            { Agent },
+            {
+              restoreOAuthSession,
+              resetOAuthClient,
+              onOAuthSessionDeleted,
+              onOAuthSessionUpdated,
+            },
+          ] = await Promise.all([loadAtproto(), import('./oauth')]);
           // Subscribe before restoring: a terminal restore failure (session
           // revoked, or deleted by another tab) emits the deletion event
           // during restore itself, and must not be missed
-          if (!oauthDeleteSubscribed) {
-            oauthDeleteSubscribed = true;
+          if (!oauthEventsSubscribed) {
+            oauthEventsSubscribed = true;
             onOAuthSessionDeleted((sub) => {
-              if (sub === did) {
-                sessionDeleted = true;
-                agent = null;
-                resumePromise = null;
-                onAuthExpired?.();
-                onSessionDeleted?.();
-              }
+              if (sub !== did) return;
+              // Not terminal yet: the library also emits this when it merely
+              // failed to read the store (closed IndexedDB connection), or
+              // relays another tab's read failure — see oauth.js. Drop the
+              // agent and let the next call re-check the stored session.
+              oauthDeletionPending = true;
+              agent = null;
+            });
+            onOAuthSessionUpdated((sub) => {
+              // A refresh in this tab or another one — the session works
+              if (sub === did) onSessionRestored?.();
             });
           }
-          const oauthSession = await restoreOAuthSession(did);
+          // Re-checking after a deletion event: the deletion may be an
+          // artefact of this page's dead IndexedDB connection, which only a
+          // fresh OAuth client (fresh connection) gets past
+          const verifying = oauthDeletionPending;
+          oauthDeletionPending = false;
+          if (verifying) await resetOAuthClient();
+          let oauthSession;
+          try {
+            oauthSession = await restoreOAuthSession(did);
+          } catch (e) {
+            if (oauthDeletionPending) {
+              // The deletion event fired during this very restore: the
+              // store really has no usable session. Only a fresh login fixes
+              // this, so fail fast from here on.
+              oauthDeletionPending = false;
+              sessionDeleted = true;
+              onAuthExpired?.();
+              onSessionDeleted?.();
+            }
+            // Anything else (network, timeout) is transient: keep the
+            // account alive and let the next call retry
+            throw e;
+          }
           agent = new Agent(oauthSession);
-        })().catch((e) => {
+          onSessionRestored?.();
+        })().finally(() => {
           resumePromise = null;
-          throw e;
         });
       }
       await resumePromise;

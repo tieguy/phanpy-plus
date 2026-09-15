@@ -19,6 +19,13 @@ A small adapter layer (`src/utils/bluesky/`) wraps [`@atproto/api`](https://gith
 
 `@atproto/api` is **lazy-loaded**, so Mastodon-only users don't pay the bundle cost.
 
+### Session death is proven, never announced
+
+An account's `authExpired` flag hides it from every merged view and shows "Log back in" in the Accounts sheet, so a false positive is a visible logout while everything still works. Two rules keep it honest, both in `src/utils/bluesky/client.js`:
+
+- **The OAuth library's `deleted` event is a prompt to re-check, not a verdict.** `@atproto/oauth-client-browser` keeps one IndexedDB connection for the page's lifetime and treats it as closed for good once the browser closes it (iPadOS does this to suspended pages); every later read fails, is swallowed as "no stored session", and is reported as `deleted by another process` while the tokens sit intact on disk. The same event is relayed from other tabs. So the client only drops its agent on the event; the next call rebuilds the OAuth client (`resetOAuthClient` in `oauth.js`, the only way to a fresh connection) and restores again, and only a restore that fails *while the event fires* sets `authExpired`. A restore that fails without the event (network) changes nothing.
+- **Any working restore or refresh clears the flag** (`onSessionRestored`, fed by the library's `updated` event too). Because flagged accounts are skipped by the merged views, an account that is not current would never get that chance, so `reviveExpiredBlueskyAccounts()` (called once from `app.jsx` after init) probes flagged OAuth accounts in the background. Password accounts need neither: their client re-reads the accounts store on every call and revives on a newer refresh token.
+
 The facade deliberately over-loads some Mastodon concepts. `v1.statuses.$select(id).quotes.list()` — Mastodon's own quotes endpoint, API v7+ — is backed by `app.bsky.feed.getQuotes` and, like masto.js, yields **statuses** rather than accounts (unlike the sibling `favouritedBy` / `rebloggedBy` listings). `v1.lists.list()` returns not only the user's Bluesky lists but also their subscribed **feed generators**, shaped as lists and tagged `_feed`. Per-list metadata and timeline calls branch on the AT-URI collection (`app.bsky.feed.generator` → `getFeedGenerator`/`getFeed`; `app.bsky.graph.list` → `getList`/`getListFeed`). Consumers must treat `_feed` entries as read-only — no edit / manage-members — see `src/pages/lists.jsx` and `src/pages/list.jsx`.
 
 ### Publishing and threading
