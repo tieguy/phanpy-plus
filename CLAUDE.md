@@ -1,6 +1,6 @@
 # fleeting-social — developer notes
 
-Last verified: 2026-09-10
+Last verified: 2026-10-21
 
 fleeting-social is a fork of [Phanpy](https://github.com/cheeaun/phanpy) (a Mastodon web client) that adds native Bluesky (AT Protocol) support and interweaves the two networks. Most of the codebase is stock Phanpy; the fork-specific machinery lives under `src/utils/bluesky/` plus a handful of merge/filter helpers.
 
@@ -21,10 +21,12 @@ A small adapter layer (`src/utils/bluesky/`) wraps [`@atproto/api`](https://gith
 
 ### Session death is proven, never announced
 
+Bluesky accounts log in with an app password only. AT Protocol OAuth is not supported: its authorization server fetches the client metadata document from the app's origin over the public internet, and the deployment is tailnet-only. The session is the app-password refresh JWT, kept in the accounts store in localStorage; `@atproto/api`'s `AtpAgent` refreshes it, and refresh tokens are single-use, so every refresh rotates it.
+
 An account's `authExpired` flag hides it from every merged view and shows "Log back in" in the Accounts sheet, so a false positive is a visible logout while everything still works. Two rules keep it honest, both in `src/utils/bluesky/client.js`:
 
-- **The OAuth library's `deleted` event is a prompt to re-check, not a verdict.** `@atproto/oauth-client-browser` keeps one IndexedDB connection for the page's lifetime and treats it as closed for good once the browser closes it (iPadOS does this to suspended pages); every later read fails, is swallowed as "no stored session", and is reported as `deleted by another process` while the tokens sit intact on disk. The same event is relayed from other tabs. So the client only drops its agent on the event; the next call rebuilds the OAuth client (`resetOAuthClient` in `oauth.js`, the only way to a fresh connection) and restores again, and only a restore that fails *while the event fires* sets `authExpired`. A restore that fails without the event (network) changes nothing.
-- **Any working restore or refresh clears the flag** (`onSessionRestored`, fed by the library's `updated` event too). Because flagged accounts are skipped by the merged views, an account that is not current would never get that chance, so `reviveExpiredBlueskyAccounts()` (called once from `app.jsx` after init) probes flagged OAuth accounts in the background. Password accounts need neither: their client re-reads the accounts store on every call and revives on a newer refresh token.
+- **A failed refresh is terminal only if the store has nothing newer.** Another tab may have rotated the token already. The client sets `authExpired` only when the stored refresh JWT is missing or is the one that just failed. A `network-error` refresh changes nothing.
+- **The client re-reads the store on every call.** It resumes from the stored session, not the one it was created with, and stays registered after a failure. A newer refresh JWT in the store (another tab's rotation, or a fresh login) revives it, and a successful refresh clears the flag (`persistSessionForAccount` in `index.js`). Rotations persisted by another tab are adopted through the `storage` event without a network call (`adoptSession`).
 
 The facade deliberately over-loads some Mastodon concepts. `v1.statuses.$select(id).quotes.list()` — Mastodon's own quotes endpoint, API v7+ — is backed by `app.bsky.feed.getQuotes` and, like masto.js, yields **statuses** rather than accounts (unlike the sibling `favouritedBy` / `rebloggedBy` listings). `v1.lists.list()` returns not only the user's Bluesky lists but also their subscribed **feed generators**, shaped as lists and tagged `_feed`. Per-list metadata and timeline calls branch on the AT-URI collection (`app.bsky.feed.generator` → `getFeedGenerator`/`getFeed`; `app.bsky.graph.list` → `getList`/`getListFeed`). Consumers must treat `_feed` entries as read-only — no edit / manage-members — see `src/pages/lists.jsx` and `src/pages/list.jsx`.
 
@@ -54,6 +56,10 @@ When adding a feature that fetches per-account data, remember that the current a
 The same routing rule applies to **per-profile actions** (follow / mute / block, and the relationship load that gates their UI): send them to a client on the *target profile's* network — detected via the converter's `info._bluesky` flag — not the currently-active account, which may be on the other network. See `src/components/related-actions.jsx`, which resolves an acting client by the profile's network rather than by instance-string matching. Correspondingly, the Bluesky facade's account actions return a *full* relationship object (they re-read the profile and apply the change), because callers replace their entire relationship state with the return value — a partial object would wipe the other flags.
 
 **Mentions follow the same network rule.** A @-mention only links and notifies when posted from an account on the *mentioned profile's* network — a Bluesky handle is inert in a Mastodon post and vice-versa. `src/utils/mention-network.js`'s `getMentionInstance` picks an account on the target's network (or `null` if there is none), which the mention entry points (`related-actions.jsx`, `account-statuses.jsx`) pass into the composer as `draftStatus._instance`; `compose.jsx` posts from that instance. When it returns `null`, the mention affordance is hidden rather than producing a dead mention.
+
+## Fixed accounts on the login page
+
+A single-user build sets `FLEETING_ACCOUNTS` (comma-separated `network:identifier` pairs, for example `mastodon:luis_in_brief@social.coop,bluesky:lu.is`). `src/utils/fixed-accounts.js` parses it; malformed entries are dropped, so a typo in deploy configuration cannot break the page. When at least one entry parses, `src/pages/login.jsx` replaces the free-text server and handle fields with one entry per account: a Mastodon button that runs the normal OAuth flow for that instance, and a Bluesky app-password form whose handle field is read-only. The handle field is still submitted, so password managers can pair the saved app password with it. When the variable is unset, the login page is stock.
 
 ## Engagement tab
 

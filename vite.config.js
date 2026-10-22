@@ -195,34 +195,6 @@ export default defineConfig(({ command }) => {
             commitHash,
           },
         },
-        // AT Protocol (Bluesky) OAuth client metadata — the authorization
-        // server fetches this document from the deployed origin. Must
-        // stay in sync with buildClientMetadata() in
-        // src/utils/bluesky/oauth.js. Requires FLEETING_WEBSITE to be set
-        // to the deployed origin; localhost dev uses a loopback client
-        // and doesn't need this file.
-        ...(WEBSITE && /^https:/.test(WEBSITE)
-          ? [
-              {
-                type: 'json',
-                output: './oauth/client-metadata.json',
-                data: {
-                  client_id: `${WEBSITE.replace(/\/+$/, '')}/oauth/client-metadata.json`,
-                  client_name: 'Fleeting',
-                  client_uri: WEBSITE.replace(/\/+$/, ''),
-                  redirect_uris: [`${WEBSITE.replace(/\/+$/, '')}/`],
-                  // Keep in sync with BLUESKY_OAUTH_SCOPE in
-                  // src/utils/bluesky/oauth.js. transition:chat.bsky enables DMs.
-                  scope: 'atproto transition:generic transition:chat.bsky',
-                  grant_types: ['authorization_code', 'refresh_token'],
-                  response_types: ['code'],
-                  token_endpoint_auth_method: 'none',
-                  application_type: 'web',
-                  dpop_bound_access_tokens: true,
-                },
-              },
-            ]
-          : []),
         ...(DISALLOW_ROBOTS
           ? [
               {

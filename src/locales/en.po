@@ -1869,8 +1869,9 @@ msgid "Accounts…"
 msgstr ""
 
 #: src/components/nav-menu.jsx:386
-#: src/pages/login.jsx:35
-#: src/pages/login.jsx:297
+#: src/pages/login.jsx:41
+#: src/pages/login.jsx:351
+#: src/pages/login.jsx:393
 #: src/pages/status.jsx:1119
 msgid "Log in"
 msgstr ""
@@ -2742,7 +2743,7 @@ msgstr ""
 #: src/components/shortcuts-settings.jsx:80
 #: src/components/shortcuts-settings.jsx:89
 #: src/components/shortcuts-settings.jsx:127
-#: src/pages/login.jsx:301
+#: src/pages/login.jsx:397
 msgid "Server"
 msgstr "Server"
 
@@ -3517,7 +3518,7 @@ msgstr "Login required."
 #: src/compose.jsx:96
 #: src/pages/annual-report.jsx:186
 #: src/pages/http-route.jsx:94
-#: src/pages/login.jsx:493
+#: src/pages/login.jsx:492
 msgid "Go home"
 msgstr ""
 
@@ -4470,43 +4471,47 @@ msgstr ""
 msgid "No lists yet."
 msgstr ""
 
-#: src/pages/login.jsx:144
-#: src/pages/login.jsx:156
+#: src/pages/login.jsx:151
+#: src/pages/login.jsx:163
 msgid "Failed to register application"
 msgstr "Failed to register application"
 
-#: src/pages/login.jsx:264
+#: src/pages/login.jsx:249
 msgid "Failed to log in to Bluesky."
 msgstr "Failed to log in to Bluesky."
 
-#: src/pages/login.jsx:316
-msgid "server domain"
-msgstr "server domain"
-
-#: src/pages/login.jsx:341
-msgid "e.g. “mastodon.social”"
-msgstr ""
-
-#: src/pages/login.jsx:352
-msgid "Failed to log in. Please try again or try another server."
-msgstr "Failed to log in. Please try again or try another server."
-
-#: src/pages/login.jsx:364
-msgid "Continue with {selectedInstanceText}"
-msgstr ""
-
-#: src/pages/login.jsx:365
-msgid "Continue"
-msgstr ""
-
-#: src/pages/login.jsx:380
-#: src/pages/login.jsx:438
+#: src/pages/login.jsx:262
 msgid "Handle"
 msgstr "Handle"
 
-#: src/pages/login.jsx:399
+#: src/pages/login.jsx:282
 msgid "App password"
 msgstr "App password"
+
+#: src/pages/login.jsx:297
+msgid "Log in with app password"
+msgstr "Log in with app password"
+
+#: src/pages/login.jsx:306
+msgid "Create an app password on Bluesky"
+msgstr "Create an app password on Bluesky"
+
+#: src/pages/login.jsx:308
+msgid "— tick \"Allow access to your direct messages\" if you want DMs."
+msgstr "— tick \"Allow access to your direct messages\" if you want DMs."
+
+#: src/pages/login.jsx:365
+msgid "Continue as {label}"
+msgstr "Continue as {label}"
+
+#. placeholder {0}: account.label
+#: src/pages/login.jsx:365
+#~ msgid "Continue as {0}"
+#~ msgstr "Continue as {0}"
+
+#: src/pages/login.jsx:371
+msgid "Failed to log in. Please try again."
+msgstr "Failed to log in. Please try again."
 
 #: src/pages/login.jsx:402
 #~ msgid "You'll be sent to your Bluesky server to authorize this app."
@@ -4516,36 +4521,44 @@ msgstr "App password"
 #~ msgid "Use an app password instead"
 #~ msgstr "Use an app password instead"
 
-#: src/pages/login.jsx:414
-msgid "Log in with app password"
-msgstr "Log in with app password"
-
-#: src/pages/login.jsx:423
-msgid "Create an app password on Bluesky"
-msgstr "Create an app password on Bluesky"
-
-#: src/pages/login.jsx:425
-msgid "— tick \"Allow access to your direct messages\" if you want DMs."
-msgstr "— tick \"Allow access to your direct messages\" if you want DMs."
+#: src/pages/login.jsx:412
+msgid "server domain"
+msgstr "server domain"
 
 #: src/pages/login.jsx:433
-msgid "Use OAuth instead"
-msgstr "Use OAuth instead"
+#~ msgid "Use OAuth instead"
+#~ msgstr "Use OAuth instead"
+
+#: src/pages/login.jsx:437
+msgid "e.g. “mastodon.social”"
+msgstr ""
+
+#: src/pages/login.jsx:448
+msgid "Failed to log in. Please try again or try another server."
+msgstr "Failed to log in. Please try again or try another server."
 
 #: src/pages/login.jsx:458
-msgid "Continue with Bluesky"
-msgstr "Continue with Bluesky"
+#~ msgid "Continue with Bluesky"
+#~ msgstr "Continue with Bluesky"
+
+#: src/pages/login.jsx:460
+msgid "Continue with {selectedInstanceText}"
+msgstr ""
+
+#: src/pages/login.jsx:461
+msgid "Continue"
+msgstr ""
 
 #: src/pages/login.jsx:462
-msgid "You'll be sent to your Bluesky server to authorize this app. No password is stored, but the session has to be renewed every two weeks."
-msgstr "You'll be sent to your Bluesky server to authorize this app. No password is stored, but the session has to be renewed every two weeks."
+#~ msgid "You'll be sent to your Bluesky server to authorize this app. No password is stored, but the session has to be renewed every two weeks."
+#~ msgstr "You'll be sent to your Bluesky server to authorize this app. No password is stored, but the session has to be renewed every two weeks."
 
-#: src/pages/login.jsx:478
+#: src/pages/login.jsx:477
 #: src/pages/welcome.jsx:60
 msgid "Log in with Bluesky"
 msgstr "Log in with Bluesky"
 
-#: src/pages/login.jsx:487
+#: src/pages/login.jsx:486
 msgid "Don't have an account? Create one!"
 msgstr ""
 

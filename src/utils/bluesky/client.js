@@ -120,25 +120,16 @@ export function createBlueskyClient({
   instance,
   session,
   did,
-  authType, // 'password' (default) | 'oauth'
   onSessionChange,
-  onSessionDeleted,
   getStoredSession, // () => latest persisted session for this account
   onAuthExpired, // auth is terminally dead; only a fresh login can fix it
-  onSessionRestored, // OAuth only — the stored session proved to work again
 }) {
   let agent = null;
-  let sessionDeleted = false; // OAuth only — password auth can self-revive
-  // OAuth only: the library announced a deletion since the last successful
-  // restore. Not trusted on its own (see oauth.js) — the next ready() rebuilds
-  // the OAuth client and re-restores; only a restore that fails while this is
-  // set proves the session dead.
-  let oauthDeletionPending = false;
 
-  // Password auth: refresh tokens are single-use (rotated), so a refresh
-  // token that failed terminally must not be retried on every call — but a
-  // *different* token appearing in the store (another tab/window rotated it,
-  // or the user logged in again) means the account is alive again.
+  // Refresh tokens are single-use (rotated), so a refresh token that failed
+  // terminally must not be retried on every call — but a *different* token
+  // appearing in the store (another tab/window rotated it, or the user logged
+  // in again) means the account is alive again.
   let deadRefreshJwt = null;
   // The refresh token the agent currently holds, tracked so an in-flight
   // 'expired' event (which carries no session) can record which token died.
@@ -150,81 +141,8 @@ export function createBlueskyClient({
     );
   }
 
-  let oauthEventsSubscribed = false;
   let resumePromise = null;
   async function ready() {
-    if (authType === 'oauth') {
-      // OAuth sessions are restored via @atproto/oauth-client-browser;
-      // tokens live in its own IndexedDB store and auto-refresh
-      if (sessionDeleted) throw expiredError();
-      if (agent && !oauthDeletionPending) return;
-      // resumePromise only dedupes concurrent callers of one in-flight
-      // restore; it is cleared when that restore settles, so a deletion event
-      // landing mid-restore leads to a re-check on the next call rather than
-      // a second, parallel restore
-      if (!resumePromise) {
-        resumePromise = (async () => {
-          const [
-            { Agent },
-            {
-              restoreOAuthSession,
-              resetOAuthClient,
-              onOAuthSessionDeleted,
-              onOAuthSessionUpdated,
-            },
-          ] = await Promise.all([loadAtproto(), import('./oauth')]);
-          // Subscribe before restoring: a terminal restore failure (session
-          // revoked, or deleted by another tab) emits the deletion event
-          // during restore itself, and must not be missed
-          if (!oauthEventsSubscribed) {
-            oauthEventsSubscribed = true;
-            onOAuthSessionDeleted((sub) => {
-              if (sub !== did) return;
-              // Not terminal yet: the library also emits this when it merely
-              // failed to read the store (closed IndexedDB connection), or
-              // relays another tab's read failure — see oauth.js. Drop the
-              // agent and let the next call re-check the stored session.
-              oauthDeletionPending = true;
-              agent = null;
-            });
-            onOAuthSessionUpdated((sub) => {
-              // A refresh in this tab or another one — the session works
-              if (sub === did) onSessionRestored?.();
-            });
-          }
-          // Re-checking after a deletion event: the deletion may be an
-          // artefact of this page's dead IndexedDB connection, which only a
-          // fresh OAuth client (fresh connection) gets past
-          const verifying = oauthDeletionPending;
-          oauthDeletionPending = false;
-          if (verifying) await resetOAuthClient();
-          let oauthSession;
-          try {
-            oauthSession = await restoreOAuthSession(did);
-          } catch (e) {
-            if (oauthDeletionPending) {
-              // The deletion event fired during this very restore: the
-              // store really has no usable session. Only a fresh login fixes
-              // this, so fail fast from here on.
-              oauthDeletionPending = false;
-              sessionDeleted = true;
-              onAuthExpired?.();
-              onSessionDeleted?.();
-            }
-            // Anything else (network, timeout) is transient: keep the
-            // account alive and let the next call retry
-            throw e;
-          }
-          agent = new Agent(oauthSession);
-          onSessionRestored?.();
-        })().finally(() => {
-          resumePromise = null;
-        });
-      }
-      await resumePromise;
-      if (sessionDeleted) throw expiredError();
-      return;
-    }
     if (!agent) {
       const { AtpAgent } = await loadAtproto();
       agent = new AtpAgent({
@@ -240,8 +158,8 @@ export function createBlueskyClient({
             // Allow a future revival (newer stored token) to actually resume
             resumePromise = null;
             // Terminal only if the store has no newer token to revive from.
-            // Unlike OAuth, the client stays registered: ready() re-reads the
-            // store and revives if a fresh login/rotation lands there.
+            // The client stays registered: ready() re-reads the store and
+            // revives if a fresh login/rotation lands there.
             const stored = getStoredSession?.();
             if (!stored?.refreshJwt || stored.refreshJwt === deadRefreshJwt) {
               onAuthExpired?.();
@@ -275,7 +193,6 @@ export function createBlueskyClient({
   // Keeping the in-memory session current prevents this context from
   // refreshing with a stale, already-rotated (hence revoked) token.
   function adoptSession(newSession) {
-    if (authType === 'oauth') return; // OAuth store syncs itself
     if (!newSession?.refreshJwt || !newSession?.accessJwt) return;
     if (deadRefreshJwt && deadRefreshJwt !== newSession.refreshJwt) {
       deadRefreshJwt = null;
@@ -285,7 +202,6 @@ export function createBlueskyClient({
     lastRefreshJwt = newSession.refreshJwt;
   }
 
-  // Works for both credential sessions and OAuth sessions
   function agentDid() {
     return agent?.did || agent?.session?.did || did;
   }

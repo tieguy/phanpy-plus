@@ -13,8 +13,7 @@
 const isBlueskyAcct = (account) => account?.accountType === 'bluesky';
 const isLoggedIn = (account) =>
   isBlueskyAcct(account)
-    ? !account.authExpired &&
-      (account.blueskyAuth === 'oauth' || !!account.blueskySession?.refreshJwt)
+    ? !account.authExpired && !!account.blueskySession?.refreshJwt
     : !!account?.accessToken;
 
 // Logged-in accounts on the target's network — the accounts that could

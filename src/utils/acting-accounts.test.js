@@ -8,16 +8,16 @@ const bsky = {
   blueskySession: { refreshJwt: 'r' },
   info: { id: 'did:plc:abc' },
 };
-const bskyOauth = {
+const bsky2 = {
   accountType: 'bluesky',
   instanceURL: 'https://bsky.social',
-  blueskyAuth: 'oauth',
+  blueskySession: { refreshJwt: 's' },
   info: { id: 'did:plc:def' },
 };
 const bskyExpired = {
   accountType: 'bluesky',
   instanceURL: 'https://bsky.social',
-  blueskyAuth: 'oauth',
+  blueskySession: { refreshJwt: 't' },
   authExpired: true,
   info: { id: 'did:plc:dead' },
 };
@@ -47,9 +47,9 @@ describe('eligibleAccounts', () => {
     expect(
       eligibleAccounts({
         targetIsBluesky: true,
-        accounts: [bsky, masto, bskyOauth],
+        accounts: [bsky, masto, bsky2],
       }),
-    ).toEqual([bsky, bskyOauth]);
+    ).toEqual([bsky, bsky2]);
   });
 
   it('excludes logged-out and auth-expired accounts', () => {
@@ -62,9 +62,9 @@ describe('eligibleAccounts', () => {
     expect(
       eligibleAccounts({
         targetIsBluesky: true,
-        accounts: [bskyExpired, bskyOauth],
+        accounts: [bskyExpired, bsky2],
       }),
-    ).toEqual([bskyOauth]);
+    ).toEqual([bsky2]);
   });
 
   it('returns empty when no account is on the target network', () => {
@@ -102,9 +102,9 @@ describe('accountRoster', () => {
   });
 
   it('works when currentID is missing or unknown', () => {
-    expect(accountRoster({ accounts: [masto, bsky], currentID: 'nope' })).toEqual(
-      [masto, bsky],
-    );
+    expect(
+      accountRoster({ accounts: [masto, bsky], currentID: 'nope' }),
+    ).toEqual([masto, bsky]);
     expect(accountRoster({ accounts: [masto, bsky] })).toEqual([masto, bsky]);
   });
 });

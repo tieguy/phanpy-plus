@@ -18,7 +18,7 @@ import {
 } from '../utils/auth';
 import { openAuthPopup, watchAuthPopup } from '../utils/auth-popup';
 import { DEFAULT_BLUESKY_SERVICE, loginBluesky } from '../utils/bluesky';
-import { signInBlueskyOAuth } from '../utils/bluesky/oauth';
+import { parseFixedAccounts } from '../utils/fixed-accounts';
 import { supportsPKCE } from '../utils/oauth-pkce';
 import store from '../utils/store';
 import {
@@ -28,7 +28,13 @@ import {
 } from '../utils/store-utils';
 import useTitle from '../utils/useTitle';
 
-const { FLEETING_DEFAULT_INSTANCE: DEFAULT_INSTANCE } = import.meta.env;
+const {
+  FLEETING_DEFAULT_INSTANCE: DEFAULT_INSTANCE,
+  FLEETING_ACCOUNTS: ACCOUNTS,
+} = import.meta.env;
+
+// Single-user deployments name their accounts at build time
+const fixedAccounts = parseFixedAccounts(ACCOUNTS);
 
 function Login() {
   const { t } = useLingui();
@@ -63,6 +69,7 @@ function Login() {
   const [instancesList, setInstancesList] = useState([]);
   const searcher = useRef();
   useEffect(() => {
+    if (fixedAccounts.length) return;
     (async () => {
       try {
         const res = await fetch(instancesListURL);
@@ -214,27 +221,6 @@ function Login() {
         ? instancesList.find((instance) => instance.includes(instanceText))
         : null;
 
-  // Alternative: AT Protocol OAuth — redirects to the account's PDS
-  const onBlueskyOAuthSubmit = (e) => {
-    e.preventDefault();
-    const { elements } = e.target;
-    const identifier = elements.bskyIdentifier.value?.trim();
-    if (!identifier) return;
-    setBskyError(null);
-    setBskyUIState('loading');
-    (async () => {
-      try {
-        await signInBlueskyOAuth(identifier);
-        // Unreachable: the browser navigates away on success
-      } catch (err) {
-        console.error(err);
-        setBskyError(err?.message || `${err}`);
-        setBskyUIState('error');
-      }
-    })();
-  };
-
-  // Primary: app password
   const onBlueskyPasswordSubmit = (e) => {
     e.preventDefault();
     const { elements } = e.target;
@@ -258,11 +244,73 @@ function Login() {
     })();
   };
 
-  // One error surface for both Bluesky forms — they share bskyUIState.
   const blueskyError = bskyUIState === 'error' && (
     <p class="error">
       <Trans>Failed to log in to Bluesky.</Trans> {bskyError}
     </p>
+  );
+
+  // With a fixed handle the field is read-only but still submitted, so
+  // password managers can pair the saved app password with the handle.
+  const blueskyPasswordForm = ({ fixedHandle } = {}) => (
+    <form onSubmit={onBlueskyPasswordSubmit}>
+      <h2>
+        <Icon icon="bluesky" alt="" /> Bluesky
+      </h2>
+      <label>
+        <p>
+          <Trans>Handle</Trans>
+        </p>
+        <input
+          type="text"
+          class="large"
+          name="bskyPwIdentifier"
+          defaultValue={fixedHandle || blueskyHandle}
+          readOnly={!!fixedHandle}
+          required
+          autocorrect="off"
+          autocapitalize="off"
+          autocomplete="username"
+          spellCheck={false}
+          placeholder="you.bsky.social"
+          disabled={bskyUIState === 'loading'}
+          dir="auto"
+        />
+      </label>
+      <label>
+        <p>
+          <Trans>App password</Trans>
+        </p>
+        <input
+          type="password"
+          class="large"
+          name="bskyPassword"
+          required
+          autocomplete="current-password"
+          placeholder="xxxx-xxxx-xxxx-xxxx"
+          disabled={bskyUIState === 'loading'}
+        />
+      </label>
+      {blueskyError}
+      <div>
+        <button disabled={bskyUIState === 'loading'}>
+          <Trans>Log in with app password</Trans>
+        </button>
+      </div>
+      <p style={{ fontSize: '90%' }}>
+        <a
+          href="https://bsky.app/settings/app-passwords"
+          target="_blank"
+          rel="noopener"
+        >
+          <Trans>Create an app password on Bluesky</Trans>
+        </a>{' '}
+        <Trans>
+          — tick "Allow access to your direct messages" if you want DMs.
+        </Trans>
+      </p>
+      <Loader hidden={bskyUIState !== 'loading'} />
+    </form>
   );
 
   const onSubmit = (e) => {
@@ -286,6 +334,54 @@ function Login() {
     useEffect(() => {
       submitInstance(instance || selectedInstanceText);
     }, []);
+  }
+
+  if (fixedAccounts.length) {
+    const mastodonAccounts = fixedAccounts.filter(
+      (a) => a.network === 'mastodon',
+    );
+    const blueskyAccounts = fixedAccounts.filter(
+      (a) => a.network === 'bluesky',
+    );
+    return (
+      <main id="login" style={{ textAlign: 'center' }}>
+        <h1>
+          <img src={logo} alt="" width="80" height="80" />
+          <br />
+          <Trans>Log in</Trans>
+        </h1>
+        {mastodonAccounts.length > 0 && (
+          <div>
+            <h2>
+              <Icon icon="mastodon" alt="" /> Mastodon
+            </h2>
+            {mastodonAccounts.map(({ label, instance }) => (
+              <p key={label}>
+                <button
+                  type="button"
+                  disabled={uiState === 'loading'}
+                  onClick={() => submitInstance(instance)}
+                >
+                  {t`Continue as ${label}`}
+                </button>
+              </p>
+            ))}
+            {uiState === 'error' && (
+              <p class="error">
+                <Trans>Failed to log in. Please try again.</Trans>
+              </p>
+            )}
+            <Loader hidden={uiState !== 'loading'} />
+          </div>
+        )}
+        {blueskyAccounts.map((account) => (
+          <div key={account.label}>
+            <hr />
+            {blueskyPasswordForm({ fixedHandle: account.handle })}
+          </div>
+        ))}
+      </main>
+    );
   }
 
   return (
@@ -370,104 +466,7 @@ function Login() {
       <hr />
       <div id="bluesky-login">
         {showBluesky ? (
-          <>
-            <form onSubmit={onBlueskyPasswordSubmit}>
-              <h2>
-                <Icon icon="bluesky" alt="" /> Bluesky
-              </h2>
-              <label>
-                <p>
-                  <Trans>Handle</Trans>
-                </p>
-                <input
-                  type="text"
-                  class="large"
-                  name="bskyPwIdentifier"
-                  defaultValue={blueskyHandle}
-                  required
-                  autocorrect="off"
-                  autocapitalize="off"
-                  autocomplete="username"
-                  spellCheck={false}
-                  placeholder="you.bsky.social"
-                  disabled={bskyUIState === 'loading'}
-                  dir="auto"
-                />
-              </label>
-              <label>
-                <p>
-                  <Trans>App password</Trans>
-                </p>
-                <input
-                  type="password"
-                  class="large"
-                  name="bskyPassword"
-                  required
-                  autocomplete="current-password"
-                  placeholder="xxxx-xxxx-xxxx-xxxx"
-                  disabled={bskyUIState === 'loading'}
-                />
-              </label>
-              {blueskyError}
-              <div>
-                <button disabled={bskyUIState === 'loading'}>
-                  <Trans>Log in with app password</Trans>
-                </button>
-              </div>
-              <p style={{ fontSize: '90%' }}>
-                <a
-                  href="https://bsky.app/settings/app-passwords"
-                  target="_blank"
-                  rel="noopener"
-                >
-                  <Trans>Create an app password on Bluesky</Trans>
-                </a>{' '}
-                <Trans>
-                  — tick "Allow access to your direct messages" if you want DMs.
-                </Trans>
-              </p>
-              <Loader hidden={bskyUIState !== 'loading'} />
-            </form>
-            <details class="bluesky-oauth">
-              <summary style={{ cursor: 'pointer', fontSize: '90%' }}>
-                <Trans>Use OAuth instead</Trans>
-              </summary>
-              <form onSubmit={onBlueskyOAuthSubmit}>
-                <label>
-                  <p>
-                    <Trans>Handle</Trans>
-                  </p>
-                  <input
-                    type="text"
-                    class="large"
-                    name="bskyIdentifier"
-                    defaultValue={blueskyHandle}
-                    required
-                    autocorrect="off"
-                    autocapitalize="off"
-                    autocomplete="username"
-                    spellCheck={false}
-                    placeholder="you.bsky.social"
-                    disabled={bskyUIState === 'loading'}
-                    dir="auto"
-                  />
-                </label>
-                {blueskyError}
-                <div>
-                  <button disabled={bskyUIState === 'loading'}>
-                    <Trans>Continue with Bluesky</Trans>
-                  </button>
-                </div>
-                <p style={{ fontSize: '90%' }}>
-                  <Trans>
-                    You'll be sent to your Bluesky server to authorize this app.
-                    No password is stored, but the session has to be renewed
-                    every two weeks.
-                  </Trans>
-                </p>
-              </form>
-            </details>
-          </>
+          blueskyPasswordForm()
         ) : (
           <p>
             <button

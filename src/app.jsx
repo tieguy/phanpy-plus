@@ -433,45 +433,7 @@ function App() {
     const code = decodeURIComponent(
       (window.location.search.match(/code=([^&]+)/) || [, ''])[1],
     );
-    // AT Protocol (Bluesky) OAuth callbacks also carry `code`, but are
-    // distinguished by `iss` + `state` params
-    const searchParams = new URLSearchParams(window.location.search);
-    const isBlueskyOAuthCallback =
-      !!code && searchParams.has('iss') && searchParams.has('state');
-
-    if (isBlueskyOAuthCallback) {
-      (async () => {
-        setUIState('loading');
-        try {
-          const { completeBlueskyOAuth } = await import('./utils/bluesky');
-          const did = await completeBlueskyOAuth();
-          // Clear remaining OAuth params from the URL
-          window.history.replaceState(
-            {},
-            document.title,
-            window.location.pathname || '/',
-          );
-          if (did) {
-            const account = getAccount(did);
-            const { client } = api({ account });
-            initStates();
-            window.__IGNORE_GET_ACCOUNT_ERROR__ = true;
-            await Promise.allSettled([
-              initPreferences(client),
-              initInstance(client, client.instance),
-            ]);
-            setIsLoggedIn(true);
-            setUIState('default');
-          } else {
-            setUIState('error');
-          }
-        } catch (e) {
-          console.error(e);
-          setUIState('error');
-        }
-        __BENCHMARK.end('app-init');
-      })();
-    } else if (code) {
+    if (code) {
       console.log({ code });
 
       const isPopup = window.opener && !window.opener.closed;
@@ -590,13 +552,6 @@ function App() {
             setUIState('default');
             __BENCHMARK.end('app-init');
           }
-          // Non-blocking: give Bluesky OAuth accounts flagged as expired a
-          // chance to prove they still work and clear the flag
-          import('./utils/bluesky')
-            .then(({ reviveExpiredBlueskyAccounts }) =>
-              reviveExpiredBlueskyAccounts(),
-            )
-            .catch(() => {});
         })();
       } else {
         setUIState('default');

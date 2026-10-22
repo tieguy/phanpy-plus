@@ -23,9 +23,7 @@ export function isBlueskyAccount(account) {
   return account?.accountType === 'bluesky';
 }
 
-// Logged-in check that works for both auth modes: app-password sessions
-// keep a refresh JWT in the account; OAuth sessions keep tokens in the
-// OAuth client's own store and only mark the account with blueskyAuth.
+// Logged in = the account holds an app-password session's refresh JWT.
 // `authExpired` marks a terminally-dead session (set below in
 // markBlueskyAuthExpired) — treat it as logged out so merged-timeline and
 // cross-post fan-outs skip the account instead of erroring on every call.
@@ -33,7 +31,7 @@ export function isBlueskyLoggedIn(account) {
   return (
     isBlueskyAccount(account) &&
     !account.authExpired &&
-    (account.blueskyAuth === 'oauth' || !!account.blueskySession?.refreshJwt)
+    !!account.blueskySession?.refreshJwt
   );
 }
 
@@ -101,19 +99,6 @@ function markBlueskyAuthExpired(did) {
   });
 }
 
-// The OAuth counterpart of persistSessionForAccount's `delete authExpired`:
-// a successful restore or refresh proves the session works. Without this the
-// flag was sticky for OAuth accounts — nothing in that path ever cleared it,
-// so one spurious deletion event (see oauth.js) showed "Log back in" for good
-// while every request kept succeeding.
-function clearBlueskyAuthExpired(did) {
-  mutateAccounts((accounts) => {
-    const acc = accounts.find((a) => a.info.id === did);
-    if (!acc?.authExpired) return false;
-    delete acc.authExpired;
-  });
-}
-
 export function getBlueskyClient(account) {
   const did = account.info.id;
   if (blueskyClients[did]) return blueskyClients[did];
@@ -122,38 +107,13 @@ export function getBlueskyClient(account) {
     instance: account.instanceURL,
     session: account.blueskySession,
     did,
-    authType: account.blueskyAuth || 'password',
     onSessionChange: (session) => persistSessionForAccount(did, session),
-    onSessionDeleted: () => {
-      delete blueskyClients[did];
-    },
     getStoredSession: () =>
       getAccounts().find((a) => a.info.id === did)?.blueskySession || null,
     onAuthExpired: () => markBlueskyAuthExpired(did),
-    onSessionRestored: () => clearBlueskyAuthExpired(did),
   });
   blueskyClients[did] = client;
   return client;
-}
-
-// An OAuth account flagged authExpired is skipped by every merged view, so
-// unless it is the current account nothing ever touches its client again and
-// a stale flag can never clear itself. Probe such accounts once per page load:
-// a successful restore clears the flag (onSessionRestored); a failure changes
-// nothing. Password accounts need no probe — their client re-reads the
-// accounts store on every call and revives on a newer refresh token.
-export function reviveExpiredBlueskyAccounts() {
-  for (const account of getAccounts()) {
-    if (
-      isBlueskyAccount(account) &&
-      account.authExpired &&
-      account.blueskyAuth === 'oauth'
-    ) {
-      getBlueskyClient(account)
-        ._ready()
-        .catch(() => {});
-    }
-  }
 }
 
 // Other tabs/windows rotate the (single-use) refresh tokens and persist them
@@ -235,11 +195,6 @@ export async function loginBluesky({ service, identifier, password }) {
     instanceURL: instance,
     accessToken: session.accessJwt,
     accountType: 'bluesky',
-    // Set explicitly: this account may have been on OAuth before, and the
-    // marker decides which token store the client resumes from. Object.assign
-    // below would otherwise leave the stale 'oauth' value in place and the
-    // fresh app-password session would never be used.
-    blueskyAuth: 'password',
     blueskyService: service,
     blueskySession: {
       did: session.did,
@@ -251,12 +206,6 @@ export async function loginBluesky({ service, identifier, password }) {
     vapidKey: null,
   };
   if (existing) {
-    // Don't leave a live OAuth session behind on the PDS
-    if (existing.blueskyAuth === 'oauth') {
-      import('./oauth')
-        .then(({ revokeOAuthSession }) => revokeOAuthSession(session.did))
-        .catch(() => {});
-    }
     Object.assign(existing, accountData, { updatedAt: Date.now() });
     delete existing.authExpired;
   } else {
@@ -269,73 +218,7 @@ export async function loginBluesky({ service, identifier, password }) {
   return session.did;
 }
 
-// Complete an AT Protocol OAuth callback (or restore the pending flow),
-// save the account, and make it current. Returns the DID, or null if
-// there was nothing to complete.
-export async function completeBlueskyOAuth() {
-  const { initBlueskyOAuth } = await import('./oauth');
-  const result = await initBlueskyOAuth();
-  if (!result?.session) return null;
-  const { session } = result;
-  const did = session.did || session.sub;
-
-  const { Agent } = await loadAtproto();
-  const agent = new Agent(session);
-  let profile;
-  try {
-    const res = await agent.getProfile({ actor: did });
-    profile = res.data;
-  } catch (e) {
-    profile = { did, handle: '' };
-  }
-
-  // Best-effort: label the account with its auth server's host
-  let instance = 'bsky.social';
-  let service = DEFAULT_BLUESKY_SERVICE;
-  try {
-    const issuer = session.serverMetadata?.issuer;
-    if (issuer) {
-      instance = new URL(issuer).host.toLowerCase();
-      service = issuer.replace(/\/+$/, '');
-    }
-  } catch (e) {}
-
-  seedInstanceInfo(instance);
-
-  const accounts = getAccounts();
-  const existing = accounts.find((a) => a.info.id === did);
-  const accountData = {
-    info: profileToAccount(profile, instance),
-    instanceURL: instance,
-    // Marker value: real tokens live in the OAuth client's own store.
-    // Must be truthy so "logged out" checks (!account.accessToken) pass.
-    accessToken: 'oauth',
-    accountType: 'bluesky',
-    blueskyAuth: 'oauth',
-    blueskyService: service,
-    blueskySession: null,
-    vapidKey: null,
-  };
-  if (existing) {
-    Object.assign(existing, accountData, { updatedAt: Date.now() });
-    delete existing.authExpired;
-  } else {
-    accounts.push({ ...accountData, createdAt: Date.now() });
-  }
-  saveAccounts(accounts);
-  setCurrentAccountID(did);
-  delete blueskyClients[did];
-  return did;
-}
-
 export function logoutBluesky(accountID) {
-  const account = getAccounts().find((a) => a.info.id === accountID);
-  if (account?.blueskyAuth === 'oauth') {
-    // Fire-and-forget token revocation via the OAuth client
-    import('./oauth')
-      .then(({ revokeOAuthSession }) => revokeOAuthSession(accountID))
-      .catch(() => {});
-  }
   delete blueskyClients[accountID];
 }
 
