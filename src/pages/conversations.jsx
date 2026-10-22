@@ -6,6 +6,7 @@ import { useSnapshot } from 'valtio';
 
 import Avatar from '../components/avatar';
 import Icon from '../components/icon';
+import Link from '../components/link';
 import Loader from '../components/loader';
 import RelativeTime from '../components/relative-time';
 import { api } from '../utils/api';
@@ -31,8 +32,8 @@ function names(accounts) {
 
 // The conversation list: threads with a reply or mention to the user in the
 // last CONVERSATION_DAYS, from every merged source. In conversation mode this
-// is the only page, so the header carries no navigation menu and no home link,
-// and rows contain no links.
+// is the only page, so the header carries no navigation menu and no home link.
+// Each row opens its thread at the latest response.
 function Conversations() {
   const { t } = useLingui();
   useTitle(t`Conversations`, '/conversations');
@@ -145,42 +146,47 @@ function Conversations() {
                 const account = entry.accounts[0];
                 const bluesky = !!entry.latestStatus._bluesky;
                 return (
-                  <li key={entry.key} class="conversation-row">
-                    <Avatar
-                      url={account?.avatar}
-                      size="xxl"
-                      alt={account?.displayName}
-                      squircle={account?.bot}
-                    />
-                    <div class="conversation-content">
-                      <div class="conversation-top">
-                        <span class="conversation-name">
-                          {names(entry.accounts)}
-                        </span>
-                        <Icon
-                          icon={bluesky ? 'bluesky' : 'mastodon'}
-                          size="s"
-                          class="network-badge"
-                          alt={bluesky ? 'Bluesky' : 'Mastodon'}
-                        />
-                        <RelativeTime
-                          datetime={entry.latestAt}
-                          format="micro"
-                        />
-                      </div>
-                      <div class="conversation-snippet">
-                        {getHTMLText(entry.latestStatus.content) || <i>…</i>}
-                      </div>
-                      {entry.responseCount > 1 && (
-                        <div class="conversation-count">
-                          <Plural
-                            value={entry.responseCount}
-                            one="# response"
-                            other="# responses"
+                  <li key={entry.key}>
+                    <Link
+                      class="conversation-row"
+                      to={`/conversations/${entry.instance}/${entry.latestStatus.id}`}
+                    >
+                      <Avatar
+                        url={account?.avatar}
+                        size="xxl"
+                        alt={account?.displayName}
+                        squircle={account?.bot}
+                      />
+                      <div class="conversation-content">
+                        <div class="conversation-top">
+                          <span class="conversation-name">
+                            {names(entry.accounts)}
+                          </span>
+                          <Icon
+                            icon={bluesky ? 'bluesky' : 'mastodon'}
+                            size="s"
+                            class="network-badge"
+                            alt={bluesky ? 'Bluesky' : 'Mastodon'}
+                          />
+                          <RelativeTime
+                            datetime={entry.latestAt}
+                            format="micro"
                           />
                         </div>
-                      )}
-                    </div>
+                        <div class="conversation-snippet">
+                          {getHTMLText(entry.latestStatus.content) || <i>…</i>}
+                        </div>
+                        {entry.responseCount > 1 && (
+                          <div class="conversation-count">
+                            <Plural
+                              value={entry.responseCount}
+                              one="# response"
+                              other="# responses"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </Link>
                   </li>
                 );
               })}

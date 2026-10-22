@@ -63,6 +63,40 @@ test.describe('in conversation mode', () => {
     });
   }
 
+  test('a thread renders with inert profile links', async ({ page }) => {
+    const status = {
+      id: '123',
+      created_at: '2026-10-21T12:00:00.000Z',
+      account: {
+        id: 'b1',
+        username: 'bob',
+        display_name: 'Bob',
+        acct: 'bob@instance-a.test',
+        url: 'https://instance-a.test/@bob',
+        avatar: '',
+        avatar_static: '',
+      },
+      content: '<p>Replying to you</p>',
+      visibility: 'public',
+      media_attachments: [],
+      mentions: [],
+      tags: [],
+      emojis: [],
+    };
+    await page.route('https://instance-a.test/api/v1/statuses/123', (route) =>
+      route.fulfill({ json: status }),
+    );
+    await page.route(
+      'https://instance-a.test/api/v1/statuses/123/context',
+      (route) => route.fulfill({ json: { ancestors: [], descendants: [] } }),
+    );
+    await page.goto('/#/conversations/instance-a.test/123');
+    await expect(page.getByText('Replying to you')).toBeVisible();
+    await page.locator('.name-text').first().click();
+    await expect(page).toHaveURL(/#\/conversations\/instance-a.test\/123$/);
+    await expect(page.locator('.account-container')).toHaveCount(0);
+  });
+
   test('shows no app chrome', async ({ page }) => {
     await page.goto('/#/conversations');
     await expect(

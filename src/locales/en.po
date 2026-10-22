@@ -900,6 +900,7 @@ msgstr "Schedule"
 #: src/components/status.jsx:2386
 #: src/components/status.jsx:3188
 #: src/components/status.jsx:3200
+#: src/pages/conversation-thread.jsx:80
 msgid "Reply"
 msgstr ""
 
@@ -2093,6 +2094,7 @@ msgstr ""
 #: src/components/related-actions.jsx:641
 #: src/components/status.jsx:1680
 #: src/pages/collection.jsx:325
+#: src/pages/conversation-thread.jsx:58
 msgid "Link copied"
 msgstr ""
 
@@ -2100,6 +2102,7 @@ msgstr ""
 #: src/components/related-actions.jsx:644
 #: src/components/status.jsx:1683
 #: src/pages/collection.jsx:328
+#: src/pages/conversation-thread.jsx:60
 msgid "Unable to copy link"
 msgstr ""
 
@@ -2191,7 +2194,7 @@ msgstr "Show results"
 
 #: src/components/poll.jsx:411
 #: src/components/poll.jsx:413
-#: src/pages/conversations.jsx:121
+#: src/pages/conversations.jsx:124
 #: src/pages/engagement.jsx:105
 #: src/pages/scheduled-posts.jsx:100
 #: src/pages/status.jsx:1583
@@ -3162,6 +3165,7 @@ msgstr ""
 #: src/components/status.jsx:1457
 #: src/components/status.jsx:2400
 #: src/components/status.jsx:3329
+#: src/pages/conversation-thread.jsx:90
 msgid "Unlike"
 msgstr ""
 
@@ -3170,6 +3174,7 @@ msgstr ""
 #: src/components/status.jsx:2401
 #: src/components/status.jsx:3329
 #: src/components/status.jsx:3330
+#: src/pages/conversation-thread.jsx:90
 msgid "Like"
 msgstr ""
 
@@ -4039,31 +4044,56 @@ msgstr "No accounts in this collection yet."
 msgid "Marked as sensitive"
 msgstr "Marked as sensitive"
 
+#. placeholder {0}: e?.message || e
+#: src/pages/conversation-thread.jsx:39
+msgid "Unable to like: {0}"
+msgstr "Unable to like: {0}"
+
+#: src/pages/conversation-thread.jsx:94
+msgid "Share link"
+msgstr "Share link"
+
+#: src/pages/conversation-thread.jsx:106
+#: src/pages/conversation-thread.jsx:158
+msgid "Conversation"
+msgstr "Conversation"
+
+#: src/pages/conversation-thread.jsx:154
+#: src/pages/dm-thread.jsx:120
+#: src/pages/dm-thread.jsx:121
+#: src/pages/status.jsx:1467
+msgid "Back"
+msgstr ""
+
+#: src/pages/conversation-thread.jsx:166
+msgid "Unable to load this conversation."
+msgstr "Unable to load this conversation."
+
 #: src/pages/conversations.jsx:25
 #~ msgid "Conversations will appear here."
 #~ msgstr "Conversations will appear here."
 
-#: src/pages/conversations.jsx:38
-#: src/pages/conversations.jsx:112
+#: src/pages/conversations.jsx:39
+#: src/pages/conversations.jsx:115
 #: src/pages/filters.jsx:31
 msgid "Conversations"
 msgstr ""
 
 #. placeholder {0}: failed.join(', ')
-#: src/pages/conversations.jsx:129
+#: src/pages/conversations.jsx:132
 msgid "Couldn’t load: {0}"
 msgstr "Couldn’t load: {0}"
 
-#: src/pages/conversations.jsx:135
+#: src/pages/conversations.jsx:138
 msgid "Unable to load conversations."
 msgstr "Unable to load conversations."
 
 #. placeholder {0}: entry.responseCount
-#: src/pages/conversations.jsx:174
+#: src/pages/conversations.jsx:181
 msgid "{0, plural, one {# response} other {# responses}}"
 msgstr "{0, plural, one {# response} other {# responses}}"
 
-#: src/pages/conversations.jsx:188
+#: src/pages/conversations.jsx:196
 msgid "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 msgstr "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 
@@ -4082,12 +4112,6 @@ msgstr "Messages"
 #: src/pages/dm-thread.jsx:102
 msgid "Your message couldn’t be sent. Try again."
 msgstr "Your message couldn’t be sent. Try again."
-
-#: src/pages/dm-thread.jsx:120
-#: src/pages/dm-thread.jsx:121
-#: src/pages/status.jsx:1467
-msgid "Back"
-msgstr ""
 
 #: src/pages/dm-thread.jsx:169
 msgid "Couldn’t load this conversation."

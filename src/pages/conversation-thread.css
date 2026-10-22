@@ -1,0 +1,50 @@
+#conversation-thread-page {
+  .thread-posts {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .thread-post {
+    border-bottom: 1px solid var(--outline-color);
+
+    &.focused {
+      background-color: var(--bg-faded-color);
+    }
+  }
+
+  /* Inert links read as text. Web links in the post text keep link colour,
+     because they still open in a new tab. */
+  .inert-links a {
+    cursor: default;
+  }
+  .inert-links :is(.name-text, .mention, .status-link, .avatar) {
+    color: inherit;
+    text-decoration: none;
+  }
+  .inert-links .content a:not(.mention),
+  .inert-links a.card {
+    cursor: pointer;
+  }
+
+  .thread-actions {
+    display: flex;
+    gap: 8px;
+    padding: 0 16px 8px;
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      color: var(--text-insignificant-color);
+    }
+
+    button.liked {
+      color: var(--favourite-color);
+    }
+  }
+
+  .ui-state {
+    color: var(--text-insignificant-color);
+  }
+}

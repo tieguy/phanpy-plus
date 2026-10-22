@@ -24,6 +24,10 @@ import './utils/toast-alert';
 
 import BackgroundService from './components/background-service';
 import ComposeButton from './components/compose-button';
+import {
+  ConversationNotificationRoute,
+  ConversationNotificationRouter,
+} from './components/conversation-notification-router';
 import { ICONS } from './components/ICONS';
 import IOSInstallHint from './components/ios-install-hint';
 import KeyboardShortcutsHelp from './components/keyboard-shortcuts-help';
@@ -40,6 +44,7 @@ import AnnualReport from './pages/annual-report';
 import Bookmarks from './pages/bookmarks';
 import Catchup from './pages/catchup';
 import Collection from './pages/collection';
+import ConversationThread from './pages/conversation-thread';
 import Conversations from './pages/conversations';
 import DMThread from './pages/dm-thread';
 import Engagement from './pages/engagement';
@@ -704,6 +709,7 @@ function App() {
         <ConversationRoutes />
         <Modals />
         <BackgroundService />
+        {isLoggedIn && <ConversationNotificationRouter />}
       </AuthProvider>
     );
   }
@@ -747,6 +753,22 @@ function ConversationRoutes() {
         element={
           <AuthRoute>
             <Conversations />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/conversations/:instance/:id"
+        element={
+          <AuthRoute>
+            <ConversationThread />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <AuthRoute>
+            <ConversationNotificationRoute />
           </AuthRoute>
         }
       />
@@ -885,6 +907,14 @@ function SecondaryRoutes() {
         element={
           <AuthRoute>
             <Conversations />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/conversations/:instance/:id"
+        element={
+          <AuthRoute>
+            <ConversationThread />
           </AuthRoute>
         }
       />

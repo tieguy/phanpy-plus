@@ -166,19 +166,36 @@ uses direct responses.
 
 ### Thread view
 
-`src/pages/conversation-thread.jsx` fetches
-`masto.v1.statuses.$select(id).context.fetch()` through the client for the
-row's instance. It renders ancestors, the focused post and descendants
-with the existing `Status` component in `readOnly` mode, plus its own
-reply, like and share-link buttons. Share link uses the system share sheet
-(`navigator.share`) where it exists, and copies the post URL elsewhere.
+A row opens `/conversations/:instance/:id` at its latest response.
+`src/pages/conversation-thread.jsx` fetches the status and
+`masto.v1.statuses.$select(id).context.fetch()` through `api({ instance })`.
+It renders ancestors, that post and its descendants as one flat list, in
+the order the server returns them, and scrolls the post into view. Each
+post is the existing `Status` component in `readOnly` and `previewMode`,
+which removes its action bar and its context menu (the context menu has
+profile and boost actions). Below each post are the page's own reply,
+like and share-link buttons:
 
-An `InertLinks` wrapper controls every link inside the thread. It
-handles `click` and `keydown` in the capture phase. For a link to a web
-page in post text, it opens the URL in a new tab. For every other link
-(profile, hashtag, mention, quoted post), it calls `preventDefault()`, and
-CSS removes the link styling. Quoted posts render as their text only, with
-no click target.
+- **Reply** opens the composer with `replyToStatus._instance` set to the
+  thread's instance, so the reply posts from that account. After a post,
+  the composer bumps `states.reloadStatusPage`, and the thread reloads.
+- **Like** calls `favourite()` or `unfavourite()` and saves the returned
+  status.
+- **Share link** uses the system share sheet (`navigator.share`) where it
+  exists, and copies the post URL elsewhere.
+
+`src/components/inert-links.jsx` wraps each post. It handles `click` and
+Enter `keydown` in the capture phase, and it calls `preventDefault()` and
+`stopPropagation()` on any event inside an `<a>`. Stopping propagation
+matters: some links act from their own `onClick` (a profile name opens the
+account sheet) instead of following their `href`. `webLinkTarget` decides
+which links open a new tab: an `http(s)` link inside `.content` that is
+not a `.mention` (Mastodon and the Bluesky converter both give @-mentions
+and hashtags that class), and a link-preview `a.card`. Every other link
+does nothing, and CSS shows it as text.
+
+The composer's "Reply posted" toast links to `/:instance/s/:id`. In
+conversation mode, that path redirects to the list.
 
 A new tab is outside this app. A Mastodon post URL opens that server's own
 web interface, which has a feed. The plan accepts this, because leaving
@@ -194,12 +211,23 @@ accounts get no push notices. A Bluesky push path is not part of this
 plan.
 
 When the user taps a notice, the `notificationclick` handler in
-`public/sw.js` opens `/#/notifications?id=<notification ID>&access_token=…`.
-The worker knows the notification ID, not the post. In conversation mode,
-the guard catches this route. It fetches the notification with the
-account that matches the access token, then redirects to the conversation
-thread of its status. If the fetch fails, it redirects to
-`/conversations`. `public/sw.js` does not change.
+`public/sw.js` reaches the app in one of two ways. With no window open,
+it opens `/#/notifications?id=<notification ID>&access_token=…`. With a
+window open, it posts a message, and a listener in
+`src/components/notification-service.jsx` sets `states.routeNotification`.
+Either way, the app knows the notification ID, not the post.
+
+`NotificationService` is not rendered in conversation mode.
+`src/components/conversation-notification-router.jsx` takes its place:
+
+- `ConversationNotificationRoute` is the `/notifications` route. It
+  copies the ID and the decoded token into `states.routeNotification`.
+- `ConversationNotificationRouter` watches `states.routeNotification`. It
+  fetches the notification with the account that matches the token, then
+  opens the thread of its status. If the fetch fails, or the status is a
+  private mention, it opens `/conversations`.
+
+`public/sw.js` does not change.
 
 Which notices arrive is set per subscription on the Mastodon server, in
 the existing push settings. Those settings are reachable only during a
