@@ -824,16 +824,6 @@ const PrimaryRoutes = memo(() => {
             }
           />
           <Route path="/_qr-scan" element={<QrScanTest />} />
-          <Route
-            path="/_foryou-lab"
-            element={
-              <AuthRoute>
-                <Suspense fallback={<Loader />}>
-                  <ForYouLab />
-                </Suspense>
-              </AuthRoute>
-            }
-          />
         </>
       )}
     </Routes>
@@ -940,6 +930,18 @@ function SecondaryRoutes() {
           </AuthRoute>
         }
       />
+      {(import.meta.env.DEV || import.meta.env.FLEETING_DEV) && (
+        <Route
+          path="/_foryou-lab"
+          element={
+            <AuthRoute>
+              <Suspense fallback={<Loader />}>
+                <ForYouLab />
+              </Suspense>
+            </AuthRoute>
+          }
+        />
+      )}
       <Route
         path="/messages"
         element={
