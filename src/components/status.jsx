@@ -40,6 +40,7 @@ import openCompose from '../utils/open-compose';
 import pmem from '../utils/pmem';
 import {
   getPostQuoteApprovalPolicy,
+  getQuotePolicy,
   supportsNativeQuote,
 } from '../utils/quote-utils';
 import RTF from '../utils/relative-time-format';
@@ -298,7 +299,7 @@ const checkDifferentLanguage = (
   return different;
 };
 
-const quoteMessages = {
+export const quoteMessages = {
   quotePrivate: msg`Private posts cannot be quoted`,
   requestQuote: msg`Request to quote`,
   quoteManualReview: msg`Author will manually review`,
@@ -814,35 +815,22 @@ function Status({
     canBoost = true;
   }
 
-  // Quote logic blatantly copied from https://github.com/mastodon/mastodon/blob/854aaec6fe69df02e6d850cb90eef37032b4d72f/app/javascript/mastodon/components/status/boost_button_utils.ts#L131-L163
   let quoteDisabled = false;
   let quoteText = t`Quote`;
   let quoteMetaText;
 
   if (supportsNativeQuote(instance)) {
-    const isMine = isSelf;
-    const isMineAndPrivate = isMine && visibility === 'private';
-    const isQuoteAutomaticallyAccepted =
-      quoteApproval?.currentUser === 'automatic' &&
-      (isPublic || isMineAndPrivate);
-    const isQuoteManuallyAccepted =
-      quoteApproval?.currentUser === 'manual' && (isPublic || isMineAndPrivate);
-    const isQuoteFollowersOnly =
-      quoteApproval?.automatic?.[0] === 'followers' ||
-      quoteApproval?.manual?.[0] === 'followers';
-    if (!isPublic && !isMine) {
-      quoteDisabled = true;
-      quoteMetaText = _(quoteMessages.quotePrivate);
-    } else if (isQuoteAutomaticallyAccepted) {
-      // No need to do anything
-    } else if (isQuoteManuallyAccepted) {
+    const { disabled, reason } = getQuotePolicy({
+      visibility,
+      isSelf,
+      quoteApproval,
+    });
+    quoteDisabled = disabled;
+    if (reason === 'requestQuote') {
       quoteText = _(quoteMessages.requestQuote);
       quoteMetaText = _(quoteMessages.quoteManualReview);
-    } else {
-      quoteDisabled = true;
-      quoteMetaText = isQuoteFollowersOnly
-        ? _(quoteMessages.quoteFollowersOnly)
-        : _(quoteMessages.quoteCannot);
+    } else if (reason) {
+      quoteMetaText = _(quoteMessages[reason]);
     }
   }
   const canQuote = supportsNativeQuote(instance) && !quoteDisabled;

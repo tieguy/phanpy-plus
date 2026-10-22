@@ -17,7 +17,7 @@ let blueskyInstances;
 let currentInstance;
 let apiVersionsByInstance;
 
-const { supportsNativeQuote } = await import('./quote-utils');
+const { getQuotePolicy, supportsNativeQuote } = await import('./quote-utils');
 
 describe('supportsNativeQuote', () => {
   beforeEach(() => {
@@ -48,5 +48,61 @@ describe('supportsNativeQuote', () => {
     expect(supportsNativeQuote()).toBe(false);
     currentInstance = { _bluesky: true };
     expect(supportsNativeQuote()).toBe(true);
+  });
+});
+
+describe('getQuotePolicy', () => {
+  it('allows a public post that accepts quotes automatically', () => {
+    expect(
+      getQuotePolicy({
+        visibility: 'public',
+        isSelf: false,
+        quoteApproval: { currentUser: 'automatic' },
+      }),
+    ).toEqual({ disabled: false, reason: null });
+  });
+
+  it('allows a request when the author reviews quotes', () => {
+    expect(
+      getQuotePolicy({
+        visibility: 'unlisted',
+        isSelf: false,
+        quoteApproval: { currentUser: 'manual' },
+      }),
+    ).toEqual({ disabled: false, reason: 'requestQuote' });
+  });
+
+  it('refuses someone else’s private post', () => {
+    expect(
+      getQuotePolicy({
+        visibility: 'private',
+        isSelf: false,
+        quoteApproval: { currentUser: 'automatic' },
+      }),
+    ).toEqual({ disabled: true, reason: 'quotePrivate' });
+  });
+
+  it('allows the user’s own private post', () => {
+    expect(
+      getQuotePolicy({
+        visibility: 'private',
+        isSelf: true,
+        quoteApproval: { currentUser: 'automatic' },
+      }),
+    ).toEqual({ disabled: false, reason: null });
+  });
+
+  it('names a followers-only policy', () => {
+    expect(
+      getQuotePolicy({
+        visibility: 'public',
+        isSelf: false,
+        quoteApproval: { automatic: ['followers'], currentUser: 'denied' },
+      }),
+    ).toEqual({ disabled: true, reason: 'quoteFollowersOnly' });
+    expect(getQuotePolicy({ visibility: 'public', isSelf: false })).toEqual({
+      disabled: true,
+      reason: 'quoteCannot',
+    });
   });
 });

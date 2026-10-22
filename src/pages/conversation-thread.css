@@ -1,0 +1,149 @@
+#conversation-thread-page {
+  /* Status draws a 50px avatar inside 16px of padding, then 12px of gap.
+     A small (nested) Status puts a 20px avatar in its meta line instead, and
+     its text starts at the padding. */
+  --status-padding: 16px;
+  --avatar-center: 41px;
+  --text-start: 78px;
+  --small-avatar-center: 26px;
+  --line-width: 3px;
+  --line-radius: 10px;
+  --level-indent: 16px;
+
+  /* Narrow screens spend less on each level, so deep replies keep a readable
+     width. */
+  @media (max-width: 40em) {
+    --status-padding: 10px;
+    --small-avatar-center: 20px;
+    --level-indent: 8px;
+
+    .thread-post.nested .status {
+      padding-inline: var(--status-padding);
+    }
+  }
+
+  .thread-posts,
+  .thread-replies {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* Top-level branches are separated like timeline items. */
+  .thread-posts > li {
+    border-bottom: var(--hairline-width) solid var(--divider-color);
+  }
+
+  /* A reply list hangs off its parent's avatar on a rounded line, with a
+     curve into each reply, as in the full app's thread view. */
+  .thread-replies {
+    position: relative;
+    margin-inline-start: calc(var(--avatar-center) - var(--line-width) / 2);
+    padding-bottom: 8px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset-block: 0 16px;
+      inset-inline-start: 0;
+      width: var(--line-width);
+      border-radius: var(--line-width);
+      background-color: var(--comment-line-color);
+    }
+
+    > li {
+      position: relative;
+    }
+
+    > li:not(.thread-more)::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      inset-inline-start: 0;
+      width: calc(var(--line-radius) * 2);
+      height: calc(var(--line-radius) * 2);
+      border-radius: var(--line-radius);
+      border: var(--line-width) solid transparent;
+      border-bottom-color: var(--comment-line-color);
+      transform: rotate(45deg);
+      :dir(rtl) & {
+        transform: rotate(-45deg);
+      }
+    }
+
+    > li > .thread-post {
+      padding-inline-start: var(--level-indent);
+    }
+
+    /* Deeper lists hang off the reply's own small avatar. */
+    .thread-replies {
+      margin-inline-start: calc(
+        var(--level-indent) + var(--small-avatar-center) - var(--line-width) / 2
+      );
+    }
+  }
+
+  .thread-post {
+    border-radius: 16px;
+
+    &.focused {
+      background-color: var(--bg-faded-color);
+    }
+  }
+
+  /* Inert links read as text. Web links in the post text keep link colour,
+     because they still open in a new tab. */
+  .inert-links a {
+    cursor: default;
+  }
+  .inert-links :is(.name-text, .mention, .status-link, .avatar) {
+    color: inherit;
+    text-decoration: none;
+  }
+  .inert-links .content a:not(.mention),
+  .inert-links a.card {
+    cursor: pointer;
+  }
+
+  .thread-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: -8px;
+    padding: 0 16px 8px var(--text-start);
+
+    .thread-post.nested & {
+      padding-inline-start: var(--status-padding);
+    }
+
+    button {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      border-radius: 999px;
+      color: var(--text-insignificant-color);
+    }
+
+    button.liked {
+      color: var(--favourite-color);
+    }
+  }
+
+  /* The full app's "more replies" pill. */
+  .thread-more {
+    padding: 4px 0 12px var(--level-indent);
+
+    button {
+      padding: 8px;
+      border-radius: 8px;
+      background-color: var(--bg-faded-color);
+      box-shadow: 0 0 0 2px var(--bg-color);
+      color: var(--text-insignificant-color);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+  }
+
+  .ui-state {
+    color: var(--text-insignificant-color);
+  }
+}

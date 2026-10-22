@@ -575,6 +575,12 @@ a[href^='http'][rel*='nofollow']:visited:not(:has(div)) {
 @media (max-width: 40em) {
   .timeline.contextual {
     --max-comments-level: 4;
+    /* Each level and each reply's padding cost less, so deep replies keep a
+       readable width. */
+    --line-margin-end: 10px;
+  }
+  .timeline.contextual > li.descendant .status {
+    padding-inline: 10px;
   }
   .timeline.contextual .replies[data-comments-level='4'],
   .timeline.contextual .replies[data-comments-level='4']:has(.replies) {
