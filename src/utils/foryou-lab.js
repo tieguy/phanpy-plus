@@ -1,5 +1,5 @@
 // For You lab: candidate ranking rules, compared blind on real data.
-// Pure functions only; the dev page in src/pages/foryou-lab.jsx fetches the
+// Pure functions only; the page in src/pages/foryou-lab.jsx fetches the
 // data and records which picks the user finds interesting.
 
 export const WINDOW_MS = 24 * 60 * 60 * 1000;

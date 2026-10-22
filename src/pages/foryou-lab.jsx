@@ -20,8 +20,8 @@ import {
 import states, { saveStatus } from '../utils/states';
 import useTitle from '../utils/useTitle';
 
-// Dev-only page. Its strings are plain text, not lingui macros, so they
-// need no catalog entries.
+// Experiment page, reached only by typing its URL. Its strings are plain
+// text, not lingui macros, so they need no catalog entries.
 
 const HOME_PAGES = 12;
 const FEED_PAGES = 4;

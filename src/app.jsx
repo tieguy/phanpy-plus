@@ -96,10 +96,7 @@ const Sandbox =
   import.meta.env.DEV || import.meta.env.FLEETING_DEV
     ? lazy(() => import('./pages/sandbox'))
     : () => null;
-const ForYouLab =
-  import.meta.env.DEV || import.meta.env.FLEETING_DEV
-    ? lazy(() => import('./pages/foryou-lab'))
-    : () => null;
+const ForYouLab = lazy(() => import('./pages/foryou-lab'));
 
 // Lazy load MockHome component only in development (not FLEETING_DEV)
 const MockHome = lazy(() => import('./pages/mock-home'));
@@ -885,18 +882,16 @@ function SecondaryRoutes() {
           </AuthRoute>
         }
       />
-      {(import.meta.env.DEV || import.meta.env.FLEETING_DEV) && (
-        <Route
-          path="/_foryou-lab"
-          element={
-            <AuthRoute>
-              <Suspense fallback={<Loader />}>
-                <ForYouLab />
-              </Suspense>
-            </AuthRoute>
-          }
-        />
-      )}
+      <Route
+        path="/_foryou-lab"
+        element={
+          <AuthRoute>
+            <Suspense fallback={<Loader />}>
+              <ForYouLab />
+            </Suspense>
+          </AuthRoute>
+        }
+      />
       <Route
         path="/messages"
         element={
