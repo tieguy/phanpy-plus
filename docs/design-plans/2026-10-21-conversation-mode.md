@@ -288,6 +288,8 @@ and the invariants below. Run `npm run extract` and commit
 
 ## Open Questions
 
+- **Nesting**: the thread view is a flat list. A busy thread with
+  branches may need nesting by `inReplyToId`.
 - **Recency**: is 7 days the right length for the list?
 - **Notifications badge**: should conversation mode show a count of new
   direct responses, or should the list refresh only when the user opens

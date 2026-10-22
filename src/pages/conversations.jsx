@@ -180,8 +180,8 @@ function Conversations() {
                           <div class="conversation-count">
                             <Plural
                               value={entry.responseCount}
-                              one="# response"
-                              other="# responses"
+                              one="# reply"
+                              other="# replies"
                             />
                           </div>
                         )}

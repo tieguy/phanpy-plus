@@ -86,6 +86,65 @@ Two invariants, both load-bearing:
 
 On a post the user cannot boost (`!canBoost`), the action is unreachable on both surfaces. This is a code reading on 2026-09-10, not a browser observation. In the action bar, the rocket `StatusButton` is the menu trigger and carries `disabled={!canBoost}`, so the menu does not open. In the kebab, the Boost entry is a `SubMenu` that receives the same `disabled` prop, so its submenu does not open.
 
+## Conversation mode
+
+Outside fixed daily windows, the app shows only conversations: threads with
+a reply or mention to the user. The design plan is
+`docs/design-plans/2026-10-21-conversation-mode.md`.
+
+- **Schedule.** `src/utils/conversation-schedule.js` holds
+  `FULL_APP_WINDOWS` (weekday and weekend lists of `[startMinute,
+  endMinute)` in device local time), `isFullAppOpen(date)` and
+  `nextChange(date)`. The schedule is a constant by decision, so nothing in
+  the app can switch it off. A change is a code change and a deploy.
+- **Guard.** `src/utils/useConversationMode.js` sets one timer for the next
+  window edge and re-checks when the page becomes visible. In conversation
+  mode, `App` in `src/app.jsx` renders `ConversationRoutes` instead of the
+  normal route trees and chrome: the list, a thread, `/notifications`,
+  login and welcome. Every other path redirects to `/conversations`.
+  Entry into the mode waits until the composer closes, then
+  `hideAllModals()` closes any sheet left open.
+- **List.** `src/pages/conversations.jsx` walks `types: ['mention']`
+  notifications for 7 days from every merged source, and
+  `groupConversations` in `src/utils/conversation-group.js` makes one row per
+  thread. Bluesky rows group by `_threadRootId`, which the converter sets
+  from `record.reply.root`. Mastodon rows group by following `inReplyToId`
+  through the batch, so one thread can show as two rows. Mastodon private
+  mentions are dropped.
+- **Thread.** `src/pages/conversation-thread.jsx` renders the context as a
+  flat list of `Status` in `readOnly` and `previewMode`, with its own reply,
+  like and share-link buttons. `src/components/inert-links.jsx` stops every
+  click inside an `<a>` in the capture phase. Only a web link in the post
+  text (`.content`, not `.mention`) or a link-preview `a.card` opens, in a
+  new tab.
+- **Push notices.** `NotificationService` is not rendered in conversation
+  mode. `src/components/conversation-notification-router.jsx` maps a tapped
+  notice, from either the `/notifications?id=` URL or the service worker's
+  message, to the thread of its post.
+
+Dev builds show the full app at any time, so that local work and the
+Playwright specs do not depend on the clock. Set localStorage
+`conversationModeOverride` to `on` to force conversation mode, or to
+`schedule` to follow the windows. Production builds ignore the key.
+`tests/conversation-mode.spec.js` covers the redirects, the missing chrome
+and the inert thread links.
+
+Three invariants, all load-bearing:
+
+- **The schedule is not a setting.** No UI changes it.
+- **No path out.** In conversation mode, nothing rendered navigates to a
+  route outside the conversation tree, and every other route redirects.
+- **No draft loss.** The guard never switches modes while the composer is
+  open.
+
+## Build: console calls are stripped
+
+`vite-plugin-remove-console` deletes every `console.*` call from production
+builds. An arrow function whose whole body is one console call, such as
+`.forEach((r) => console.error(r))`, is left with an empty body, and the
+build fails with a parse error. Give such a function a block body, or use a
+loop.
+
 ## UI strings
 
 Every user-visible string goes through the lingui macros (`<Trans>` and the `t`
