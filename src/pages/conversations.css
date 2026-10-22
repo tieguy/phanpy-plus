@@ -70,6 +70,31 @@
     overflow-wrap: anywhere;
   }
 
+  .conversation-extras {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    margin-top: 4px;
+    color: var(--text-insignificant-color);
+    font-size: 0.85em;
+
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+
+  .conversations-footer {
+    padding: 16px;
+    text-align: center;
+
+    .block {
+      display: block;
+      width: 100%;
+    }
+  }
+
   .conversation-count {
     margin-top: 4px;
     color: var(--text-insignificant-color);

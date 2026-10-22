@@ -4,8 +4,9 @@
 
 import { isDirectResponse } from './notification-filter';
 
-export const CONVERSATION_DAYS = 7;
 export const PAGE_CAP = 5;
+
+const VIDEO_TYPES = new Set(['video', 'gifv']);
 
 function timeOf(notification) {
   const time = Date.parse(notification?.createdAt);
@@ -79,4 +80,23 @@ export function groupConversations(sources) {
       };
     })
     .sort((a, b) => Date.parse(b.latestAt) - Date.parse(a.latestAt));
+}
+
+// What a row's text excerpt leaves out, so the row can say so:
+// { images, videos, others, quote, card, poll }.
+export function statusExtras(status) {
+  const extras = {
+    images: 0,
+    videos: 0,
+    others: 0,
+    quote: !!status?.quote,
+    card: !!status?.card,
+    poll: !!status?.poll,
+  };
+  for (const m of status?.mediaAttachments || []) {
+    if (m.type === 'image') extras.images++;
+    else if (VIDEO_TYPES.has(m.type)) extras.videos++;
+    else extras.others++;
+  }
+  return extras;
 }

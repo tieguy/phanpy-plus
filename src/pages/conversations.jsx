@@ -12,9 +12,9 @@ import RelativeTime from '../components/relative-time';
 import { api } from '../utils/api';
 import { getOtherNetworkAccounts } from '../utils/bluesky';
 import {
-  CONVERSATION_DAYS,
   PAGE_CAP,
   groupConversations,
+  statusExtras,
 } from '../utils/conversation-group';
 import { walkUntilCutoff } from '../utils/engagement-tally';
 import getHTMLText from '../utils/getHTMLText';
@@ -30,8 +30,52 @@ function names(accounts) {
   return `${list.slice(0, 2).join(', ')} +${list.length - 2}`;
 }
 
+// A row's excerpt is text only, so it names what it leaves out.
+function Extras({ status }) {
+  const { images, videos, others, quote, card, poll } = statusExtras(status);
+  if (!images && !videos && !others && !quote && !card && !poll) return null;
+  return (
+    <div class="conversation-extras">
+      {images > 0 && (
+        <span>
+          <Icon icon="media" size="s" />{' '}
+          <Plural value={images} one="# image" other="# images" />
+        </span>
+      )}
+      {videos > 0 && (
+        <span>
+          <Icon icon="media" size="s" />{' '}
+          <Plural value={videos} one="# video" other="# videos" />
+        </span>
+      )}
+      {others > 0 && (
+        <span>
+          <Icon icon="attachment" size="s" />{' '}
+          <Plural value={others} one="# attachment" other="# attachments" />
+        </span>
+      )}
+      {quote && (
+        <span>
+          <Icon icon="quote" size="s" /> <Trans>Quoted post</Trans>
+        </span>
+      )}
+      {card && (
+        <span>
+          <Icon icon="link" size="s" /> <Trans>Link preview</Trans>
+        </span>
+      )}
+      {poll && (
+        <span>
+          <Icon icon="poll" size="s" /> <Trans>Poll</Trans>
+        </span>
+      )}
+    </div>
+  );
+}
+
 // The conversation list: threads with a reply or mention to the user in the
-// last CONVERSATION_DAYS, from every merged source. In conversation mode this
+// last day, from every merged source, one more day per tap of the footer
+// button. In conversation mode this
 // is the only page, so the header carries no navigation menu and no home link.
 // Each row opens its thread at the latest response.
 function Conversations() {
@@ -42,6 +86,8 @@ function Conversations() {
   const [uiState, setUIState] = useState('default');
   const [entries, setEntries] = useState(null);
   const [failed, setFailed] = useState([]);
+  const [days, setDays] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const [reloadCount, reload] = useReducer((c) => c + 1, 0);
 
   const sources = useRef(null);
@@ -54,56 +100,75 @@ function Conversations() {
     ];
   }
 
+  // Per source: the notifications iterator and everything read from it so
+  // far. "Show one more day" continues the same iterators instead of
+  // starting over. A refresh starts over at one day.
+  const walks = useRef(null);
+  function resetWalks() {
+    walks.current = sources.current.map(({ masto, instance }) => ({
+      instance,
+      iterator: masto.v1.notifications
+        .list({ limit: LIMIT, types: ['mention'] })
+        .values(),
+      notifications: [],
+      ended: false,
+    }));
+  }
+
   useEffect(() => {
-    let cancelled = false;
-    setUIState('loading');
-    (async () => {
-      const cutoff = Date.now() - CONVERSATION_DAYS * DAY_MS;
-      const walked = await Promise.allSettled(
-        sources.current.map(async ({ masto, instance }) => {
-          const iterator = masto.v1.notifications
-            .list({ limit: LIMIT, types: ['mention'] })
-            .values();
-          const { notifications } = await walkUntilCutoff(iterator, {
-            cutoff,
-            pageCap: PAGE_CAP,
-          });
-          return {
-            instance,
-            notifications: notifications.filter(
-              (n) => Date.parse(n.createdAt) >= cutoff,
-            ),
-          };
-        }),
-      );
-      if (cancelled) return;
-      const loaded = walked
-        .filter((r) => r.status === 'fulfilled')
-        .map((r) => r.value);
-      const failedInstances = walked
-        .map((r, i) => r.status === 'rejected' && sources.current[i].instance)
-        .filter(Boolean);
-      // A block body: the build's console stripping leaves an empty arrow body
-      // otherwise, which does not parse.
-      for (const r of walked) {
-        if (r.status === 'rejected') console.error(r.reason);
-      }
-      setFailed(failedInstances);
-      if (!loaded.length) {
-        setUIState('error');
-        return;
-      }
-      const next = groupConversations(loaded);
-      next.forEach(({ latestStatus, instance }) =>
-        saveStatus(latestStatus, instance),
-      );
-      setEntries(next);
-      setUIState('default');
-    })();
-    return () => {
-      cancelled = true;
-    };
+    resetWalks();
+    setDays(1);
+    load(1);
   }, [reloadCount]);
+
+  useEffect(() => {
+    if (days > 1) load(days);
+  }, [days]);
+
+  async function load(days) {
+    setUIState('loading');
+    const cutoff = Date.now() - days * DAY_MS;
+    const older = (n) => Date.parse(n.createdAt) < cutoff;
+    const current = walks.current;
+    const results = await Promise.allSettled(
+      current.map(async (walk) => {
+        if (walk.ended || walk.notifications.some(older)) return;
+        const { notifications, capped } = await walkUntilCutoff(walk.iterator, {
+          cutoff,
+          pageCap: PAGE_CAP,
+        });
+        walk.notifications.push(...notifications);
+        if (!capped && !notifications.some(older)) walk.ended = true;
+      }),
+    );
+    if (walks.current !== current) return;
+
+    const failedInstances = [];
+    // A block body: the build's console stripping leaves an empty arrow body
+    // otherwise, which does not parse.
+    results.forEach((r, i) => {
+      if (r.status !== 'rejected') return;
+      console.error(r.reason);
+      failedInstances.push(current[i].instance);
+    });
+    setFailed(failedInstances);
+    if (failedInstances.length === current.length) {
+      setUIState('error');
+      return;
+    }
+    const next = groupConversations(
+      current.map(({ instance, notifications }) => ({
+        instance,
+        notifications: notifications.filter((n) => !older(n)),
+      })),
+    );
+    next.forEach(({ latestStatus, instance }) =>
+      saveStatus(latestStatus, instance),
+    );
+    setEntries(next);
+    setHasMore(current.some((walk) => !walk.ended));
+    setUIState('default');
+  }
 
   return (
     <div id="conversations-page" class="deck-container" tabIndex="-1">
@@ -176,6 +241,7 @@ function Conversations() {
                         <div class="conversation-snippet">
                           {getHTMLText(entry.latestStatus.content) || <i>…</i>}
                         </div>
+                        <Extras status={entry.latestStatus} />
                         {entry.responseCount > 1 && (
                           <div class="conversation-count">
                             <Plural
@@ -194,11 +260,30 @@ function Conversations() {
           ) : (
             <p class="ui-state insignificant">
               <Plural
-                value={CONVERSATION_DAYS}
+                value={days}
                 one="No replies or mentions in the last day."
                 other="No replies or mentions in the last # days."
               />
             </p>
+          )}
+          {!!entries && (
+            <div class="conversations-footer">
+              {uiState === 'loading' ? (
+                <Loader />
+              ) : hasMore ? (
+                <button
+                  type="button"
+                  class="plain block"
+                  onClick={() => setDays((d) => d + 1)}
+                >
+                  <Trans>Show one more day</Trans>
+                </button>
+              ) : (
+                <p class="ui-state insignificant">
+                  <Trans>No older replies or mentions.</Trans>
+                </p>
+              )}
+            </div>
           )}
         </main>
       </div>

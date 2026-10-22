@@ -105,12 +105,14 @@ a reply or mention to the user. The design plan is
   Entry into the mode waits until the composer closes, then
   `hideAllModals()` closes any sheet left open.
 - **List.** `src/pages/conversations.jsx` walks `types: ['mention']`
-  notifications for 7 days from every merged source, and
+  notifications from every merged source for one day, plus one more day
+  per tap of "Show one more day", and
   `groupConversations` in `src/utils/conversation-group.js` makes one row per
   thread. Bluesky rows group by `_threadRootId`, which the converter sets
   from `record.reply.root`. Mastodon rows group by following `inReplyToId`
   through the batch, so one thread can show as two rows. Mastodon private
-  mentions are dropped.
+  mentions are dropped. `statusExtras` lists what a text-only row leaves
+  out (media, quoted post, link preview, poll).
 - **Thread.** `src/pages/conversation-thread.jsx` renders the context as a
   flat list of `Status` in `readOnly` and `previewMode`, with its own reply,
   like and share-link buttons. `src/components/inert-links.jsx` stops every

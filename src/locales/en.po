@@ -1001,6 +1001,7 @@ msgstr ""
 
 #: src/components/drafts.jsx:278
 #: src/pages/catchup.jsx:2108
+#: src/pages/conversations.jsx:69
 msgid "Poll"
 msgstr ""
 
@@ -2194,7 +2195,7 @@ msgstr "Show results"
 
 #: src/components/poll.jsx:411
 #: src/components/poll.jsx:413
-#: src/pages/conversations.jsx:124
+#: src/pages/conversations.jsx:189
 #: src/pages/engagement.jsx:105
 #: src/pages/scheduled-posts.jsx:100
 #: src/pages/status.jsx:1583
@@ -4073,25 +4074,31 @@ msgstr "Unable to load this conversation."
 #~ msgid "Conversations will appear here."
 #~ msgstr "Conversations will appear here."
 
-#: src/pages/conversations.jsx:39
-#: src/pages/conversations.jsx:115
+#: src/pages/conversations.jsx:42
+msgid "{images, plural, one {# image} other {# images}}"
+msgstr "{images, plural, one {# image} other {# images}}"
+
+#: src/pages/conversations.jsx:48
+msgid "{videos, plural, one {# video} other {# videos}}"
+msgstr "{videos, plural, one {# video} other {# videos}}"
+
+#: src/pages/conversations.jsx:54
+msgid "{others, plural, one {# attachment} other {# attachments}}"
+msgstr "{others, plural, one {# attachment} other {# attachments}}"
+
+#: src/pages/conversations.jsx:59
+msgid "Quoted post"
+msgstr "Quoted post"
+
+#: src/pages/conversations.jsx:64
+msgid "Link preview"
+msgstr "Link preview"
+
+#: src/pages/conversations.jsx:83
+#: src/pages/conversations.jsx:180
 #: src/pages/filters.jsx:31
 msgid "Conversations"
 msgstr ""
-
-#. placeholder {0}: failed.join(', ')
-#: src/pages/conversations.jsx:132
-msgid "Couldn’t load: {0}"
-msgstr "Couldn’t load: {0}"
-
-#: src/pages/conversations.jsx:138
-msgid "Unable to load conversations."
-msgstr "Unable to load conversations."
-
-#. placeholder {0}: entry.responseCount
-#: src/pages/conversations.jsx:181
-msgid "{0, plural, one {# reply} other {# replies}}"
-msgstr "{0, plural, one {# reply} other {# replies}}"
 
 #. placeholder {0}: entry.responseCount
 #: src/pages/conversations.jsx:181
@@ -4099,8 +4106,34 @@ msgstr "{0, plural, one {# reply} other {# replies}}"
 #~ msgstr "{0, plural, one {# response} other {# responses}}"
 
 #: src/pages/conversations.jsx:196
-msgid "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
-msgstr "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
+#~ msgid "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
+#~ msgstr "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
+
+#. placeholder {0}: failed.join(', ')
+#: src/pages/conversations.jsx:197
+msgid "Couldn’t load: {0}"
+msgstr "Couldn’t load: {0}"
+
+#: src/pages/conversations.jsx:203
+msgid "Unable to load conversations."
+msgstr "Unable to load conversations."
+
+#. placeholder {0}: entry.responseCount
+#: src/pages/conversations.jsx:247
+msgid "{0, plural, one {# reply} other {# replies}}"
+msgstr "{0, plural, one {# reply} other {# replies}}"
+
+#: src/pages/conversations.jsx:262
+msgid "{days, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
+msgstr "{days, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
+
+#: src/pages/conversations.jsx:279
+msgid "Show one more day"
+msgstr "Show one more day"
+
+#: src/pages/conversations.jsx:283
+msgid "No older replies or mentions."
+msgstr "No older replies or mentions."
 
 #. placeholder {0}: account.displayName || account.acct
 #: src/pages/dm-thread.jsx:36

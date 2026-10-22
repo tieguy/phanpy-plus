@@ -155,11 +155,17 @@ The thread key differs per network:
 `src/pages/conversations.jsx` fetches `types: ['mention']` notifications
 from each merged source through `api({ account })`. For each source,
 `walkUntilCutoff` from `src/utils/engagement-tally.js` pages back until
-`CONVERSATION_DAYS` (7) or `PAGE_CAP` (5 pages of 40). A source that fails
-is named in a notice, and the other sources still show. A row shows the
-avatar and names of the people who responded, a network badge, the
-relative time and up to three lines of the latest response. A row
-contains no links.
+the cutoff or `PAGE_CAP` (5 pages of 40). The first cutoff is one day.
+"Show one more day" moves the cutoff back a day and continues the same
+iterators, so it reads only the older pages. A refresh starts over at one
+day. A source that fails is named in a notice, and the other sources
+still show.
+
+A row shows the avatar and names of the people who responded, a network
+badge, the relative time and up to three lines of the latest response.
+The excerpt is text only, so `statusExtras` lists what it leaves out:
+images, videos, other attachments, a quoted post, a link preview, a poll.
+The row links to the thread at the latest response.
 
 The list does not apply `settings.notificationsResponsesOnly`. It always
 uses direct responses.
@@ -290,7 +296,6 @@ and the invariants below. Run `npm run extract` and commit
 
 - **Nesting**: the thread view is a flat list. A busy thread with
   branches may need nesting by `inReplyToId`.
-- **Recency**: is 7 days the right length for the list?
 - **Notifications badge**: should conversation mode show a count of new
   direct responses, or should the list refresh only when the user opens
   it?

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { groupConversations } from './conversation-group';
+import { groupConversations, statusExtras } from './conversation-group';
 
 let seq = 0;
 function response({
@@ -124,5 +124,41 @@ describe('groupConversations', () => {
       },
     ]);
     expect(entries.length).toBeGreaterThan(0);
+  });
+});
+
+describe('statusExtras', () => {
+  it('counts media by kind and flags quotes, cards and polls', () => {
+    expect(
+      statusExtras({
+        mediaAttachments: [
+          { type: 'image' },
+          { type: 'image' },
+          { type: 'gifv' },
+          { type: 'audio' },
+        ],
+        quote: { state: 'accepted' },
+        card: { url: 'https://example.com' },
+        poll: null,
+      }),
+    ).toEqual({
+      images: 2,
+      videos: 1,
+      others: 1,
+      quote: true,
+      card: true,
+      poll: false,
+    });
+  });
+
+  it('reports nothing for a text-only post', () => {
+    expect(statusExtras({ mediaAttachments: [] })).toEqual({
+      images: 0,
+      videos: 0,
+      others: 0,
+      quote: false,
+      card: false,
+      poll: false,
+    });
   });
 });
