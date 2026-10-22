@@ -128,30 +128,38 @@ data. Neither path reaches the feed.
 ### Conversation list
 
 `src/utils/conversation-group.js` (pure) exports
-`groupConversations(notifications)`. It keeps direct responses, groups
+`groupConversations(sources)`, where each source is
+`{ instance, notifications }`. It keeps public direct responses, groups
 them by thread key, and returns one entry per thread:
-`{ key, instance, rootId, latestAt, latestStatus, responseCount }`, sorted
-by `latestAt` descending.
+`{ key, instance, threadId, latestAt, latestStatus, responseCount, accounts }`,
+sorted by `latestAt` descending. `accounts` lists the people who
+responded, newest first, once each. Mastodon delivers private mentions
+(DMs) as `mention` notifications, so the grouping drops statuses with
+`visibility: 'direct'`.
 
 The thread key differs per network:
 
-- **Bluesky**: the converter in `src/utils/bluesky/convert.js` reads only
-  `record.reply.parent`. Add `_threadRootId` from `record.reply.root`. A
-  post with no `reply` field is its own root.
-- **Mastodon**: no field names the root. The list groups by
-  `inReplyToId` chains that are present in the fetched batch, and falls
-  back to the status ID. Two replies in the same thread that do not share
-  a chain inside the batch appear as two rows. The thread view fetches
-  the full context, so both rows open the same thread. To find the true
-  root, the list must send one context request per row. Do not add these
-  requests unless duplicate rows are common in practice.
+- **Bluesky**: the converter in `src/utils/bluesky/convert.js` sets
+  `_threadRootId` from `record.reply.root`. A post with no `reply` field
+  has no `_threadRootId` and falls through to the Mastodon rule.
+- **Mastodon**: no field names the root. The key follows `inReplyToId`
+  through the statuses in the batch and stops at the first post outside
+  it. That post is usually the user's own post, which never arrives as a
+  notification, so replies to the same post share a key. A mention that
+  is not a reply is its own thread. Two replies whose chains meet only
+  outside the batch appear as two rows. The thread view fetches the full
+  context, so both rows open the same thread. To find the true root, the
+  list must send one context request per row. Do not add these requests
+  unless duplicate rows are common in practice.
 
 `src/pages/conversations.jsx` fetches `types: ['mention']` notifications
-from each merged source through `api({ account })`, merges them with
-`createMergedTimelineIterator`, and renders rows. A row shows the author
-of the latest response, a one-line excerpt and a relative time. It loads
-until it reaches `CONVERSATION_DAYS` (initial value 7) or a page cap, in
-the same way as `walkUntilCutoff` in `src/utils/engagement-tally.js`.
+from each merged source through `api({ account })`. For each source,
+`walkUntilCutoff` from `src/utils/engagement-tally.js` pages back until
+`CONVERSATION_DAYS` (7) or `PAGE_CAP` (5 pages of 40). A source that fails
+is named in a notice, and the other sources still show. A row shows the
+avatar and names of the people who responded, a network badge, the
+relative time and up to three lines of the latest response. A row
+contains no links.
 
 The list does not apply `settings.notificationsResponsesOnly`. It always
 uses direct responses.

@@ -394,6 +394,11 @@ function baseStatus({
       : { currentUser: 'automatic', automatic: ['public'], manual: [] },
     inReplyToId: inReplyToUri ? atUriToId(inReplyToUri) : null,
     inReplyToAccountId: inReplyToUri ? didFromAtUri(inReplyToUri) : null,
+    // Conversation mode groups notifications by thread root, which Mastodon
+    // statuses do not carry.
+    _threadRootId: record?.reply?.root?.uri
+      ? atUriToId(record.reply.root.uri)
+      : null,
     language: record?.langs?.[0]?.split('-')?.[0] || null,
     filtered: [],
     application: null,
