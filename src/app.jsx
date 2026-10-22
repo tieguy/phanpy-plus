@@ -728,6 +728,18 @@ function ConversationRoutes() {
           </AuthRoute>
         }
       />
+      {/* The For You experiment stays open in conversation mode while its
+          rules are being chosen */}
+      <Route
+        path="/_foryou-lab"
+        element={
+          <AuthRoute>
+            <Suspense fallback={<Loader />}>
+              <ForYouLab />
+            </Suspense>
+          </AuthRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/conversations" replace />} />
     </Routes>
   );

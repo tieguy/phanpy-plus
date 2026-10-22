@@ -107,7 +107,9 @@ a reply or mention to the user. The design plan is
   window edge and re-checks when the page becomes visible. In conversation
   mode, `App` in `src/app.jsx` renders `ConversationRoutes` instead of the
   normal route trees and chrome: the list, a thread, `/notifications`,
-  login and welcome. Every other path redirects to `/conversations`.
+  login, welcome, and the For You lab (`/_foryou-lab`, an experiment
+  reached only by typing its URL). Every other path redirects to
+  `/conversations`.
   Entry into the mode waits until the composer closes, then
   `hideAllModals()` closes any sheet left open.
 - **List.** `src/pages/conversations.jsx` walks `types: ['mention']`
@@ -151,6 +153,8 @@ Three invariants, all load-bearing:
 - **The schedule is not a setting.** No UI changes it.
 - **No path out.** In conversation mode, nothing rendered navigates to a
   route outside the conversation tree, and every other route redirects.
+  The For You lab is the one exception, by decision, while its ranking
+  rules are being chosen.
 - **No draft loss.** The guard never switches modes while the composer is
   open.
 
