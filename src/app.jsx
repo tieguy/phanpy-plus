@@ -96,6 +96,10 @@ const Sandbox =
   import.meta.env.DEV || import.meta.env.FLEETING_DEV
     ? lazy(() => import('./pages/sandbox'))
     : () => null;
+const ForYouLab =
+  import.meta.env.DEV || import.meta.env.FLEETING_DEV
+    ? lazy(() => import('./pages/foryou-lab'))
+    : () => null;
 
 // Lazy load MockHome component only in development (not FLEETING_DEV)
 const MockHome = lazy(() => import('./pages/mock-home'));
@@ -820,6 +824,16 @@ const PrimaryRoutes = memo(() => {
             }
           />
           <Route path="/_qr-scan" element={<QrScanTest />} />
+          <Route
+            path="/_foryou-lab"
+            element={
+              <AuthRoute>
+                <Suspense fallback={<Loader />}>
+                  <ForYouLab />
+                </Suspense>
+              </AuthRoute>
+            }
+          />
         </>
       )}
     </Routes>
