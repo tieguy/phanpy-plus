@@ -4038,6 +4038,16 @@ msgstr "No accounts in this collection yet."
 msgid "Marked as sensitive"
 msgstr "Marked as sensitive"
 
+#: src/pages/conversations.jsx:9
+#: src/pages/conversations.jsx:18
+#: src/pages/filters.jsx:31
+msgid "Conversations"
+msgstr ""
+
+#: src/pages/conversations.jsx:25
+msgid "Conversations will appear here."
+msgstr "Conversations will appear here."
+
 #. placeholder {0}: account.displayName || account.acct
 #: src/pages/dm-thread.jsx:36
 msgid "Messages with {0}"
@@ -4127,10 +4137,6 @@ msgstr ""
 
 #: src/pages/filters.jsx:30
 msgid "Public timelines"
-msgstr ""
-
-#: src/pages/filters.jsx:31
-msgid "Conversations"
 msgstr ""
 
 #: src/pages/filters.jsx:32

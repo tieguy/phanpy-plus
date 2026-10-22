@@ -40,6 +40,7 @@ import AnnualReport from './pages/annual-report';
 import Bookmarks from './pages/bookmarks';
 import Catchup from './pages/catchup';
 import Collection from './pages/collection';
+import Conversations from './pages/conversations';
 import DMThread from './pages/dm-thread';
 import Engagement from './pages/engagement';
 import Favourites from './pages/favourites';
@@ -83,6 +84,7 @@ import {
   getVapidKey,
   setCurrentAccountID,
 } from './utils/store-utils';
+import useConversationMode from './utils/useConversationMode';
 
 // Lazy load Sandbox component only in development
 const Sandbox =
@@ -612,6 +614,13 @@ function App() {
 
   let location = useLocation();
   states.currentLocation = location.pathname;
+  const conversationMode = useConversationMode();
+  // A sheet left open from the full app (settings, accounts, media) carries
+  // links back into it. The hook enters conversation mode only after the
+  // composer closes, so this closes nothing in progress.
+  useEffect(() => {
+    if (conversationMode) hideAllModals();
+  }, [conversationMode]);
   // useLayoutEffect(() => {
   //   states.currentLocation = location.pathname;
   // }, [location.pathname]);
@@ -681,12 +690,22 @@ function App() {
     }
   }, [isPWA, uiState]);
 
-  if (/\/https?:/.test(location.pathname)) {
+  if (/\/https?:/.test(location.pathname) && !conversationMode) {
     return <HttpRoute />;
   }
 
   if (uiState === 'loading') {
     return <Loader id="loader-root" />;
+  }
+
+  if (conversationMode) {
+    return (
+      <AuthProvider value={isLoggedIn}>
+        <ConversationRoutes />
+        <Modals />
+        <BackgroundService />
+      </AuthProvider>
+    );
   }
 
   return (
@@ -706,6 +725,33 @@ function App() {
       <KeyboardShortcutsHelp />
       <IOSInstallHint />
     </AuthProvider>
+  );
+}
+
+// Conversation mode: the only routes that exist. Every other path, including
+// deep links and a restored PWA path, lands on the conversation list.
+function ConversationRoutes() {
+  const isLoggedIn = useAuth();
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          isLoggedIn ? <Navigate to="/conversations" replace /> : <Welcome />
+        }
+      />
+      <Route path="/login" element={<Login />} />
+      <Route path="/welcome" element={<Welcome />} />
+      <Route
+        path="/conversations"
+        element={
+          <AuthRoute>
+            <Conversations />
+          </AuthRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/conversations" replace />} />
+    </Routes>
   );
 }
 
@@ -831,6 +877,14 @@ function SecondaryRoutes() {
         element={
           <AuthRoute>
             <Mentions />
+          </AuthRoute>
+        }
+      />
+      <Route
+        path="/conversations"
+        element={
+          <AuthRoute>
+            <Conversations />
           </AuthRoute>
         }
       />

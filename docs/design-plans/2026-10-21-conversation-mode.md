@@ -24,8 +24,9 @@ out of scope for this round.
 ## Definition of Done
 
 - Outside the full-app windows, every route except the conversation routes
-  and the composer redirects to `/conversations`. This includes deep links,
-  PWA last-path restore, the `compose/` pop-out entry and the share target.
+  and the composer redirects to `/conversations`. This includes deep links
+  and PWA last-path restore. The `compose/` pop-out entry and the share
+  target open only a composer.
 - `/conversations` lists recent threads that contain a direct response to
   the user, from the current account plus every merged other-network
   account. The list is sorted by the time of the newest direct response,
@@ -99,18 +100,30 @@ user, not enforcement.
 - `/conversations/:instance/:id`: the thread view.
 - Every other path: `<Navigate to="/conversations" replace />`.
 - `<Modals />` stays, because the composer is a modal.
-- `/login` stays, so that an expired session can be renewed. The
-  Accounts sheet is reachable only from the "Log back in" prompt.
+- `/` and `/welcome` show the welcome page to a device with no account.
+- `/login` stays, so that a device with no account can log in. The
+  Accounts sheet is not reachable, so an account flagged `authExpired` is
+  renewed during a full-app window.
 
-A hook, `useFullAppOpen()`, holds the predicate in state and sets a timer
-for `nextChange()`. When a window closes while the full app is open, the
-guard waits until the composer is closed, then redirects. A redirect while
-the composer is open would discard a draft.
+The hook `useConversationMode()` in `src/utils/useConversationMode.js`
+holds the predicate in state. It sets one timer for `nextChange()`, and it
+re-checks when the page becomes visible, because timers do not fire on a
+sleeping device. When a window closes while the composer is open, the hook
+stays in full-app mode until the composer closes. On entry to conversation
+mode, `App` calls `hideAllModals()`, because a sheet left open from the
+full app (settings, accounts, media) has links back into it.
+
+Dev builds show the full app at any time, so that local work and the
+existing Playwright specs do not depend on the clock. The localStorage key
+`conversationModeOverride` set to `on` forces conversation mode, and
+`schedule` follows `FULL_APP_WINDOWS`. Production builds ignore the key,
+and the production bundle does not contain it.
 
 The `compose/` pop-out entry uses its own HTML page and does not pass
-through `App`. It must check the predicate too, or the pop-out becomes a
-way into the full app. The composer itself has no links out, so the
-pop-out only needs to block navigation that leaves the composer.
+through `App`. It needs no check: it renders only a composer, and its one
+link goes to `/`, which passes through the guard. The share target
+redirects to `/`, and the app then opens the composer with the shared
+data. Neither path reaches the feed.
 
 ### Conversation list
 
@@ -199,11 +212,11 @@ subscription to mentions only.
 
 ### Phase 1: Schedule and guard
 
-Add `conversation-schedule.js` with tests, the `useFullAppOpen()` hook,
-the conversation-mode route tree in `app.jsx` with a placeholder list
-page, and the schedule check in the `compose/` entry. Done when every non-conversation path
-redirects outside a window (verify by setting a test window in a dev
-build) and the app is unchanged inside one.
+Add `conversation-schedule.js` with tests, the `useConversationMode()`
+hook, and the conversation-mode route tree in `app.jsx` with a placeholder
+list page. `tests/conversation-mode.spec.js` checks the redirects, the
+missing chrome, the logged-out case and the unchanged full app. Done when
+that spec passes.
 
 ### Phase 2: List
 
