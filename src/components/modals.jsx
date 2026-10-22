@@ -5,6 +5,7 @@ import { subscribe, useSnapshot } from 'valtio';
 
 import Accounts from '../pages/accounts';
 import Settings from '../pages/settings';
+import { api } from '../utils/api';
 import { useAuth } from '../utils/auth-context';
 import focusDeck from '../utils/focus-deck';
 import showToast from '../utils/show-toast';
@@ -34,7 +35,9 @@ subscribe(states, (changes) => {
   }
 });
 
-export default function Modals() {
+// In conversation mode, "Check it out" after posting opens the conversation
+// thread, the only status view that exists there.
+export default function Modals({ conversationMode = false }) {
   const { t } = useLingui();
   const snapStates = useSnapshot(states);
   const navigate = useNavigate();
@@ -101,6 +104,13 @@ export default function Modals() {
                   duration: 10_000, // 10 seconds
                   onClick: (toast) => {
                     toast.hideToast();
+                    if (conversationMode) {
+                      if (scheduledAt) return;
+                      navigate(
+                        `/conversations/${instance || api().instance}/${newStatus.id}`,
+                      );
+                      return;
+                    }
                     states.prevLocation = location;
                     if (scheduledAt) {
                       navigate('/sp');

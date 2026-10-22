@@ -111,11 +111,20 @@ a reply or mention to the user. The design plan is
   thread. Bluesky rows group by `_threadRootId`, which the converter sets
   from `record.reply.root`. Mastodon rows group by following `inReplyToId`
   through the batch, so one thread can show as two rows. Mastodon private
-  mentions are dropped. `statusExtras` lists what a text-only row leaves
-  out (media, quoted post, link preview, poll).
-- **Thread.** `src/pages/conversation-thread.jsx` renders the context as a
-  flat list of `Status` in `readOnly` and `previewMode`, with its own reply,
-  like and share-link buttons. `src/components/inert-links.jsx` stops every
+  mentions are dropped, and so are responses from muted or blocked
+  Bluesky authors (`isHiddenAuthor`), because the facade passes them on.
+  `statusExtras` lists what a text-only row leaves out (media, quoted
+  post, link preview, poll). The header's "New post" button opens the
+  full composer, threads included.
+- **Thread.** `src/pages/conversation-thread.jsx` fetches the context of
+  the post and of the thread root, and `threadRows` in
+  `src/utils/conversation-tree.js` nests the replies (indent capped at
+  three levels, long side branches collapsed to a "# more replies" row).
+  Each post is a `Status` in `readOnly` and `previewMode`, with the page's
+  own reply, quote, like and share-link buttons. Quote follows
+  `getQuotePolicy` in `src/utils/quote-utils.js`, which the full app's
+  quote menu in `status.jsx` also uses. After a post, the composer's toast
+  opens the conversation thread (`Modals` gets `conversationMode`). `src/components/inert-links.jsx` stops every
   click inside an `<a>` in the capture phase. Only a web link in the post
   text (`.content`, not `.mention`) or a link-preview `a.card` opens, in a
   new tab.

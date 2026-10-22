@@ -99,6 +99,20 @@ describe('groupConversations', () => {
     expect(entries.map((e) => e.threadId)).toEqual(['ok']);
   });
 
+  it('drops replies from muted and blocked Bluesky authors', () => {
+    const muted = response({ id: 'm', at: t(10) });
+    muted.account._viewer = { muted: true };
+    const blocked = response({ id: 'b', at: t(11) });
+    blocked.account._viewer = { blocking: 'at://block' };
+    const entries = groupConversations([
+      {
+        instance: 'bsky.social',
+        notifications: [muted, blocked, response({ id: 'ok', at: t(9) })],
+      },
+    ]);
+    expect(entries.map((e) => e.threadId)).toEqual(['ok']);
+  });
+
   it('keeps instances apart and sorts newest first', () => {
     const entries = groupConversations([
       {

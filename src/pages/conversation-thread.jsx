@@ -1,7 +1,7 @@
 import './conversation-thread.css';
 
-import { Trans, useLingui } from '@lingui/react/macro';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { Plural, Trans, useLingui } from '@lingui/react/macro';
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks';
 import { useParams } from 'react-router-dom';
 import { useSnapshot } from 'valtio';
 
@@ -9,23 +9,53 @@ import Icon from '../components/icon';
 import InertLinks from '../components/inert-links';
 import Link from '../components/link';
 import Loader from '../components/loader';
-import Status from '../components/status';
+import Status, { quoteMessages } from '../components/status';
 import { api } from '../utils/api';
+import { threadRows } from '../utils/conversation-tree';
+import { getQuotePolicy, supportsNativeQuote } from '../utils/quote-utils';
 import shortenNumber from '../utils/shorten-number';
 import showCompose from '../utils/show-compose';
 import showToast from '../utils/show-toast';
 import states, { saveStatus, statusKey } from '../utils/states';
+import { isSelfAccountID } from '../utils/store-utils';
 import useTitle from '../utils/useTitle';
 
-// One post of the thread, with the only three actions conversation mode
-// offers: reply, like and share link.
-function ThreadPost({ statusID, instance, focused, masto }) {
-  const { t } = useLingui();
+// One post of the thread, with the only actions conversation mode offers:
+// reply, quote, like and share link.
+function ThreadPost({ statusID, instance, depth, focused, masto }) {
+  const { t, _ } = useLingui();
   const snapStates = useSnapshot(states);
   const status = snapStates.statuses[statusKey(statusID, instance)];
   const [liking, setLiking] = useState(false);
   if (!status) return null;
-  const { favourited, favouritesCount, repliesCount } = status;
+  const { favourited, favouritesCount, repliesCount, quotesCount } = status;
+
+  // Native quotes follow the post's quote policy. An instance without them
+  // gets the post's link in a new post, as the full app's "Quote with link".
+  const nativeQuote = supportsNativeQuote(instance);
+  const quotePolicy = nativeQuote
+    ? getQuotePolicy({
+        visibility: status.visibility,
+        isSelf: isSelfAccountID(status.account?.id, instance),
+        quoteApproval: status.quoteApproval,
+      })
+    : { disabled: !status.url, reason: null };
+  const quoteLabel =
+    quotePolicy.reason === 'requestQuote'
+      ? _(quoteMessages.requestQuote)
+      : quotePolicy.reason
+        ? _(quoteMessages[quotePolicy.reason])
+        : t`Quote`;
+
+  function quote() {
+    if (nativeQuote) {
+      showCompose({ quoteStatus: { ...status, _instance: instance } });
+    } else {
+      showCompose({
+        draftStatus: { status: `\n${status.url}`, _instance: instance },
+      });
+    }
+  }
 
   async function like() {
     setLiking(true);
@@ -63,8 +93,9 @@ function ThreadPost({ statusID, instance, focused, masto }) {
 
   return (
     <li
-      class={`thread-post ${focused ? 'focused' : ''}`}
+      class={`thread-post ${depth ? 'nested' : ''} ${focused ? 'focused' : ''}`}
       data-focused={focused}
+      style={{ '--depth': depth }}
     >
       <InertLinks>
         <Status statusID={statusID} instance={instance} previewMode readOnly />
@@ -79,6 +110,16 @@ function ThreadPost({ statusID, instance, focused, masto }) {
         >
           <Icon icon="comment" alt={t`Reply`} />
           {repliesCount > 0 && <span>{shortenNumber(repliesCount)}</span>}
+        </button>
+        <button
+          type="button"
+          class="plain"
+          onClick={quote}
+          disabled={quotePolicy.disabled}
+          title={quoteLabel}
+        >
+          <Icon icon="quote" alt={quoteLabel} />
+          {quotesCount > 0 && <span>{shortenNumber(quotesCount)}</span>}
         </button>
         <button
           type="button"
@@ -98,8 +139,8 @@ function ThreadPost({ statusID, instance, focused, masto }) {
   );
 }
 
-// A thread in conversation mode: ancestors, the post the row pointed at, and
-// its replies, in the order the server returns them. Nothing in it navigates
+// A thread in conversation mode: the whole thread from its root, replies
+// nested under the post they answer (see threadRows). Nothing in it navigates
 // except the back link to the list.
 function ConversationThread() {
   const { t } = useLingui();
@@ -108,7 +149,8 @@ function ConversationThread() {
   const snapStates = useSnapshot(states);
   const { masto } = api({ instance });
   const [uiState, setUIState] = useState('loading');
-  const [ids, setIds] = useState([]);
+  const [thread, setThread] = useState(null);
+  const [expanded, setExpanded] = useState(() => new Set());
   const focusedRef = useRef(false);
 
   useEffect(() => {
@@ -120,10 +162,23 @@ function ConversationThread() {
           select.fetch(),
           select.context.fetch(),
         ]);
+        let all = [...context.ancestors, status, ...context.descendants];
+        // The context of a reply holds only its own line of ancestors, so
+        // read the root's context too for the other branches.
+        const rootId = context.ancestors[0]?.id || status.id;
+        if (rootId !== status.id) {
+          try {
+            const rootContext = await masto.v1.statuses
+              .$select(rootId)
+              .context.fetch();
+            all = [...all, ...rootContext.descendants];
+          } catch (e) {
+            console.error(e);
+          }
+        }
         if (cancelled) return;
-        const all = [...context.ancestors, status, ...context.descendants];
         all.forEach((s) => saveStatus(s, instance));
-        setIds(all.map((s) => s.id));
+        setThread({ rootId, statuses: all });
         setUIState('default');
       } catch (e) {
         console.error(e);
@@ -134,6 +189,18 @@ function ConversationThread() {
       cancelled = true;
     };
   }, [instance, id, snapStates.reloadStatusPage]);
+
+  const rows = useMemo(
+    () =>
+      thread
+        ? threadRows(thread.statuses, {
+            rootId: thread.rootId,
+            focusedId: id,
+            expanded,
+          })
+        : [],
+    [thread, id, expanded],
+  );
 
   // Bring the post the row pointed at into view once, on first load.
   useEffect(() => {
@@ -161,25 +228,48 @@ function ConversationThread() {
           </div>
         </header>
         <main>
-          {uiState === 'error' && !ids.length ? (
+          {uiState === 'error' && !thread ? (
             <p class="ui-state">
               <Trans>Unable to load this conversation.</Trans>
             </p>
-          ) : !ids.length ? (
+          ) : !thread ? (
             <p class="ui-state">
               <Loader />
             </p>
           ) : (
             <ul class="thread-posts">
-              {ids.map((statusID) => (
-                <ThreadPost
-                  key={statusID}
-                  statusID={statusID}
-                  instance={instance}
-                  focused={statusID === id}
-                  masto={masto}
-                />
-              ))}
+              {rows.map((row) =>
+                row.type === 'post' ? (
+                  <ThreadPost
+                    key={row.id}
+                    statusID={row.id}
+                    instance={instance}
+                    depth={row.depth}
+                    focused={row.id === id}
+                    masto={masto}
+                  />
+                ) : (
+                  <li
+                    key={`more-${row.id}`}
+                    class="thread-more"
+                    style={{ '--depth': row.depth }}
+                  >
+                    <button
+                      type="button"
+                      class="plain"
+                      onClick={() =>
+                        setExpanded((prev) => new Set(prev).add(row.id))
+                      }
+                    >
+                      <Plural
+                        value={row.count}
+                        one="# more reply"
+                        other="# more replies"
+                      />
+                    </button>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </main>

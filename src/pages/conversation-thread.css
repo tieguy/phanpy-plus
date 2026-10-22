@@ -5,6 +5,17 @@
     padding: 0;
   }
 
+  /* Replies indent by depth (threadRows caps it), with a rule that shows
+     which post they answer. */
+  .thread-post,
+  .thread-more {
+    --indent: calc(var(--depth, 0) * 14px);
+    margin-inline-start: var(--indent);
+  }
+  .thread-post.nested {
+    border-inline-start: 2px solid var(--outline-color);
+  }
+
   .thread-post {
     border-bottom: 1px solid var(--outline-color);
 
@@ -41,6 +52,16 @@
 
     button.liked {
       color: var(--favourite-color);
+    }
+  }
+
+  .thread-more {
+    border-inline-start: 2px solid var(--outline-color);
+    border-bottom: 1px solid var(--outline-color);
+
+    button {
+      padding: 8px 16px;
+      color: var(--link-color);
     }
   }
 

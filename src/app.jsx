@@ -707,7 +707,7 @@ function App() {
     return (
       <AuthProvider value={isLoggedIn}>
         <ConversationRoutes />
-        <Modals />
+        <Modals conversationMode />
         <BackgroundService />
         {isLoggedIn && <ConversationNotificationRouter />}
       </AuthProvider>

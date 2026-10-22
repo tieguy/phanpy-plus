@@ -34,7 +34,10 @@ out of scope for this round.
 - Selecting a row opens a thread view. In the thread view, posts show their
   text and media. Profile names, avatars, hashtags, mentions and quoted
   posts are inert. Links to web pages in post text open in a new tab.
-  The only actions are reply, like and share link.
+  Replies nest under the post they answer. The only actions are reply,
+  quote, like and share link.
+- The list has a "New post" button that opens the composer, including
+  its multi-post threads.
 - Reply opens the existing composer, which posts from the account that
   received the notification.
 - During a full-app window, the app works as it does today, and the
@@ -170,21 +173,56 @@ The row links to the thread at the latest response.
 The list does not apply `settings.notificationsResponsesOnly`. It always
 uses direct responses.
 
+The Bluesky facade passes on notifications from muted and blocked
+accounts. No evidence found of whether Bluesky's server removes them, so
+the grouping drops a response whose author, or whose notification
+account, is muted, blocked or blocking. `isHiddenAuthor` in
+`src/utils/conversation-tree.js` reads the `_viewer` flags that the
+Bluesky converter sets. Mastodon accounts have no `_viewer`, and Mastodon
+servers leave muted and blocked accounts out of notifications.
+
+The header has a "New post" button, which opens the composer with no
+reply or quote, from the current account. The composer offers all of its
+usual options, multi-post threads included. Posting new content during
+the day is allowed by decision.
+
 ### Thread view
 
 A row opens `/conversations/:instance/:id` at its latest response.
 `src/pages/conversation-thread.jsx` fetches the status and
 `masto.v1.statuses.$select(id).context.fetch()` through `api({ instance })`.
-It renders ancestors, that post and its descendants as one flat list, in
-the order the server returns them, and scrolls the post into view. Each
-post is the existing `Status` component in `readOnly` and `previewMode`,
-which removes its action bar and its context menu (the context menu has
-profile and boost actions). Below each post are the page's own reply,
-like and share-link buttons:
+The context of a reply holds only its own line of ancestors, so the page
+also fetches the context of the first ancestor, the thread root, to get
+the other branches.
+
+`threadRows` in `src/utils/conversation-tree.js` (pure) turns the posts
+into rows:
+
+- Each reply nests under the post it answers, oldest first. The indent
+  stops at `MAX_DEPTH` (3), so deeper replies line up with their parent.
+- A post whose parent is missing shows as a reply to the root.
+- A side branch with more than `BRANCH_LIMIT` (2) posts under its first
+  post shows that post and a "# more replies" row. Tapping the row opens
+  the branch in place. The branch that holds the focused post never
+  collapses.
+- A post by a muted or blocked Bluesky author is left out, with every
+  reply under it. The root and the line to the focused post always show.
+
+The page scrolls the focused post into view. Each post is the existing
+`Status` component in `readOnly` and `previewMode`, which removes its
+action bar and its context menu (the context menu has profile and boost
+actions). Below each post are the page's own reply, quote, like and
+share-link buttons:
 
 - **Reply** opens the composer with `replyToStatus._instance` set to the
   thread's instance, so the reply posts from that account. After a post,
   the composer bumps `states.reloadStatusPage`, and the thread reloads.
+- **Quote** opens the composer with `quoteStatus._instance` set to the
+  thread's instance. Where the instance has native quotes (Bluesky, and
+  Mastodon API version 7 or later), `getQuotePolicy` in
+  `src/utils/quote-utils.js` applies the post's quote policy, the same
+  rules the full app's quote menu uses. Elsewhere the button opens a new
+  post that holds the post's URL.
 - **Like** calls `favourite()` or `unfavourite()` and saves the returned
   status.
 - **Share link** uses the system share sheet (`navigator.share`) where it
@@ -200,8 +238,10 @@ not a `.mention` (Mastodon and the Bluesky converter both give @-mentions
 and hashtags that class), and a link-preview `a.card`. Every other link
 does nothing, and CSS shows it as text.
 
-The composer's "Reply posted" toast links to `/:instance/s/:id`. In
-conversation mode, that path redirects to the list.
+After a post, the composer's toast ("Post published. Check it out.")
+opens `/conversations/:instance/:id` in conversation mode, because `App`
+passes `conversationMode` to `Modals`. A scheduled post's toast opens
+nothing, because the scheduled-posts page is not part of the mode.
 
 A new tab is outside this app. A Mastodon post URL opens that server's own
 web interface, which has a feed. The plan accepts this, because leaving
@@ -283,6 +323,14 @@ A "Conversation mode" section in `CLAUDE.md` with the schedule, the guard
 and the invariants below. Run `npm run extract` and commit
 `src/locales/en.po`.
 
+### Phase 5: Nesting, quotes and new posts
+
+Add `conversation-tree.js` with tests, the root-context fetch, the quote
+button with `getQuotePolicy` extracted from `status.jsx`, the hidden-author
+filter in the list, and the "New post" button. Done when a thread with
+branches nests and a quote posts from the correct account on each
+network.
+
 ## Invariants
 
 - **The schedule is not a setting.** No UI changes it. A change is a
@@ -294,12 +342,8 @@ and the invariants below. Run `npm run extract` and commit
 
 ## Open Questions
 
-- **Nesting**: the thread view is a flat list. A busy thread with
-  branches may need nesting by `inReplyToId`.
 - **Notifications badge**: should conversation mode show a count of new
   direct responses, or should the list refresh only when the user opens
   it?
 - **Bluesky push**: no evidence found of a push path that a third-party
   web client can use. Investigate separately if Bluesky notices matter.
-- **Muted or blocked authors**: the notification APIs already drop these
-  on Mastodon. Check that the Bluesky facade does the same.

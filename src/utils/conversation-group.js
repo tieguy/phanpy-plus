@@ -2,6 +2,7 @@
 // thread. A conversation exists only once someone responds to the user, so
 // notifications are the only source.
 
+import { isHiddenAuthor } from './conversation-tree';
 import { isDirectResponse } from './notification-filter';
 
 export const PAGE_CAP = 5;
@@ -14,12 +15,15 @@ function timeOf(notification) {
 }
 
 // Mastodon delivers private mentions (DMs) as `mention` notifications too. DMs
-// are not part of conversation mode.
+// are not part of conversation mode. The Bluesky facade passes on
+// notifications from muted and blocked accounts, so those are dropped here.
 function isPublicResponse(notification) {
   return (
     isDirectResponse(notification) &&
     !!notification.status &&
-    notification.status.visibility !== 'direct'
+    notification.status.visibility !== 'direct' &&
+    !isHiddenAuthor(notification.account) &&
+    !isHiddenAuthor(notification.status.account)
   );
 }
 

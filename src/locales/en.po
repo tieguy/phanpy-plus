@@ -33,7 +33,7 @@ msgstr ""
 
 #: src/components/account-block.jsx:236
 #: src/components/account-info.jsx:748
-#: src/components/status.jsx:629
+#: src/components/status.jsx:630
 msgid "Group"
 msgstr ""
 
@@ -234,7 +234,7 @@ msgid "Original"
 msgstr ""
 
 #: src/components/account-info.jsx:1077
-#: src/components/status.jsx:3037
+#: src/components/status.jsx:3025
 #: src/pages/account-statuses.jsx:445
 #: src/pages/catchup.jsx:74
 #: src/pages/catchup.jsx:1594
@@ -247,7 +247,7 @@ msgstr ""
 
 #: src/components/account-info.jsx:1082
 #: src/components/quotes-modal.jsx:85
-#: src/components/status.jsx:3042
+#: src/components/status.jsx:3030
 #: src/pages/catchup.jsx:75
 #: src/pages/catchup.jsx:1597
 #: src/pages/year-in-posts.jsx:1400
@@ -307,8 +307,8 @@ msgstr "View post stats"
 #: src/components/shortcuts-settings.jsx:255
 #: src/components/shortcuts-settings.jsx:608
 #: src/components/shortcuts-settings.jsx:809
-#: src/components/status.jsx:3734
-#: src/components/status.jsx:3946
+#: src/components/status.jsx:3722
+#: src/components/status.jsx:3934
 #: src/components/translated-bio-sheet.jsx:21
 #: src/pages/accounts.jsx:48
 #: src/pages/catchup.jsx:1731
@@ -500,7 +500,7 @@ msgstr "Unable to delete collection."
 #: src/components/edit-profile-sheet.jsx:108
 #: src/components/edit-profile-sheet.jsx:120
 #: src/components/list-add-edit.jsx:188
-#: src/components/status.jsx:1876
+#: src/components/status.jsx:1864
 #: src/pages/filters.jsx:640
 #: src/pages/scheduled-posts.jsx:398
 msgid "Delete…"
@@ -782,7 +782,7 @@ msgid "Thread failed to post. If the connection dropped mid-post, it may have go
 msgstr "Thread failed to post. If the connection dropped mid-post, it may have gone through on Bluesky — check your profile before retrying to avoid duplicating the thread. Error: {msg}"
 
 #: src/components/compose.jsx:1914
-#: src/components/status.jsx:2766
+#: src/components/status.jsx:2754
 #: src/components/timeline.jsx:1070
 msgid "Content warning"
 msgstr ""
@@ -838,21 +838,21 @@ msgstr "Bluesky limit applied: 300 characters"
 
 #: src/components/compose.jsx:2468
 #: src/components/quote-settings-sheet.jsx:82
-#: src/components/status.jsx:310
+#: src/components/status.jsx:311
 #: src/pages/settings.jsx:334
 msgid "Anyone can quote"
 msgstr "Anyone can quote"
 
 #: src/components/compose.jsx:2471
 #: src/components/quote-settings-sheet.jsx:85
-#: src/components/status.jsx:311
+#: src/components/status.jsx:312
 #: src/pages/settings.jsx:337
 msgid "Your followers can quote"
 msgstr "Your followers can quote"
 
 #: src/components/compose.jsx:2474
 #: src/components/quote-settings-sheet.jsx:88
-#: src/components/status.jsx:312
+#: src/components/status.jsx:313
 #: src/pages/settings.jsx:340
 msgid "Only you can quote"
 msgstr "Only you can quote"
@@ -875,7 +875,7 @@ msgid "Quiet public"
 msgstr "Quiet public"
 
 #: src/components/compose.jsx:2558
-#: src/components/status.jsx:2645
+#: src/components/status.jsx:2633
 #: src/utils/visibility-text.jsx:8
 msgid "Private mention"
 msgstr ""
@@ -894,13 +894,13 @@ msgstr "Schedule"
 
 #: src/components/compose.jsx:2629
 #: src/components/keyboard-shortcuts-help.jsx:165
-#: src/components/status.jsx:1248
-#: src/components/status.jsx:1297
-#: src/components/status.jsx:2385
-#: src/components/status.jsx:2386
+#: src/components/status.jsx:1236
+#: src/components/status.jsx:1285
+#: src/components/status.jsx:2373
+#: src/components/status.jsx:2374
+#: src/components/status.jsx:3176
 #: src/components/status.jsx:3188
-#: src/components/status.jsx:3200
-#: src/pages/conversation-thread.jsx:80
+#: src/pages/conversation-thread.jsx:111
 msgid "Reply"
 msgstr ""
 
@@ -1001,7 +1001,7 @@ msgstr ""
 
 #: src/components/drafts.jsx:278
 #: src/pages/catchup.jsx:2108
-#: src/pages/conversations.jsx:69
+#: src/pages/conversations.jsx:70
 msgid "Poll"
 msgstr ""
 
@@ -1013,6 +1013,7 @@ msgstr ""
 #: src/components/drafts.jsx:285
 #: src/components/keyboard-shortcuts-help.jsx:194
 #: src/components/status.jsx:819
+#: src/pages/conversation-thread.jsx:48
 msgid "Quote"
 msgstr ""
 
@@ -1051,11 +1052,11 @@ msgstr "Exit"
 #: src/components/media-attachment.jsx:465
 #: src/components/media-modal.jsx:398
 #: src/components/related-actions.jsx:332
-#: src/components/status.jsx:2410
-#: src/components/status.jsx:2427
-#: src/components/status.jsx:2571
-#: src/components/status.jsx:3368
-#: src/components/status.jsx:3371
+#: src/components/status.jsx:2398
+#: src/components/status.jsx:2415
+#: src/components/status.jsx:2559
+#: src/components/status.jsx:3356
+#: src/components/status.jsx:3359
 #: src/pages/account-statuses.jsx:693
 #: src/pages/accounts.jsx:209
 #: src/pages/collection.jsx:284
@@ -1420,9 +1421,9 @@ msgid "<0>l</0> or <1>f</1>"
 msgstr ""
 
 #: src/components/keyboard-shortcuts-help.jsx:186
-#: src/components/status.jsx:1340
-#: src/components/status.jsx:3237
-#: src/components/status.jsx:3312
+#: src/components/status.jsx:1328
+#: src/components/status.jsx:3225
+#: src/components/status.jsx:3300
 msgid "Boost"
 msgstr ""
 
@@ -1431,9 +1432,9 @@ msgid "<0>Shift</0> + <1>b</1>"
 msgstr ""
 
 #: src/components/keyboard-shortcuts-help.jsx:198
-#: src/components/status.jsx:1467
-#: src/components/status.jsx:3344
-#: src/components/status.jsx:3345
+#: src/components/status.jsx:1455
+#: src/components/status.jsx:3332
+#: src/components/status.jsx:3333
 msgid "Bookmark"
 msgstr ""
 
@@ -1569,14 +1570,14 @@ msgid "Media description"
 msgstr ""
 
 #: src/components/media-alt-modal.jsx:67
-#: src/components/status.jsx:1559
-#: src/components/status.jsx:1568
+#: src/components/status.jsx:1547
+#: src/components/status.jsx:1556
 #: src/components/translation-block.jsx:270
 msgid "Translate"
 msgstr ""
 
 #: src/components/media-alt-modal.jsx:78
-#: src/components/status.jsx:1589
+#: src/components/status.jsx:1577
 msgid "Speak"
 msgstr ""
 
@@ -1701,8 +1702,8 @@ msgstr ""
 
 #: src/components/media-post.jsx:130
 #: src/components/status-compact.jsx:73
-#: src/components/status.jsx:3872
-#: src/components/status.jsx:3950
+#: src/components/status.jsx:3860
+#: src/components/status.jsx:3938
 #: src/components/timeline.jsx:1059
 #: src/pages/catchup.jsx:79
 #: src/pages/catchup.jsx:2052
@@ -1713,23 +1714,23 @@ msgstr ""
 msgid "Open file"
 msgstr "Open file"
 
-#: src/components/modals.jsx:93
+#: src/components/modals.jsx:96
 msgid "Post scheduled"
 msgstr "Post scheduled"
 
-#: src/components/modals.jsx:94
+#: src/components/modals.jsx:97
 msgid "Post published. Check it out."
 msgstr ""
 
-#: src/components/modals.jsx:96
+#: src/components/modals.jsx:99
 msgid "Reply scheduled"
 msgstr "Reply scheduled"
 
-#: src/components/modals.jsx:97
+#: src/components/modals.jsx:100
 msgid "Reply posted. Check it out."
 msgstr ""
 
-#: src/components/modals.jsx:98
+#: src/components/modals.jsx:101
 msgid "Post updated. Check it out."
 msgstr ""
 
@@ -2059,8 +2060,8 @@ msgid "[Unknown notification type: {type}]"
 msgstr ""
 
 #: src/components/notification.jsx:498
-#: src/components/status.jsx:1506
-#: src/components/status.jsx:1516
+#: src/components/status.jsx:1494
+#: src/components/status.jsx:1504
 msgid "Boosted/Liked by…"
 msgstr ""
 
@@ -2087,23 +2088,23 @@ msgstr "View #Wrapstodon"
 
 #: src/components/notification.jsx:897
 #: src/components/quote-chain-modal.jsx:18
-#: src/components/status.jsx:273
+#: src/components/status.jsx:274
 msgid "Read more →"
 msgstr ""
 
 #: src/components/open-link-sheet.jsx:30
 #: src/components/related-actions.jsx:641
-#: src/components/status.jsx:1680
+#: src/components/status.jsx:1668
 #: src/pages/collection.jsx:325
-#: src/pages/conversation-thread.jsx:58
+#: src/pages/conversation-thread.jsx:88
 msgid "Link copied"
 msgstr ""
 
 #: src/components/open-link-sheet.jsx:33
 #: src/components/related-actions.jsx:644
-#: src/components/status.jsx:1683
+#: src/components/status.jsx:1671
 #: src/pages/collection.jsx:328
-#: src/pages/conversation-thread.jsx:60
+#: src/pages/conversation-thread.jsx:90
 msgid "Unable to copy link"
 msgstr ""
 
@@ -2115,14 +2116,14 @@ msgstr "Open link?"
 #: src/components/post-embed-modal.jsx:233
 #: src/components/related-actions.jsx:650
 #: src/components/shortcuts-settings.jsx:1183
-#: src/components/status.jsx:1689
+#: src/components/status.jsx:1677
 #: src/pages/collection.jsx:334
 msgid "Copy"
 msgstr ""
 
 #: src/components/open-link-sheet.jsx:82
 #: src/components/related-actions.jsx:671
-#: src/components/status.jsx:1711
+#: src/components/status.jsx:1699
 #: src/pages/collection.jsx:351
 msgid "Share…"
 msgstr ""
@@ -2195,7 +2196,7 @@ msgstr "Show results"
 
 #: src/components/poll.jsx:411
 #: src/components/poll.jsx:413
-#: src/pages/conversations.jsx:189
+#: src/pages/conversations.jsx:197
 #: src/pages/engagement.jsx:105
 #: src/pages/scheduled-posts.jsx:100
 #: src/pages/status.jsx:1583
@@ -2204,7 +2205,7 @@ msgid "Refresh"
 msgstr ""
 
 #: src/components/post-embed-modal.jsx:202
-#: src/components/status.jsx:1724
+#: src/components/status.jsx:1712
 msgid "Embed post"
 msgstr ""
 
@@ -2465,7 +2466,7 @@ msgstr "Search my posts"
 
 #: src/components/related-actions.jsx:665
 #: src/components/shortcuts-settings.jsx:1201
-#: src/components/status.jsx:1705
+#: src/components/status.jsx:1693
 msgid "Sharing doesn't seem to work."
 msgstr ""
 
@@ -2804,7 +2805,7 @@ msgid "Not available in current view mode"
 msgstr ""
 
 #: src/components/shortcuts-settings.jsx:404
-#: src/components/status.jsx:1838
+#: src/components/status.jsx:1826
 #: src/pages/collection.jsx:396
 #: src/pages/list.jsx:205
 msgid "Edit"
@@ -2997,426 +2998,426 @@ msgstr ""
 msgid "Import/export settings from/to server (Very experimental)"
 msgstr "Import/export settings from/to server (Very experimental)"
 
-#: src/components/status.jsx:302
+#: src/components/status.jsx:303
 msgid "Private posts cannot be quoted"
 msgstr "Private posts cannot be quoted"
 
-#: src/components/status.jsx:303
+#: src/components/status.jsx:304
 msgid "Request to quote"
 msgstr "Request to quote"
 
-#: src/components/status.jsx:304
+#: src/components/status.jsx:305
 msgid "Author will manually review"
 msgstr "Author will manually review"
 
-#: src/components/status.jsx:305
+#: src/components/status.jsx:306
 msgid "Only followers can quote this post"
 msgstr "Only followers can quote this post"
 
-#: src/components/status.jsx:306
+#: src/components/status.jsx:307
 msgid "You are not allowed to quote this post"
 msgstr "You are not allowed to quote this post"
 
-#: src/components/status.jsx:382
-#: src/components/status.jsx:3513
-#: src/components/status.jsx:3514
-#: src/components/status.jsx:3515
+#: src/components/status.jsx:383
+#: src/components/status.jsx:3501
+#: src/components/status.jsx:3502
+#: src/components/status.jsx:3503
 msgid "Post unavailable"
 msgstr "Post unavailable"
 
-#: src/components/status.jsx:653
+#: src/components/status.jsx:654
 msgid "<0/> <1>boosted</1>"
 msgstr "<0/> <1>boosted</1>"
 
-#: src/components/status.jsx:772
+#: src/components/status.jsx:773
 msgid "This post is long, so the card shows only its beginning."
 msgstr "This post is long, so the card shows only its beginning."
 
-#: src/components/status.jsx:777
+#: src/components/status.jsx:778
 msgid "Could not render the post"
 msgstr "Could not render the post"
 
-#: src/components/status.jsx:793
+#: src/components/status.jsx:794
 msgid "Sorry, your current logged-in server can't interact with this post from another server."
 msgstr "Sorry, your current logged-in server can't interact with this post from another server."
 
-#: src/components/status.jsx:982
+#: src/components/status.jsx:970
 msgid "post not found on that server"
 msgstr "post not found on that server"
 
-#: src/components/status.jsx:993
+#: src/components/status.jsx:981
 msgid "Boosted as @{acctName}"
 msgstr "Boosted as @{acctName}"
 
 #. placeholder {0}: e?.message || e
-#: src/components/status.jsx:997
+#: src/components/status.jsx:985
 msgid "Unable to boost as @{acctName}: {0}"
 msgstr "Unable to boost as @{acctName}: {0}"
 
-#: src/components/status.jsx:1007
+#: src/components/status.jsx:995
 msgid "Liked as @{acctName}"
 msgstr "Liked as @{acctName}"
 
 #. placeholder {0}: e?.message || e
-#: src/components/status.jsx:1011
+#: src/components/status.jsx:999
 msgid "Unable to like as @{acctName}: {0}"
 msgstr "Unable to like as @{acctName}: {0}"
 
 #. placeholder {0}: e?.message || e
-#: src/components/status.jsx:1032
+#: src/components/status.jsx:1020
 msgid "Unable to reply as @{acctName}: {0}"
 msgstr "Unable to reply as @{acctName}: {0}"
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1071
+#: src/components/status.jsx:1059
 msgid "Unliked @{0}'s post"
 msgstr ""
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1072
+#: src/components/status.jsx:1060
 msgid "Liked @{0}'s post"
 msgstr "Liked @{0}'s post"
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1112
+#: src/components/status.jsx:1100
 msgid "Unbookmarked @{0}'s post"
 msgstr "Unbookmarked @{0}'s post"
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1113
+#: src/components/status.jsx:1101
 msgid "Bookmarked @{0}'s post"
 msgstr "Bookmarked @{0}'s post"
 
-#: src/components/status.jsx:1217
+#: src/components/status.jsx:1205
 msgid "Some media have no descriptions."
 msgstr ""
 
 #. placeholder {0}: rtf.format(-statusMonthsAgo, 'month')
-#: src/components/status.jsx:1224
+#: src/components/status.jsx:1212
 msgid "Old post (<0>{0}</0>)"
 msgstr ""
 
-#: src/components/status.jsx:1247
+#: src/components/status.jsx:1235
 msgid "Reply…"
 msgstr "Reply…"
 
-#: src/components/status.jsx:1261
-#: src/components/status.jsx:1275
+#: src/components/status.jsx:1249
+#: src/components/status.jsx:1263
 msgid "Reply all"
 msgstr "Reply all"
 
-#: src/components/status.jsx:1264
+#: src/components/status.jsx:1252
 msgid "{mentionsCount, plural, other {# mentions}}"
 msgstr "{mentionsCount, plural, other {# mentions}}"
 
 #. placeholder {0}: mentionsCount - 1
 #. placeholder {1}: username || acct
-#: src/components/status.jsx:1278
+#: src/components/status.jsx:1266
 msgid "{0, plural, other {<0>@{1}</0> first, # others below}}"
 msgstr "{0, plural, other {<0>@{1}</0> first, # others below}}"
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1300
+#: src/components/status.jsx:1288
 msgid "Only <0>@{0}</0>"
 msgstr "Only <0>@{0}</0>"
 
-#: src/components/status.jsx:1340
-#: src/components/status.jsx:1442
-#: src/components/status.jsx:3237
-#: src/components/status.jsx:3310
+#: src/components/status.jsx:1328
+#: src/components/status.jsx:1430
+#: src/components/status.jsx:3225
+#: src/components/status.jsx:3298
 msgid "Unboost"
 msgstr ""
 
-#: src/components/status.jsx:1379
-#: src/components/status.jsx:3286
+#: src/components/status.jsx:1367
+#: src/components/status.jsx:3274
 msgid "Quote with link"
 msgstr "Quote with link"
 
-#: src/components/status.jsx:1392
-#: src/components/status.jsx:3299
+#: src/components/status.jsx:1380
+#: src/components/status.jsx:3287
 msgid "Quote without attribution"
 msgstr "Quote without attribution"
 
-#: src/components/status.jsx:1406
+#: src/components/status.jsx:1394
 msgid "Boost as @{acctName}"
 msgstr "Boost as @{acctName}"
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1421
-#: src/components/status.jsx:2039
+#: src/components/status.jsx:1409
+#: src/components/status.jsx:2027
 msgid "Unboosted @{0}'s post"
 msgstr "Unboosted @{0}'s post"
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1422
-#: src/components/status.jsx:2040
+#: src/components/status.jsx:1410
+#: src/components/status.jsx:2028
 msgid "Boosted @{0}'s post"
 msgstr "Boosted @{0}'s post"
 
-#: src/components/status.jsx:1444
-#: src/components/status.jsx:3309
+#: src/components/status.jsx:1432
+#: src/components/status.jsx:3297
 msgid "Boost/Quote…"
 msgstr "Boost/Quote…"
 
-#: src/components/status.jsx:1445
-#: src/components/status.jsx:3309
+#: src/components/status.jsx:1433
+#: src/components/status.jsx:3297
 msgid "Boost…"
 msgstr ""
 
-#: src/components/status.jsx:1457
-#: src/components/status.jsx:2400
-#: src/components/status.jsx:3329
-#: src/pages/conversation-thread.jsx:90
+#: src/components/status.jsx:1445
+#: src/components/status.jsx:2388
+#: src/components/status.jsx:3317
+#: src/pages/conversation-thread.jsx:131
 msgid "Unlike"
 msgstr ""
 
-#: src/components/status.jsx:1458
-#: src/components/status.jsx:2400
-#: src/components/status.jsx:2401
-#: src/components/status.jsx:3329
-#: src/components/status.jsx:3330
-#: src/pages/conversation-thread.jsx:90
+#: src/components/status.jsx:1446
+#: src/components/status.jsx:2388
+#: src/components/status.jsx:2389
+#: src/components/status.jsx:3317
+#: src/components/status.jsx:3318
+#: src/pages/conversation-thread.jsx:131
 msgid "Like"
 msgstr ""
 
-#: src/components/status.jsx:1467
-#: src/components/status.jsx:3344
+#: src/components/status.jsx:1455
+#: src/components/status.jsx:3332
 msgid "Unbookmark"
 msgstr ""
 
-#: src/components/status.jsx:1482
+#: src/components/status.jsx:1470
 msgid "Like as @{acctName}"
 msgstr "Like as @{acctName}"
 
-#: src/components/status.jsx:1491
+#: src/components/status.jsx:1479
 msgid "Reply as @{acctName}"
 msgstr "Reply as @{acctName}"
 
-#: src/components/status.jsx:1527
+#: src/components/status.jsx:1515
 msgid "View Quotes"
 msgstr "View Quotes"
 
-#: src/components/status.jsx:1539
+#: src/components/status.jsx:1527
 msgid "Unwrap quote chain"
 msgstr "Unwrap quote chain"
 
-#: src/components/status.jsx:1606
+#: src/components/status.jsx:1594
 msgid "Post text copied"
 msgstr "Post text copied"
 
-#: src/components/status.jsx:1609
+#: src/components/status.jsx:1597
 msgid "Unable to copy post text"
 msgstr "Unable to copy post text"
 
-#: src/components/status.jsx:1615
+#: src/components/status.jsx:1603
 msgid "Copy post text"
 msgstr "Copy post text"
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1633
+#: src/components/status.jsx:1621
 msgid "View post by <0>@{0}</0>"
 msgstr ""
 
-#: src/components/status.jsx:1654
+#: src/components/status.jsx:1642
 msgid "Show Edit History"
 msgstr ""
 
-#: src/components/status.jsx:1657
+#: src/components/status.jsx:1645
 msgid "Edited: {editedDateText}"
 msgstr ""
 
-#: src/components/status.jsx:1741
+#: src/components/status.jsx:1729
 msgid "Conversation unmuted"
 msgstr ""
 
-#: src/components/status.jsx:1741
+#: src/components/status.jsx:1729
 msgid "Conversation muted"
 msgstr ""
 
-#: src/components/status.jsx:1747
+#: src/components/status.jsx:1735
 msgid "Unable to unmute conversation"
 msgstr ""
 
-#: src/components/status.jsx:1748
+#: src/components/status.jsx:1736
 msgid "Unable to mute conversation"
 msgstr ""
 
-#: src/components/status.jsx:1757
+#: src/components/status.jsx:1745
 msgid "Unmute conversation"
 msgstr ""
 
-#: src/components/status.jsx:1764
+#: src/components/status.jsx:1752
 msgid "Mute conversation"
 msgstr ""
 
-#: src/components/status.jsx:1781
+#: src/components/status.jsx:1769
 msgid "Post unpinned from profile"
 msgstr ""
 
-#: src/components/status.jsx:1782
+#: src/components/status.jsx:1770
 msgid "Post pinned to profile"
 msgstr ""
 
-#: src/components/status.jsx:1787
+#: src/components/status.jsx:1775
 msgid "Unable to unpin post"
 msgstr ""
 
-#: src/components/status.jsx:1787
+#: src/components/status.jsx:1775
 msgid "Unable to pin post"
 msgstr ""
 
-#: src/components/status.jsx:1796
+#: src/components/status.jsx:1784
 msgid "Unpin from profile"
 msgstr ""
 
-#: src/components/status.jsx:1803
+#: src/components/status.jsx:1791
 msgid "Pin to profile"
 msgstr ""
 
-#: src/components/status.jsx:1816
+#: src/components/status.jsx:1804
 #: src/pages/settings.jsx:299
 msgid "Quote settings"
 msgstr "Quote settings"
 
-#: src/components/status.jsx:1849
+#: src/components/status.jsx:1837
 msgid "Delete this post?"
 msgstr ""
 
-#: src/components/status.jsx:1865
+#: src/components/status.jsx:1853
 msgid "Post deleted"
 msgstr ""
 
-#: src/components/status.jsx:1868
+#: src/components/status.jsx:1856
 msgid "Unable to delete post"
 msgstr ""
 
 #. placeholder {0}: username || acct
-#: src/components/status.jsx:1893
+#: src/components/status.jsx:1881
 msgid "Remove my post from <0>@{0}</0>'s post?"
 msgstr "Remove my post from <0>@{0}</0>'s post?"
 
-#: src/components/status.jsx:1915
+#: src/components/status.jsx:1903
 msgid "Quote removed"
 msgstr "Quote removed"
 
-#: src/components/status.jsx:1919
+#: src/components/status.jsx:1907
 msgid "Unable to remove quote"
 msgstr "Unable to remove quote"
 
-#: src/components/status.jsx:1925
+#: src/components/status.jsx:1913
 msgid "Remove quote…"
 msgstr "Remove quote…"
 
-#: src/components/status.jsx:1939
+#: src/components/status.jsx:1927
 msgid "Report post…"
 msgstr ""
 
-#: src/components/status.jsx:2401
-#: src/components/status.jsx:2437
-#: src/components/status.jsx:3330
+#: src/components/status.jsx:2389
+#: src/components/status.jsx:2425
+#: src/components/status.jsx:3318
 msgid "Liked"
 msgstr ""
 
-#: src/components/status.jsx:2434
-#: src/components/status.jsx:3312
+#: src/components/status.jsx:2422
+#: src/components/status.jsx:3300
 msgid "Boosted"
 msgstr ""
 
-#: src/components/status.jsx:2444
-#: src/components/status.jsx:3345
+#: src/components/status.jsx:2432
+#: src/components/status.jsx:3333
 msgid "Bookmarked"
 msgstr ""
 
-#: src/components/status.jsx:2448
+#: src/components/status.jsx:2436
 msgid "Pinned"
 msgstr ""
 
-#: src/components/status.jsx:2517
-#: src/components/status.jsx:3052
+#: src/components/status.jsx:2505
+#: src/components/status.jsx:3040
 msgid "Deleted"
+msgstr ""
+
+#: src/components/status.jsx:2543
+#: src/components/status.jsx:2610
+msgid "{repliesCount, plural, one {# reply} other {# replies}}"
 msgstr ""
 
 #: src/components/status.jsx:2555
 #: src/components/status.jsx:2622
-msgid "{repliesCount, plural, one {# reply} other {# replies}}"
-msgstr ""
-
-#: src/components/status.jsx:2567
-#: src/components/status.jsx:2634
-#: src/components/status.jsx:3103
+#: src/components/status.jsx:3091
 msgid "Edited"
 msgstr ""
 
-#: src/components/status.jsx:2729
-#: src/components/status.jsx:2791
+#: src/components/status.jsx:2717
+#: src/components/status.jsx:2779
 #: src/pages/collection.jsx:586
 msgid "Show content"
 msgstr ""
 
-#: src/components/status.jsx:2729
-#: src/components/status.jsx:2791
-#: src/components/status.jsx:2898
+#: src/components/status.jsx:2717
+#: src/components/status.jsx:2779
+#: src/components/status.jsx:2886
 msgid "Show less"
 msgstr ""
 
 #. placeholder {0}: filterInfo.titlesStr
 #. placeholder {0}: filterInfo?.titlesStr
-#: src/components/status.jsx:2894
+#: src/components/status.jsx:2882
 #: src/pages/catchup.jsx:2051
 msgid "Filtered: {0}"
 msgstr "Filtered: {0}"
 
-#: src/components/status.jsx:2898
+#: src/components/status.jsx:2886
 msgid "Show media"
 msgstr ""
 
+#: src/components/status.jsx:3177
 #: src/components/status.jsx:3189
-#: src/components/status.jsx:3201
 msgid "Comments"
 msgstr ""
 
-#: src/components/status.jsx:3511
+#: src/components/status.jsx:3499
 msgid "Post hidden by your filters"
 msgstr "Post hidden by your filters"
 
-#: src/components/status.jsx:3512
+#: src/components/status.jsx:3500
 msgid "Post pending"
 msgstr "Post pending"
 
-#: src/components/status.jsx:3516
+#: src/components/status.jsx:3504
 msgid "Post removed by author"
 msgstr "Post removed by author"
 
-#: src/components/status.jsx:3517
+#: src/components/status.jsx:3505
 msgid "Post hidden because you've blocked @{name}."
 msgstr "Post hidden because you've blocked @{name}."
 
-#: src/components/status.jsx:3519
+#: src/components/status.jsx:3507
 msgid "Post hidden because you've blocked {domain}."
 msgstr "Post hidden because you've blocked {domain}."
 
-#: src/components/status.jsx:3520
+#: src/components/status.jsx:3508
 msgid "Post hidden because you've muted @{name}."
 msgstr "Post hidden because you've muted @{name}."
 
-#: src/components/status.jsx:3594
+#: src/components/status.jsx:3582
 msgid "Show anyway"
 msgstr "Show anyway"
 
-#: src/components/status.jsx:3739
+#: src/components/status.jsx:3727
 msgid "Edit History"
 msgstr ""
 
-#: src/components/status.jsx:3743
+#: src/components/status.jsx:3731
 msgid "Failed to load history"
 msgstr ""
 
-#: src/components/status.jsx:3748
+#: src/components/status.jsx:3736
 msgid "Loading…"
 msgstr ""
 
 #. [Name] [Visibility icon] boosted
-#: src/components/status.jsx:3880
+#: src/components/status.jsx:3868
 msgid "<0/> <1/> boosted"
 msgstr "<0/> <1/> boosted"
 
@@ -4046,56 +4047,61 @@ msgid "Marked as sensitive"
 msgstr "Marked as sensitive"
 
 #. placeholder {0}: e?.message || e
-#: src/pages/conversation-thread.jsx:39
+#: src/pages/conversation-thread.jsx:69
 msgid "Unable to like: {0}"
 msgstr "Unable to like: {0}"
 
-#: src/pages/conversation-thread.jsx:94
+#: src/pages/conversation-thread.jsx:135
 msgid "Share link"
 msgstr "Share link"
 
-#: src/pages/conversation-thread.jsx:106
-#: src/pages/conversation-thread.jsx:158
+#: src/pages/conversation-thread.jsx:147
+#: src/pages/conversation-thread.jsx:225
 msgid "Conversation"
 msgstr "Conversation"
 
-#: src/pages/conversation-thread.jsx:154
+#: src/pages/conversation-thread.jsx:221
 #: src/pages/dm-thread.jsx:120
 #: src/pages/dm-thread.jsx:121
 #: src/pages/status.jsx:1467
 msgid "Back"
 msgstr ""
 
-#: src/pages/conversation-thread.jsx:166
+#: src/pages/conversation-thread.jsx:233
 msgid "Unable to load this conversation."
 msgstr "Unable to load this conversation."
+
+#. placeholder {0}: row.count
+#: src/pages/conversation-thread.jsx:264
+msgid "{0, plural, one {# more reply} other {# more replies}}"
+msgstr "{0, plural, one {# more reply} other {# more replies}}"
 
 #: src/pages/conversations.jsx:25
 #~ msgid "Conversations will appear here."
 #~ msgstr "Conversations will appear here."
 
-#: src/pages/conversations.jsx:42
+#: src/pages/conversations.jsx:43
 msgid "{images, plural, one {# image} other {# images}}"
 msgstr "{images, plural, one {# image} other {# images}}"
 
-#: src/pages/conversations.jsx:48
+#: src/pages/conversations.jsx:49
 msgid "{videos, plural, one {# video} other {# videos}}"
 msgstr "{videos, plural, one {# video} other {# videos}}"
 
-#: src/pages/conversations.jsx:54
+#: src/pages/conversations.jsx:55
 msgid "{others, plural, one {# attachment} other {# attachments}}"
 msgstr "{others, plural, one {# attachment} other {# attachments}}"
 
-#: src/pages/conversations.jsx:59
+#: src/pages/conversations.jsx:60
 msgid "Quoted post"
 msgstr "Quoted post"
 
-#: src/pages/conversations.jsx:64
+#: src/pages/conversations.jsx:65
 msgid "Link preview"
 msgstr "Link preview"
 
-#: src/pages/conversations.jsx:83
-#: src/pages/conversations.jsx:180
+#: src/pages/conversations.jsx:84
+#: src/pages/conversations.jsx:181
 #: src/pages/filters.jsx:31
 msgid "Conversations"
 msgstr ""
@@ -4105,33 +4111,37 @@ msgstr ""
 #~ msgid "{0, plural, one {# response} other {# responses}}"
 #~ msgstr "{0, plural, one {# response} other {# responses}}"
 
+#: src/pages/conversations.jsx:189
+msgid "New post"
+msgstr "New post"
+
 #: src/pages/conversations.jsx:196
 #~ msgid "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 #~ msgstr "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 
 #. placeholder {0}: failed.join(', ')
-#: src/pages/conversations.jsx:197
+#: src/pages/conversations.jsx:205
 msgid "Couldn’t load: {0}"
 msgstr "Couldn’t load: {0}"
 
-#: src/pages/conversations.jsx:203
+#: src/pages/conversations.jsx:211
 msgid "Unable to load conversations."
 msgstr "Unable to load conversations."
 
 #. placeholder {0}: entry.responseCount
-#: src/pages/conversations.jsx:247
+#: src/pages/conversations.jsx:255
 msgid "{0, plural, one {# reply} other {# replies}}"
 msgstr "{0, plural, one {# reply} other {# replies}}"
 
-#: src/pages/conversations.jsx:262
+#: src/pages/conversations.jsx:270
 msgid "{days, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 msgstr "{days, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 
-#: src/pages/conversations.jsx:279
+#: src/pages/conversations.jsx:287
 msgid "Show one more day"
 msgstr "Show one more day"
 
-#: src/pages/conversations.jsx:283
+#: src/pages/conversations.jsx:291
 msgid "No older replies or mentions."
 msgstr "No older replies or mentions."
 

@@ -18,6 +18,7 @@ import {
 } from '../utils/conversation-group';
 import { walkUntilCutoff } from '../utils/engagement-tally';
 import getHTMLText from '../utils/getHTMLText';
+import showCompose from '../utils/show-compose';
 import states, { saveStatus } from '../utils/states';
 import useTitle from '../utils/useTitle';
 
@@ -180,6 +181,9 @@ function Conversations() {
               <Trans>Conversations</Trans>
             </h1>
             <div class="header-side">
+              <button type="button" class="plain" onClick={() => showCompose()}>
+                <Icon icon="quill" size="l" alt={t`New post`} />
+              </button>
               <button
                 type="button"
                 class="plain"
