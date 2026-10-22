@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isHiddenAuthor, threadRows } from './conversation-tree';
+import { isHiddenAuthor, nestRows, threadRows } from './conversation-tree';
 
 let minute = 0;
 function post(id, inReplyToId = null, account = { id: 'bob' }) {
@@ -126,5 +126,34 @@ describe('isHiddenAuthor', () => {
     expect(isHiddenAuthor({ _viewer: { following: 'at://y' } })).toBe(false);
     expect(isHiddenAuthor({ id: 'mastodon' })).toBe(false);
     expect(isHiddenAuthor(null)).toBe(false);
+  });
+});
+
+describe('nestRows', () => {
+  const ids = (nodes) =>
+    nodes.map((n) => (n.children.length ? [n.id, ids(n.children)] : n.id));
+
+  it('makes deeper rows children of the row before them', () => {
+    const rows = [
+      { type: 'post', id: 'r', depth: 0 },
+      { type: 'post', id: 'a', depth: 1 },
+      { type: 'post', id: 'a1', depth: 2 },
+      { type: 'more', id: 'a1', depth: 3 },
+      { type: 'post', id: 'b', depth: 1 },
+    ];
+    expect(ids(nestRows(rows))).toEqual([
+      ['r', [['a', [['a1', ['a1']]]], 'b']],
+    ]);
+  });
+
+  it('keeps rows at the depth cap as siblings', () => {
+    const rows = [
+      { type: 'post', id: 'r', depth: 0 },
+      { type: 'post', id: '1', depth: 1 },
+      { type: 'post', id: '2', depth: 2 },
+      { type: 'post', id: '3', depth: 3 },
+      { type: 'post', id: '4', depth: 3 },
+    ];
+    expect(ids(nestRows(rows))).toEqual([['r', [['1', [['2', ['3', '4']]]]]]]);
   });
 });

@@ -1,23 +1,74 @@
 #conversation-thread-page {
-  .thread-posts {
+  /* Status draws a 50px avatar inside 16px of padding, then 12px of gap. */
+  --avatar-center: 41px;
+  --text-start: 78px;
+  --line-width: 3px;
+  --line-radius: 10px;
+  --level-indent: 16px;
+
+  .thread-posts,
+  .thread-replies {
     list-style: none;
     margin: 0;
     padding: 0;
   }
 
-  /* Replies indent by depth (threadRows caps it), with a rule that shows
-     which post they answer. */
-  .thread-post,
-  .thread-more {
-    --indent: calc(var(--depth, 0) * 14px);
-    margin-inline-start: var(--indent);
+  /* Top-level branches are separated like timeline items. */
+  .thread-posts > li {
+    border-bottom: var(--hairline-width) solid var(--divider-color);
   }
-  .thread-post.nested {
-    border-inline-start: 2px solid var(--outline-color);
+
+  /* A reply list hangs off its parent's avatar on a rounded line, with a
+     curve into each reply, as in the full app's thread view. */
+  .thread-replies {
+    position: relative;
+    margin-inline-start: calc(var(--avatar-center) - var(--line-width) / 2);
+    padding-bottom: 8px;
+
+    &::before {
+      content: '';
+      position: absolute;
+      inset-block: 0 16px;
+      inset-inline-start: 0;
+      width: var(--line-width);
+      border-radius: var(--line-width);
+      background-color: var(--comment-line-color);
+    }
+
+    > li {
+      position: relative;
+    }
+
+    > li:not(.thread-more)::before {
+      content: '';
+      position: absolute;
+      top: 10px;
+      inset-inline-start: 0;
+      width: calc(var(--line-radius) * 2);
+      height: calc(var(--line-radius) * 2);
+      border-radius: var(--line-radius);
+      border: var(--line-width) solid transparent;
+      border-bottom-color: var(--comment-line-color);
+      transform: rotate(45deg);
+      :dir(rtl) & {
+        transform: rotate(-45deg);
+      }
+    }
+
+    > li > .thread-post {
+      padding-inline-start: var(--level-indent);
+    }
+
+    /* Deeper lists hang off the reply's own avatar. */
+    .thread-replies {
+      margin-inline-start: calc(
+        var(--level-indent) + var(--avatar-center) - var(--line-width) / 2
+      );
+    }
   }
 
   .thread-post {
-    border-bottom: 1px solid var(--outline-color);
+    border-radius: 16px;
 
     &.focused {
       background-color: var(--bg-faded-color);
@@ -41,12 +92,14 @@
   .thread-actions {
     display: flex;
     gap: 8px;
-    padding: 0 16px 8px;
+    margin-top: -8px;
+    padding: 0 16px 8px var(--text-start);
 
     button {
       display: inline-flex;
       align-items: center;
       gap: 4px;
+      border-radius: 999px;
       color: var(--text-insignificant-color);
     }
 
@@ -55,13 +108,18 @@
     }
   }
 
+  /* The full app's "more replies" pill. */
   .thread-more {
-    border-inline-start: 2px solid var(--outline-color);
-    border-bottom: 1px solid var(--outline-color);
+    padding: 4px 0 12px var(--level-indent);
 
     button {
-      padding: 8px 16px;
-      color: var(--link-color);
+      padding: 8px;
+      border-radius: 8px;
+      background-color: var(--bg-faded-color);
+      box-shadow: 0 0 0 2px var(--bg-color);
+      color: var(--text-insignificant-color);
+      font-size: 12px;
+      text-transform: uppercase;
     }
   }
 

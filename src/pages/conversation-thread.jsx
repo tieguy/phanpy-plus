@@ -11,7 +11,7 @@ import Link from '../components/link';
 import Loader from '../components/loader';
 import Status, { quoteMessages } from '../components/status';
 import { api } from '../utils/api';
-import { threadRows } from '../utils/conversation-tree';
+import { nestRows, threadRows } from '../utils/conversation-tree';
 import { getQuotePolicy, supportsNativeQuote } from '../utils/quote-utils';
 import shortenNumber from '../utils/shorten-number';
 import showCompose from '../utils/show-compose';
@@ -22,7 +22,7 @@ import useTitle from '../utils/useTitle';
 
 // One post of the thread, with the only actions conversation mode offers:
 // reply, quote, like and share link.
-function ThreadPost({ statusID, instance, depth, focused, masto }) {
+function ThreadPost({ statusID, instance, focused, masto }) {
   const { t, _ } = useLingui();
   const snapStates = useSnapshot(states);
   const status = snapStates.statuses[statusKey(statusID, instance)];
@@ -92,10 +92,9 @@ function ThreadPost({ statusID, instance, depth, focused, masto }) {
   }
 
   return (
-    <li
-      class={`thread-post ${depth ? 'nested' : ''} ${focused ? 'focused' : ''}`}
+    <div
+      class={`thread-post ${focused ? 'focused' : ''}`}
       data-focused={focused}
-      style={{ '--depth': depth }}
     >
       <InertLinks>
         <Status statusID={statusID} instance={instance} previewMode readOnly />
@@ -135,7 +134,45 @@ function ThreadPost({ statusID, instance, depth, focused, masto }) {
           <Icon icon="share" alt={t`Share link`} />
         </button>
       </div>
-    </li>
+    </div>
+  );
+}
+
+// Nested lists of posts. A reply list sits under its parent's avatar, as in
+// the full app's thread view.
+function ThreadNodes({ nodes, instance, focusedId, masto, onExpand }) {
+  return nodes.map((node) =>
+    node.type === 'post' ? (
+      <li key={node.id}>
+        <ThreadPost
+          statusID={node.id}
+          instance={instance}
+          focused={node.id === focusedId}
+          masto={masto}
+        />
+        {node.children.length > 0 && (
+          <ul class="thread-replies">
+            <ThreadNodes
+              nodes={node.children}
+              instance={instance}
+              focusedId={focusedId}
+              masto={masto}
+              onExpand={onExpand}
+            />
+          </ul>
+        )}
+      </li>
+    ) : (
+      <li key={`more-${node.id}`} class="thread-more">
+        <button type="button" class="plain" onClick={() => onExpand(node.id)}>
+          <Plural
+            value={node.count}
+            one="# more reply"
+            other="# more replies"
+          />
+        </button>
+      </li>
+    ),
   );
 }
 
@@ -190,14 +227,16 @@ function ConversationThread() {
     };
   }, [instance, id, snapStates.reloadStatusPage]);
 
-  const rows = useMemo(
+  const nodes = useMemo(
     () =>
       thread
-        ? threadRows(thread.statuses, {
-            rootId: thread.rootId,
-            focusedId: id,
-            expanded,
-          })
+        ? nestRows(
+            threadRows(thread.statuses, {
+              rootId: thread.rootId,
+              focusedId: id,
+              expanded,
+            }),
+          )
         : [],
     [thread, id, expanded],
   );
@@ -238,38 +277,15 @@ function ConversationThread() {
             </p>
           ) : (
             <ul class="thread-posts">
-              {rows.map((row) =>
-                row.type === 'post' ? (
-                  <ThreadPost
-                    key={row.id}
-                    statusID={row.id}
-                    instance={instance}
-                    depth={row.depth}
-                    focused={row.id === id}
-                    masto={masto}
-                  />
-                ) : (
-                  <li
-                    key={`more-${row.id}`}
-                    class="thread-more"
-                    style={{ '--depth': row.depth }}
-                  >
-                    <button
-                      type="button"
-                      class="plain"
-                      onClick={() =>
-                        setExpanded((prev) => new Set(prev).add(row.id))
-                      }
-                    >
-                      <Plural
-                        value={row.count}
-                        one="# more reply"
-                        other="# more replies"
-                      />
-                    </button>
-                  </li>
-                ),
-              )}
+              <ThreadNodes
+                nodes={nodes}
+                instance={instance}
+                focusedId={id}
+                masto={masto}
+                onExpand={(branchId) =>
+                  setExpanded((prev) => new Set(prev).add(branchId))
+                }
+              />
             </ul>
           )}
         </main>

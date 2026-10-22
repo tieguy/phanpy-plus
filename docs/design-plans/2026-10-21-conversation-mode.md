@@ -208,6 +208,10 @@ into rows:
 - A post by a muted or blocked Bluesky author is left out, with every
   reply under it. The root and the line to the focused post always show.
 
+`nestRows` turns the rows into lists inside lists. Each reply list hangs
+off its parent's avatar on a rounded line, with a curve into each reply,
+in the full app's thread colours.
+
 The page scrolls the focused post into view. Each post is the existing
 `Status` component in `readOnly` and `previewMode`, which removes its
 action bar and its context menu (the context menu has profile and boost

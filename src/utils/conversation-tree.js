@@ -103,3 +103,20 @@ export function threadRows(statuses, { rootId, focusedId, expanded }) {
   walk(root, 0, false);
   return rows;
 }
+
+// Nests threadRows output for rendering as lists inside lists: each row takes
+// the rows after it with a greater depth as its children. Rows at MAX_DEPTH
+// stay siblings, because their depth stops growing.
+export function nestRows(rows) {
+  const top = [];
+  const stack = [{ depth: -1, children: top }];
+  for (const row of rows) {
+    while (stack.length > 1 && stack[stack.length - 1].depth >= row.depth) {
+      stack.pop();
+    }
+    const node = { ...row, children: [] };
+    stack[stack.length - 1].children.push(node);
+    stack.push(node);
+  }
+  return top;
+}
