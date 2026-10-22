@@ -1,0 +1,22 @@
+[Unit]
+Description=Fleeting static site (Caddy)
+
+[Container]
+ContainerName=fleeting
+Image=docker.io/library/caddy:2.10.2-alpine
+PublishPort=127.0.0.1:8085:8080
+Volume=%h/containers/volumes/fleeting/Caddyfile:/etc/caddy/Caddyfile:ro
+Volume=%h/containers/volumes/fleeting/site:/srv:ro
+ReadOnly=true
+Tmpfs=/data
+Tmpfs=/config
+DropCapability=ALL
+NoNewPrivileges=true
+PodmanArgs=--memory=128m --cpus=1
+
+[Service]
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=default.target

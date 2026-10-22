@@ -1,0 +1,17 @@
+[Unit]
+Description=Build and publish Fleeting when its branch has moved
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/fleeting-deploy
+Environment=PATH=%h/.local/share/fnm/aliases/default/bin:/usr/local/bin:/usr/bin:/bin
+Environment=FLEETING_WEBSITE=https://fleeting.peafowl-polaris.ts.net
+Environment=FLEETING_CLIENT_NAME=Fleeting
+Environment=FLEETING_DISALLOW_ROBOTS=true
+Environment=FLEETING_ACCOUNTS=mastodon:luis_in_brief@social.coop,bluesky:lu.is
+# A build is a burst on a shared box; keep it out of the way
+Nice=10
+CPUQuota=400%
+TimeoutStartSec=20min

@@ -1,0 +1,16 @@
+# Serves the current Fleeting release. tailscale serve terminates TLS and
+# proxies to this listener on 127.0.0.1, so Caddy speaks plain HTTP.
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:8080 {
+	root * /srv/current
+	# Generated from the build's _headers file by fleeting-deploy.sh
+	import /srv/headers.caddy
+	file_server {
+		hide _headers headers.caddy
+	}
+}

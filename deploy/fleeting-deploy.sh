@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Build and publish Fleeting when the deploy branch has moved.
+#
+# Runs from fleeting-deploy.timer. Each run compares the branch head with the
+# deployed commit and does nothing when they match. Otherwise it builds the
+# new commit in a clean clone, copies dist/ to releases/<sha>, converts the
+# build's Netlify-style _headers file into a Caddy snippet, and repoints the
+# `current` symlink that Caddy serves. A failed build leaves the running
+# release in place.
+set -euo pipefail
+
+REPO="${FLEETING_DEPLOY_REPO:-https://github.com/tieguy/phanpy-plus.git}"
+BRANCH="${FLEETING_DEPLOY_BRANCH:-main}"
+BASE="${FLEETING_DEPLOY_DIR:-$HOME/containers/volumes/fleeting}"
+KEEP_RELEASES=3
+
+SRC="$BASE/src"
+SITE="$BASE/site"
+RELEASES="$SITE/releases"
+
+log() { echo "fleeting-deploy: $*"; }
+
+head_sha=$(git ls-remote "$REPO" "refs/heads/$BRANCH" | cut -f1)
+if [[ -z "$head_sha" ]]; then
+  log "branch $BRANCH not found in $REPO"
+  exit 1
+fi
+deployed_sha=$(cat "$SITE/deployed-sha" 2>/dev/null || true)
+if [[ "$head_sha" == "$deployed_sha" ]]; then
+  exit 0
+fi
+log "deploying $BRANCH at $head_sha (was ${deployed_sha:-nothing})"
+
+mkdir -p "$RELEASES"
+if [[ ! -d "$SRC/.git" ]]; then
+  git clone --quiet "$REPO" "$SRC"
+fi
+git -C "$SRC" remote set-url origin "$REPO"
+git -C "$SRC" fetch --quiet origin "$head_sha"
+git -C "$SRC" checkout --quiet --force --detach "$head_sha"
+git -C "$SRC" clean --quiet -fdx -e node_modules
+
+(cd "$SRC" && npm ci --no-audit --no-fund --loglevel=error && npm run build)
+
+release="$RELEASES/$head_sha"
+rm -rf "$release"
+cp -a "$SRC/dist" "$release"
+
+# Netlify `_headers` → Caddy snippet. Each block is a path line followed by
+# indented `Name: value` lines; `/*` and `/assets/*` are prefix matches, any
+# other path is exact, as on Netlify.
+awk '
+  function flush() {
+    if (path == "" || n == 0) return
+    m++
+    printf "@h%d path %s\n", m, path
+    for (i = 1; i <= n; i++) printf "header @h%d %s\n", m, hdr[i]
+    n = 0
+  }
+  /^[^ \t]/ { flush(); path = $0; next }
+  /^[ \t]+[^ \t]/ {
+    line = $0
+    sub(/^[ \t]+/, "", line)
+    name = substr(line, 1, index(line, ":") - 1)
+    value = substr(line, index(line, ":") + 1)
+    sub(/^[ \t]+/, "", value)
+    gsub(/\\/, "\\\\", value)
+    gsub(/"/, "\\\"", value)
+    hdr[++n] = name " \"" value "\""
+    next
+  }
+  END { flush() }
+' "$release/_headers" > "$release/headers.caddy"
+
+ln -sfn "releases/$head_sha" "$SITE/current.new"
+mv -T "$SITE/current.new" "$SITE/current"
+
+# Caddy reads the header snippet at startup only
+if ! cmp -s "$release/headers.caddy" "$SITE/headers.caddy"; then
+  cp "$release/headers.caddy" "$SITE/headers.caddy"
+  systemctl --user restart fleeting.service
+  log "headers changed; restarted fleeting.service"
+fi
+echo "$head_sha" > "$SITE/deployed-sha"
+
+# Keep the newest releases, by modification time
+ls -1t "$RELEASES" | tail -n +$((KEEP_RELEASES + 1)) | while read -r old; do
+  rm -rf "${RELEASES:?}/$old"
+done
+log "deployed $head_sha"
