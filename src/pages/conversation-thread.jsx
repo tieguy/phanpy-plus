@@ -22,7 +22,7 @@ import useTitle from '../utils/useTitle';
 
 // One post of the thread, with the only actions conversation mode offers:
 // reply, quote, like and share link.
-function ThreadPost({ statusID, instance, focused, masto }) {
+function ThreadPost({ statusID, instance, focused, nested, masto }) {
   const { t, _ } = useLingui();
   const snapStates = useSnapshot(states);
   const status = snapStates.statuses[statusKey(statusID, instance)];
@@ -93,11 +93,17 @@ function ThreadPost({ statusID, instance, focused, masto }) {
 
   return (
     <div
-      class={`thread-post ${focused ? 'focused' : ''}`}
+      class={`thread-post ${focused ? 'focused' : ''} ${nested ? 'nested' : ''}`}
       data-focused={focused}
     >
       <InertLinks>
-        <Status statusID={statusID} instance={instance} previewMode readOnly />
+        <Status
+          statusID={statusID}
+          instance={instance}
+          size={nested ? 's' : undefined}
+          previewMode
+          readOnly
+        />
       </InertLinks>
       <div class="thread-actions">
         <button
@@ -139,8 +145,8 @@ function ThreadPost({ statusID, instance, focused, masto }) {
 }
 
 // Nested lists of posts. A reply list sits under its parent's avatar, as in
-// the full app's thread view.
-function ThreadNodes({ nodes, instance, focusedId, masto, onExpand }) {
+// the full app's thread view, and replies use the full app's small size.
+function ThreadNodes({ nodes, instance, focusedId, nested, masto, onExpand }) {
   return nodes.map((node) =>
     node.type === 'post' ? (
       <li key={node.id}>
@@ -148,6 +154,7 @@ function ThreadNodes({ nodes, instance, focusedId, masto, onExpand }) {
           statusID={node.id}
           instance={instance}
           focused={node.id === focusedId}
+          nested={nested}
           masto={masto}
         />
         {node.children.length > 0 && (
@@ -156,6 +163,7 @@ function ThreadNodes({ nodes, instance, focusedId, masto, onExpand }) {
               nodes={node.children}
               instance={instance}
               focusedId={focusedId}
+              nested
               masto={masto}
               onExpand={onExpand}
             />

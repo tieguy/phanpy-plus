@@ -211,6 +211,10 @@ into rows:
 `nestRows` turns the rows into lists inside lists. Each reply list hangs
 off its parent's avatar on a rounded line, with a curve into each reply,
 in the full app's thread colours.
+Replies use the full app's small `Status` size, with a small avatar in the
+name line, so each level costs less width than the root post. On screens
+narrower than 40em, the indent per level and the padding of each reply
+shrink again.
 
 The page scrolls the focused post into view. Each post is the existing
 `Status` component in `readOnly` and `previewMode`, which removes its

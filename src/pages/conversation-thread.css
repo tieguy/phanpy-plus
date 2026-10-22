@@ -1,10 +1,26 @@
 #conversation-thread-page {
-  /* Status draws a 50px avatar inside 16px of padding, then 12px of gap. */
+  /* Status draws a 50px avatar inside 16px of padding, then 12px of gap.
+     A small (nested) Status puts a 20px avatar in its meta line instead, and
+     its text starts at the padding. */
+  --status-padding: 16px;
   --avatar-center: 41px;
   --text-start: 78px;
+  --small-avatar-center: 26px;
   --line-width: 3px;
   --line-radius: 10px;
   --level-indent: 16px;
+
+  /* Narrow screens spend less on each level, so deep replies keep a readable
+     width. */
+  @media (max-width: 40em) {
+    --status-padding: 10px;
+    --small-avatar-center: 20px;
+    --level-indent: 8px;
+
+    .thread-post.nested .status {
+      padding-inline: var(--status-padding);
+    }
+  }
 
   .thread-posts,
   .thread-replies {
@@ -59,10 +75,10 @@
       padding-inline-start: var(--level-indent);
     }
 
-    /* Deeper lists hang off the reply's own avatar. */
+    /* Deeper lists hang off the reply's own small avatar. */
     .thread-replies {
       margin-inline-start: calc(
-        var(--level-indent) + var(--avatar-center) - var(--line-width) / 2
+        var(--level-indent) + var(--small-avatar-center) - var(--line-width) / 2
       );
     }
   }
@@ -94,6 +110,10 @@
     gap: 8px;
     margin-top: -8px;
     padding: 0 16px 8px var(--text-start);
+
+    .thread-post.nested & {
+      padding-inline-start: var(--status-padding);
+    }
 
     button {
       display: inline-flex;
