@@ -105,10 +105,10 @@ is set.
 
 ## Deploys
 
-**Open: choose one.**
+**Decided 2026-10-21: B, every 10 minutes.** A remains an option if the
+delay becomes a problem.
 
-**A. Push from GitHub Actions over Tailscale (recommended if the access
-changes are acceptable).** On push to `main`, a workflow builds `dist/` on
+**A. Push from GitHub Actions over Tailscale.** On push to `main`, a workflow builds `dist/` on
 the runner. It joins the tailnet as an ephemeral `tag:ci` node with
 `tailscale/github-action`, then runs `rsync --delete-after --delay-updates`
 into the web root on deepthought. This works like Netlify, with no polling
@@ -126,9 +126,9 @@ needs the operator's approval:
   see it.
 
 **B. Pull on deepthought.** A systemd user timer runs `git ls-remote` every
-minute. When `main` has moved, it fetches, builds with `npm ci && npm run
+10 minutes. When `main` has moved, it fetches, builds with `npm ci && npm run
 build`, and swaps the web root. This needs no new users, credentials, or
-policy. The costs are up to a minute of delay and a build burst on
+policy. The costs are up to 10 minutes of delay and a build burst on
 deepthought for each deploy.
 
 ## Cutover

@@ -147,6 +147,15 @@ a build emits ~24 hashed JS and CSS files, so an entry cap below roughly
 `maxHashes × 24` lets LRU eviction discard old hashes before `AssetHashPlugin`
 counts them, and `maxHashes` stops meaning anything.
 
+## Deployment
+
+Fleeting is single-user and served only on the operator's tailnet, from `deepthought`, at `https://fleeting.peafowl-polaris.ts.net`. The files are in `deploy/`; on the host they are installed as plain copies (`~/.local/bin/fleeting-deploy`, `~/.config/containers/systemd/fleeting.container`, `~/.config/systemd/user/fleeting-deploy.{service,timer}`, `~/containers/volumes/fleeting/Caddyfile`), so a change to one of them is copied over by hand.
+
+- **Serving.** A Caddy Quadlet serves `~/containers/volumes/fleeting/site/current` on `127.0.0.1:8085`, and `tailscale serve --service=svc:fleeting` terminates TLS in front of it. Missing files get a plain 404, which the service worker's stale-shell recovery relies on.
+- **Deploys are pulls.** `fleeting-deploy.timer` runs every 10 minutes. The script compares the head of `main` on GitHub with `site/deployed-sha` and does nothing if they match. Otherwise it builds that commit in a clean clone, copies `dist/` to `site/releases/<sha>`, and swaps the `current` symlink; it keeps the newest three releases. A failed build leaves the running release in place. `systemctl --user start fleeting-deploy.service` deploys immediately.
+- **Build settings** (`FLEETING_ACCOUNTS`, `FLEETING_WEBSITE`, `FLEETING_DISALLOW_ROBOTS`) are `Environment=` lines in `fleeting-deploy.service`.
+- **Headers.** The CSP and security headers are computed in `vite.config.js` and written to the Netlify-style `dist/_headers`. The deploy script converts that file into the Caddy snippet `site/headers.caddy`, and restarts Caddy only when the snippet changes.
+
 ## Naming
 
 The project was renamed from `phanpy-plus` to `fleeting-social`. As of this rename the change is **README + docs only** — `package.json`, the git repo/remote, deploy config, and in-code strings still say `phanpy`/`phanpy-plus` and are a separate pass.
