@@ -75,6 +75,22 @@ export function hasMutedWord(text, mutedWords, now = Date.now()) {
   return false;
 }
 
+// The text muted words are checked against: the post, its content warning,
+// link card, image alt text, and the same parts of a quoted post.
+export function mutableText(status, depth = 0) {
+  if (!status) return '';
+  return [
+    status.spoilerText,
+    plainText(status.content),
+    status.card?.title,
+    status.card?.description,
+    ...(status.mediaAttachments || []).map((m) => m.description),
+    depth < 1 ? mutableText(status.quote?.quotedStatus, depth + 1) : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 // Builds one candidate per original post from timeline items, which may be
 // boost wrappers. Keeps posts created after the cutoff, not by the user, not
 // direct, and not replies into someone else's thread (self-threads stay).
@@ -118,7 +134,7 @@ export function buildPool(
       const text = [status.spoilerText, plainText(status.content)]
         .filter(Boolean)
         .join('\n');
-      if (hasMutedWord(text, mutedWords)) continue;
+      if (hasMutedWord(mutableText(status), mutedWords)) continue;
       candidate = {
         key,
         instance,
