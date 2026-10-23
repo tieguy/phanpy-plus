@@ -2,6 +2,9 @@
 // Pure functions only; the page in src/pages/foryou-lab.jsx fetches the
 // data and records which picks the user finds interesting.
 
+import { isHiddenAuthor } from './conversation-tree';
+import { isFiltered } from './filters';
+
 export const WINDOW_MS = 24 * 60 * 60 * 1000;
 export const PICKS_PER_RULE = 12;
 export const PER_AUTHOR_CAP = 2;
@@ -51,6 +54,8 @@ function plainText(html) {
 // Builds one candidate per original post from timeline items, which may be
 // boost wrappers. Keeps posts created after the cutoff, not by the user, not
 // direct, and not replies into someone else's thread (self-threads stay).
+// Drops muted and blocked authors and boosters, including those on Bluesky
+// mute and block lists, and posts that match a Mastodon home filter.
 // `boostedBy` counts accounts in the home timeline that boosted the post;
 // `quotedBy` counts home-timeline authors whose posts quote it. `inHome` is
 // set when the post itself, not a boost of it, is in the home timeline.
@@ -60,6 +65,15 @@ export function buildPool(entries, { cutoff, selfKeys = new Set() }) {
   for (const { item, origin, instance } of entries) {
     if (!item) continue;
     const status = item.reblog || item;
+    if (isHiddenAuthor(status.account) || isHiddenAuthor(item.account)) {
+      continue;
+    }
+    if (
+      isFiltered(item.filtered, 'home') ||
+      isFiltered(status.filtered, 'home')
+    ) {
+      continue;
+    }
     const key = `${instance}/${status.id}`;
     let candidate = pool.get(key);
     if (!candidate) {
