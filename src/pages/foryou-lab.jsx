@@ -25,7 +25,7 @@ import useTitle from '../utils/useTitle';
 // Experiment page, reached only by typing its URL. Its strings are plain
 // text, not lingui macros, so they need no catalog entries.
 
-const HOME_PAGES = 12;
+const HOME_PAGES = 30;
 const FEED_PAGES = 4;
 const ACTIVITY_PAGES = 3;
 const PROFILE_CONCURRENCY = 6;
@@ -45,16 +45,19 @@ function saveVerdicts(verdicts) {
   } catch (e) {}
 }
 
-// Reads pages until one holds an item older than the cutoff (when `cutoff` is
-// set) or `pages` pages are read. Custom feeds are not chronological, so they
-// pass no cutoff.
+// Reads pages until a page ends with an item older than the cutoff (when
+// `cutoff` is set) or `pages` pages are read. One old item mid-page, such as a
+// backdated post, does not stop the walk. Custom feeds are not chronological,
+// so they pass no cutoff.
 async function collect(iterator, { pages, cutoff }) {
   const items = [];
   for (let i = 0; i < pages; i++) {
     const { done, value } = await iterator.next();
     if (done || !value?.length) break;
     items.push(...value);
-    if (cutoff && value.some((s) => Date.parse(s.createdAt) < cutoff)) break;
+    if (cutoff && Date.parse(value[value.length - 1].createdAt) < cutoff) {
+      break;
+    }
   }
   return items;
 }
@@ -76,6 +79,11 @@ async function loadSource({ masto, instance }, cutoff, log) {
     { pages: HOME_PAGES, cutoff },
   );
   const entries = home.map((item) => ({ item, origin: 'home', instance }));
+  // Hours of home timeline read, from the last item reached; under 24 means
+  // the walk ended before the window did
+  const homeHours = home.length
+    ? Math.round((Date.now() - Date.parse(home.at(-1).createdAt)) / 36e5)
+    : 0;
 
   let lists = [];
   try {
@@ -134,6 +142,7 @@ async function loadSource({ masto, instance }, cutoff, log) {
     entries,
     mutedWords,
     homeCount: home.length,
+    homeHours,
     feeds,
     own: own.map((status) => ({ instance, status })),
     likes: likes.map((status) => ({ instance, status })),
@@ -232,12 +241,15 @@ function ForYouLab() {
           ...result,
           byKey,
           poolSize: pool.length,
-          sources: loaded.map(({ instance, homeCount, feeds, own, likes }) => ({
-            instance,
-            homeCount,
-            feeds,
-            activity: own.length + likes.length,
-          })),
+          sources: loaded.map(
+            ({ instance, homeCount, homeHours, feeds, own, likes }) => ({
+              instance,
+              homeCount,
+              homeHours,
+              feeds,
+              activity: own.length + likes.length,
+            }),
+          ),
         });
       } catch (e) {
         console.error(e);
@@ -355,7 +367,8 @@ function ForYouLab() {
                 <ul class="lab-sources">
                   {lab.sources.map((s) => (
                     <li key={s.instance}>
-                      <b>{s.instance}</b>: {s.homeCount} home items
+                      <b>{s.instance}</b>: {s.homeCount} home items over{' '}
+                      {s.homeHours} h
                       {s.feeds.map((f) => (
                         <span key={f.title}>
                           {' '}
