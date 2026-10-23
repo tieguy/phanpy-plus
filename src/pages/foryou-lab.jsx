@@ -9,7 +9,9 @@ import NavMenu from '../components/nav-menu';
 import Status from '../components/status';
 import { api } from '../utils/api';
 import { getOtherNetworkAccounts } from '../utils/bluesky';
+import { idToAtUri } from '../utils/bluesky/convert';
 import {
+  LAB_FEEDS,
   WINDOW_MS,
   affinityFromActivity,
   authorKey,
@@ -77,7 +79,9 @@ async function loadSource({ masto, instance }, cutoff, log) {
 
   let lists = [];
   try {
-    lists = (await masto.v1.lists.list()).filter((l) => l._feed);
+    lists = (await masto.v1.lists.list()).filter(
+      (l) => l._feed && LAB_FEEDS.has(idToAtUri(l.id)),
+    );
   } catch (e) {
     console.error(e);
   }
@@ -420,7 +424,8 @@ function ForYouLab() {
                       </div>
                       {revealed && (
                         <p class="lab-why insignificant">
-                          {rulesForKey(key).join(', ')} · relative{' '}
+                          {rulesForKey(key).join(', ')} ·{' '}
+                          {f.followed ? 'followed' : 'not followed'} · relative{' '}
                           {fmt(f.relative, 3)} · raw {fmt(f.raw, 1)} · followers{' '}
                           {f.followers ?? '–'} · shared by {f.sharedBy} ·
                           affinity {f.affinity} · posts today{' '}

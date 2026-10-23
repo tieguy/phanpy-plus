@@ -6,6 +6,13 @@ export const WINDOW_MS = 24 * 60 * 60 * 1000;
 export const PICKS_PER_RULE = 12;
 export const PER_AUTHOR_CAP = 2;
 
+// The saved Bluesky feeds the lab reads. Other saved feeds are skipped.
+export const LAB_FEEDS = new Set([
+  'at://did:plc:kmqa6ybu75bsrh2a7ccavy6g/app.bsky.feed.generator/aaaeenrjnifc4', // Housing Abundance
+  'at://did:plc:lrzkd5exmxqrblbruvjieofj/app.bsky.feed.generator/MLBlend', // AI/ML Feed: Blend
+  'at://did:plc:ktdlmdqpbyzbvtxrkwz5pvp2/app.bsky.feed.generator/aaab6tnm5ipfm', // San Francisco
+]);
+
 export const TOPICS = {
   'open source':
     /\b(open[- ]source|foss|free software|osi\b|gpl|apache license|mit license|copyleft|github|maintainers?)\b/i,
@@ -45,7 +52,8 @@ function plainText(html) {
 // boost wrappers. Keeps posts created after the cutoff, not by the user, not
 // direct, and not replies into someone else's thread (self-threads stay).
 // `boostedBy` counts accounts in the home timeline that boosted the post;
-// `quotedBy` counts home-timeline authors whose posts quote it.
+// `quotedBy` counts home-timeline authors whose posts quote it. `inHome` is
+// set when the post itself, not a boost of it, is in the home timeline.
 export function buildPool(entries, { cutoff, selfKeys = new Set() }) {
   const pool = new Map();
   const quotes = [];
@@ -78,10 +86,12 @@ export function buildPool(entries, { cutoff, selfKeys = new Set() }) {
         origins: new Set(),
         boostedBy: new Set(),
         quotedBy: new Set(),
+        inHome: false,
       };
       pool.set(key, candidate);
     }
     candidate.origins.add(origin);
+    if (origin === 'home' && !item.reblog) candidate.inHome = true;
     if (item.reblog && origin === 'home') {
       candidate.boostedBy.add(authorKey(instance, item.account));
     }
@@ -155,9 +165,12 @@ function hashKey(key, seed) {
 }
 
 export function featuresOf(candidate, ctx) {
-  const { followers, affinity, homePostsByAuthor } = ctx;
+  const { followers, affinity, homePostsByAuthor, followedAuthors } = ctx;
   const followerCount = followers.get(candidate.author);
   return {
+    followed:
+      followedAuthors.has(candidate.author) ||
+      !!candidate.status.account?._viewer?.following,
     raw: rawEngagement(candidate.status),
     relative: relativeEngagement(candidate.status, followerCount),
     followers: followerCount ?? null,
@@ -169,15 +182,18 @@ export function featuresOf(candidate, ctx) {
 }
 
 // Each rule returns a sort key (higher first) or null to skip the candidate.
+// Rules marked `followsOnly` see only posts by authors the user follows.
 export const RULES = [
   {
     id: 'relative',
+    followsOnly: true,
     name: 'Engagement relative to author size',
     note: 'mastodon_digest: gmean(boosts, likes, replies) / √followers',
     score: (f) => (f.relative > 0 ? f.relative : null),
   },
   {
     id: 'raw',
+    followsOnly: true,
     name: 'Raw engagement (popularity baseline)',
     note: 'gmean(boosts, likes, replies), no author normalization',
     score: (f) => (f.raw > 0 ? f.raw : null),
@@ -185,27 +201,39 @@ export const RULES = [
   {
     id: 'shared',
     name: 'Shared by people you follow',
-    note: 'Distinct follows who boosted or quoted it in your home timeline',
+    note: 'Distinct follows who boosted or quoted it; any author',
     score: (f) =>
       f.sharedBy > 0 ? f.sharedBy + (f.relative || 0) / 1000 : null,
   },
   {
     id: 'affinity',
+    followsOnly: true,
     name: 'Authors you interact with',
     note: 'Your recent replies (3), boosts (2) and likes (1) to the author',
     score: (f, c) => (f.affinity > 0 ? f.affinity + c.time / 1e15 : null),
   },
   {
     id: 'quiet',
+    followsOnly: true,
     name: 'Quiet posters',
     note: 'Fewest posts in your home timeline today; ties by relative engagement',
     score: (f, c) =>
-      c.origins.has('home') && f.authorPostsToday > 0
+      c.inHome && f.authorPostsToday > 0
         ? 1 / f.authorPostsToday + (f.relative || 0) / 1000
         : null,
   },
   {
+    id: 'feeds',
+    name: 'Topic feeds, relative engagement',
+    note: 'Posts from your saved topic feeds by authors you do not follow',
+    score: (f, c) =>
+      !f.followed && [...c.origins].some((o) => o.startsWith('feed:'))
+        ? f.relative || 0
+        : null,
+  },
+  {
     id: 'topics',
+    followsOnly: true,
     name: 'Topic keywords',
     note: 'Matches open source, AI, San Francisco or housing regexes',
     score: (f) =>
@@ -213,6 +241,7 @@ export const RULES = [
   },
   {
     id: 'random',
+    followsOnly: true,
     name: 'Random (baseline)',
     note: 'A random sample of the pool',
     score: (f, c, seed) => hashKey(c.key, seed),
@@ -222,6 +251,7 @@ export const RULES = [
 // Top picks for one rule, at most PER_AUTHOR_CAP per author.
 export function pickForRule(rule, scored, { seed, limit = PICKS_PER_RULE }) {
   const ranked = scored
+    .filter(({ features }) => !rule.followsOnly || features.followed)
     .map(({ candidate, features }) => ({
       candidate,
       value: rule.score(features, candidate, seed),
@@ -243,14 +273,19 @@ export function pickForRule(rule, scored, { seed, limit = PICKS_PER_RULE }) {
 export function runLab(pool, { followers, affinity, seed }) {
   const homePostsByAuthor = new Map();
   for (const c of pool) {
-    if (c.origins.has('home')) {
+    if (c.inHome) {
       homePostsByAuthor.set(
         c.author,
         (homePostsByAuthor.get(c.author) || 0) + 1,
       );
     }
   }
-  const ctx = { followers, affinity, homePostsByAuthor };
+  // Authors whose own posts are in the home timeline count as followed. On
+  // Mastodon this also counts authors reached through followed hashtags.
+  const followedAuthors = new Set(
+    pool.filter((c) => c.inHome).map((c) => c.author),
+  );
+  const ctx = { followers, affinity, homePostsByAuthor, followedAuthors };
   const scored = pool.map((candidate) => ({
     candidate,
     features: featuresOf(candidate, ctx),
