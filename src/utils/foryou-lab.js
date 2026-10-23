@@ -51,15 +51,43 @@ function plainText(html) {
     .trim();
 }
 
+function escapeRegExp(str) {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// True when the text holds one of the user's Bluesky muted words. A phrase
+// matches as a substring; a single word matches whole, with or without a
+// leading '#', so a Mastodon hashtag matches too.
+export function hasMutedWord(text, mutedWords, now = Date.now()) {
+  for (const { value, expiresAt } of mutedWords) {
+    if (!value || (expiresAt && Date.parse(expiresAt) < now)) continue;
+    if (/\s/.test(value)) {
+      if (text.toLowerCase().includes(value.toLowerCase())) return true;
+    } else if (
+      new RegExp(
+        `(?:^|[^\\p{L}\\p{N}])${escapeRegExp(value)}(?:$|[^\\p{L}\\p{N}])`,
+        'iu',
+      ).test(text)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Builds one candidate per original post from timeline items, which may be
 // boost wrappers. Keeps posts created after the cutoff, not by the user, not
 // direct, and not replies into someone else's thread (self-threads stay).
 // Drops muted and blocked authors and boosters, including those on Bluesky
-// mute and block lists, and posts that match a Mastodon home filter.
+// mute and block lists, posts that match a Mastodon home filter, and posts
+// on either network that hold a Bluesky muted word.
 // `boostedBy` counts accounts in the home timeline that boosted the post;
 // `quotedBy` counts home-timeline authors whose posts quote it. `inHome` is
 // set when the post itself, not a boost of it, is in the home timeline.
-export function buildPool(entries, { cutoff, selfKeys = new Set() }) {
+export function buildPool(
+  entries,
+  { cutoff, selfKeys = new Set(), mutedWords = [] },
+) {
   const pool = new Map();
   const quotes = [];
   for (const { item, origin, instance } of entries) {
@@ -90,6 +118,7 @@ export function buildPool(entries, { cutoff, selfKeys = new Set() }) {
       const text = [status.spoilerText, plainText(status.content)]
         .filter(Boolean)
         .join('\n');
+      if (hasMutedWord(text, mutedWords)) continue;
       candidate = {
         key,
         instance,

@@ -103,6 +103,19 @@ async function loadSource({ masto, instance }, cutoff, log) {
     }
   }
 
+  // Bluesky muted words, which the facade lists as filters
+  let mutedWords = [];
+  if (self._bluesky) {
+    try {
+      mutedWords = (await masto.v1.filters.list()).map((f) => ({
+        value: f.title,
+        expiresAt: f.expiresAt,
+      }));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   log(`${instance}: reading your recent posts and likes`);
   const [own, likes] = await Promise.all([
     collect(
@@ -119,6 +132,7 @@ async function loadSource({ masto, instance }, cutoff, log) {
     masto,
     selfKey: authorKey(instance, self),
     entries,
+    mutedWords,
     homeCount: home.length,
     feeds,
     own: own.map((status) => ({ instance, status })),
@@ -194,7 +208,11 @@ function ForYouLab() {
         );
         const pool = buildPool(
           loaded.flatMap((s) => s.entries),
-          { cutoff, selfKeys: new Set(loaded.map((s) => s.selfKey)) },
+          {
+            cutoff,
+            selfKeys: new Set(loaded.map((s) => s.selfKey)),
+            mutedWords: loaded.flatMap((s) => s.mutedWords),
+          },
         );
         log(`Pool: ${pool.length} posts. Reading follower counts`);
         const followers = await loadFollowers(pool, loaded, log);
