@@ -19,6 +19,8 @@ import {
   runLab,
   scoreRules,
 } from '../utils/foryou-lab';
+import { muteWordEverywhere } from '../utils/mute-word';
+import showToast from '../utils/show-toast';
 import states, { saveStatus } from '../utils/states';
 import useTitle from '../utils/useTitle';
 
@@ -30,6 +32,7 @@ const FEED_PAGES = 4;
 const ACTIVITY_PAGES = 3;
 const PROFILE_CONCURRENCY = 6;
 const VERDICTS_KEY = 'foryouLabVerdicts';
+const REASONS_KEY = 'foryouLabReasons';
 
 function loadVerdicts() {
   try {
@@ -43,6 +46,138 @@ function saveVerdicts(verdicts) {
   try {
     localStorage.setItem(VERDICTS_KEY, JSON.stringify(verdicts));
   } catch (e) {}
+}
+
+// Reasons given for "Not for me", by post key: [{ type, value }]
+function loadReasons() {
+  try {
+    return JSON.parse(localStorage.getItem(REASONS_KEY)) || {};
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveReasons(reasons) {
+  try {
+    localStorage.setItem(REASONS_KEY, JSON.stringify(reasons));
+  } catch (e) {}
+}
+
+function hashtagsOf(status) {
+  const names = (status.tags || []).map((t) => t.name);
+  return [...new Set(names.filter(Boolean).map((n) => n.toLowerCase()))];
+}
+
+// The reasons offered after "Not for me". Each one but "Just this post" also
+// acts: it mutes or blocks the author on the post's network, or mutes a word
+// on every logged-in account, so the dislike and the fix are one tap.
+function DislikeReasons({ candidate, masto, given, onReason }) {
+  const { status } = candidate;
+  const account = status.account;
+  const [busy, setBusy] = useState(false);
+  const [word, setWord] = useState('');
+  const selection = useRef('');
+  const done = (type, value) =>
+    given.some((r) => r.type === type && r.value === value);
+
+  async function act(type, value, action) {
+    if (busy || done(type, value)) return;
+    setBusy(true);
+    try {
+      if (action) await action();
+      onReason({ type, value });
+    } catch (e) {
+      console.error(e);
+      showToast(`Failed: ${e?.message || e}`);
+    }
+    setBusy(false);
+  }
+
+  async function muteWord(value) {
+    const word = (value || '').trim();
+    if (!word) return;
+    await act('mute-word', word, async () => {
+      const instances = await muteWordEverywhere(word, { expiresIn: 0 });
+      if (!instances.length) throw new Error('no account accepted the mute');
+      showToast(`Muted "${word}" on ${instances.join(', ')}`);
+    });
+  }
+
+  const button = (type, value, label, action) => (
+    <button
+      type="button"
+      class={done(type, value) ? '' : 'light'}
+      disabled={busy}
+      onClick={() => act(type, value, action)}
+    >
+      {done(type, value) ? `✓ ${label}` : label}
+    </button>
+  );
+
+  return (
+    <div class="lab-reasons">
+      <span class="insignificant">Why?</span>
+      {button('post', '', 'Just this post')}
+      {button('mute-author', account?.acct, `Mute @${account?.acct}`, () =>
+        masto.v1.accounts.$select(account.id).mute(),
+      )}
+      {button('block-author', account?.acct, 'Block', () =>
+        masto.v1.accounts.$select(account.id).block(),
+      )}
+      {hashtagsOf(status).map((tag) => (
+        <button
+          key={tag}
+          type="button"
+          class={done('mute-word', tag) ? '' : 'light'}
+          disabled={busy}
+          onClick={() => muteWord(tag)}
+        >
+          {done('mute-word', tag) ? `✓ Muted ${tag}` : `Mute #${tag}`}
+        </button>
+      ))}
+      <button
+        type="button"
+        class="light"
+        disabled={busy}
+        // Read the selection before the tap can clear it
+        onPointerDown={() => {
+          selection.current = String(window.getSelection() || '').trim();
+        }}
+        onClick={() => {
+          const text =
+            selection.current || String(window.getSelection() || '').trim();
+          if (text) muteWord(text);
+          else showToast('Select a word or phrase in the post first');
+        }}
+      >
+        Mute selected text
+      </button>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          muteWord(word).then(() => setWord(''));
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Mute a word…"
+          value={word}
+          onInput={(e) => setWord(e.target.value)}
+          disabled={busy}
+        />
+      </form>
+      {given
+        .filter(
+          (r) =>
+            r.type === 'mute-word' && !hashtagsOf(status).includes(r.value),
+        )
+        .map((r) => (
+          <span key={r.value} class="insignificant">
+            ✓ Muted "{r.value}"
+          </span>
+        ))}
+    </div>
+  );
 }
 
 // Reads pages until a page ends with an item older than the cutoff (when
@@ -189,6 +324,7 @@ function ForYouLab() {
   const [lab, setLab] = useState(null);
   const [error, setError] = useState(null);
   const [verdicts, setVerdicts] = useState(loadVerdicts);
+  const [reasons, setReasons] = useState(loadReasons);
   const [revealed, setRevealed] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -240,6 +376,7 @@ function ForYouLab() {
         setLab({
           ...result,
           byKey,
+          mastoByInstance: new Map(loaded.map((s) => [s.instance, s.masto])),
           poolSize: pool.length,
           sources: loaded.map(
             ({ instance, homeCount, homeHours, feeds, own, likes }) => ({
@@ -267,6 +404,20 @@ function ForYouLab() {
       if (next[key] === verdict) delete next[key];
       else next[key] = verdict;
       saveVerdicts(next);
+      return next;
+    });
+  }
+
+  function addReason(key, reason) {
+    setVerdicts((prev) => {
+      if (prev[key] === 'down') return prev;
+      const next = { ...prev, [key]: 'down' };
+      saveVerdicts(next);
+      return next;
+    });
+    setReasons((prev) => {
+      const next = { ...prev, [key]: [...(prev[key] || []), reason] };
+      saveReasons(next);
       return next;
     });
   }
@@ -300,6 +451,7 @@ function ForYouLab() {
         return {
           key,
           verdict: verdicts[key] || null,
+          reasons: reasons[key] || [],
           rules: rulesByKey.get(key),
           author: c.status.account?.acct,
           origins: [...c.origins],
@@ -453,6 +605,14 @@ function ForYouLab() {
                           Open
                         </Link>
                       </div>
+                      {verdict === 'down' && (
+                        <DislikeReasons
+                          candidate={c}
+                          masto={lab.mastoByInstance.get(c.instance)}
+                          given={reasons[key] || []}
+                          onReason={(reason) => addReason(key, reason)}
+                        />
+                      )}
                       {revealed && (
                         <p class="lab-why insignificant">
                           {rulesForKey(key).join(', ')} ·{' '}
