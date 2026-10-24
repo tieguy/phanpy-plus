@@ -8,6 +8,10 @@ import { isFiltered } from './filters';
 export const WINDOW_MS = 24 * 60 * 60 * 1000;
 export const PICKS_PER_RULE = 12;
 export const PER_AUTHOR_CAP = 2;
+// Likes a topic-feed post by a stranger needs before the feeds rule ranks it.
+// Relative engagement alone favors tiny accounts: one like on a one-follower
+// account outscores a hundred likes on a large one.
+export const FEED_MIN_LIKES = 20;
 
 // The saved Bluesky feeds the lab reads. Other saved feeds are skipped.
 export const LAB_FEEDS = new Set([
@@ -284,9 +288,11 @@ export const RULES = [
   {
     id: 'feeds',
     name: 'Topic feeds, relative engagement',
-    note: 'Posts from your saved topic feeds by authors you do not follow',
+    note: `Posts from your saved topic feeds by authors you do not follow, at least ${FEED_MIN_LIKES} likes`,
     score: (f, c) =>
-      !f.followed && [...c.origins].some((o) => o.startsWith('feed:'))
+      !f.followed &&
+      (c.status.favouritesCount || 0) >= FEED_MIN_LIKES &&
+      [...c.origins].some((o) => o.startsWith('feed:'))
         ? f.relative || 0
         : null,
   },
