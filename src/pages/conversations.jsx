@@ -5,6 +5,7 @@ import { useEffect, useReducer, useRef, useState } from 'preact/hooks';
 import { useSnapshot } from 'valtio';
 
 import Avatar from '../components/avatar';
+import FixedAccountsBanner from '../components/fixed-accounts-banner';
 import Icon from '../components/icon';
 import Link from '../components/link';
 import Loader from '../components/loader';
@@ -196,6 +197,7 @@ function Conversations() {
           </div>
         </header>
         <main>
+          <FixedAccountsBanner />
           {failed.length > 0 && (
             <p class="conversations-notice">
               <Trans>Couldn’t load: {failed.join(', ')}</Trans>

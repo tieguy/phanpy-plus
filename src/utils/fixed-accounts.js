@@ -42,3 +42,41 @@ function parseEntry(entry) {
   }
   return null;
 }
+
+// Which fixed accounts this device is logged in to. `accounts` is the
+// accounts store. Each fixed account comes back with `state`:
+//   'ok'      — a usable session is stored
+//   'expired' — a Bluesky account whose session died (`authExpired`)
+//   'missing' — nothing stored for it on this device
+// A Mastodon account counts as 'ok' whenever a token is stored: a revoked
+// token is not detected here.
+export function fixedAccountStates(fixedAccounts, accounts = []) {
+  return fixedAccounts.map((fixed) => {
+    const stored = accounts.find((a) => matches(fixed, a));
+    let state = 'missing';
+    if (stored) {
+      if (fixed.network === 'bluesky') {
+        if (stored.authExpired) state = 'expired';
+        else if (stored.blueskySession?.refreshJwt) state = 'ok';
+      } else if (stored.accessToken) {
+        state = 'ok';
+      }
+    }
+    return { ...fixed, state };
+  });
+}
+
+function matches(fixed, account) {
+  const lower = (s) => (s || '').toLowerCase().replace(/^@/, '');
+  if (fixed.network === 'bluesky') {
+    if (account.accountType !== 'bluesky') return false;
+    return [account.blueskySession?.handle, account.info?.acct].some(
+      (h) => lower(h) === fixed.handle,
+    );
+  }
+  if (account.accountType === 'bluesky') return false;
+  return (
+    lower(account.info?.username) === lower(fixed.username) &&
+    lower(account.instanceURL) === fixed.instance
+  );
+}

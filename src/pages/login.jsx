@@ -7,25 +7,14 @@ import { useSearchParams } from 'react-router-dom';
 
 import logo from '../assets/logo.svg';
 
+import BlueskyLoginForm from '../components/bluesky-login-form';
 import Icon from '../components/icon';
 import Link from '../components/link';
 import Loader from '../components/loader';
 import instancesListURL from '../data/instances.json?url';
-import {
-  getAuthorizationURL,
-  getPKCEAuthorizationURL,
-  registerApplication,
-} from '../utils/auth';
-import { openAuthPopup, watchAuthPopup } from '../utils/auth-popup';
-import { DEFAULT_BLUESKY_SERVICE, loginBluesky } from '../utils/bluesky';
 import { parseFixedAccounts } from '../utils/fixed-accounts';
-import { supportsPKCE } from '../utils/oauth-pkce';
+import { startMastodonLogin } from '../utils/mastodon-login';
 import store from '../utils/store';
-import {
-  getCredentialApplication,
-  hasAccountInInstance,
-  storeCredentialApplication,
-} from '../utils/store-utils';
 import useTitle from '../utils/useTitle';
 
 const {
@@ -54,8 +43,6 @@ function Login() {
   );
   // Pre-filled when coming from "Log back in" on a logged-out Bluesky account
   const blueskyHandle = searchParams.get('handle') || '';
-  const [bskyUIState, setBskyUIState] = useState('default');
-  const [bskyError, setBskyError] = useState(null);
 
   // Deep-linked from the landing page's "Log in with Bluesky" peer.
   useEffect(() => {
@@ -91,107 +78,13 @@ function Login() {
 
   const submitInstance = (instanceURL) => {
     if (!instanceURL) return;
-
-    (async () => {
-      // WEB_DOMAIN vs LOCAL_DOMAIN negotiation time
-      // https://docs.joinmastodon.org/admin/config/#web_domain
-      try {
-        const res = await fetch(`https://${instanceURL}/.well-known/host-meta`); // returns XML
-        const text = await res.text();
-        // Parse XML
-        const parser = new DOMParser();
-        const xmlDoc = parser.parseFromString(text, 'text/xml');
-        // Get Link[template]
-        const link = xmlDoc.getElementsByTagName('Link')[0];
-        const template = link.getAttribute('template');
-        const url = URL.parse(template);
-        const { host } = url; // host includes the port
-        if (instanceURL !== host) {
-          console.log(`💫 ${instanceURL} -> ${host}`);
-          instanceURL = host;
-        }
-      } catch (e) {
-        // Silently fail
-        console.error(e);
-      }
-
-      store.local.set('instanceURL', instanceURL);
-
-      setUIState('loading');
-      try {
-        let credentialApplication = getCredentialApplication(instanceURL);
-        if (
-          !credentialApplication ||
-          !credentialApplication.client_id ||
-          !credentialApplication.client_secret
-        ) {
-          credentialApplication = await registerApplication({
-            instanceURL,
-          });
-          storeCredentialApplication(instanceURL, credentialApplication);
-        }
-
-        const { client_id, client_secret } = credentialApplication;
-
-        const authPKCE = await supportsPKCE({ instanceURL });
-        console.log({ authPKCE });
-        const forceLogin = hasAccountInInstance(instanceURL);
-
-        let authUrl;
-        if (authPKCE && window.isSecureContext) {
-          if (client_id && client_secret) {
-            const [url, verifier] = await getPKCEAuthorizationURL({
-              instanceURL,
-              client_id,
-              forceLogin,
-            });
-            store.sessionCookie.set('codeVerifier', verifier);
-            authUrl = url;
-          } else {
-            alert(t`Failed to register application`);
-            setUIState('default');
-            return;
-          }
-        } else {
-          if (client_id && client_secret) {
-            authUrl = await getAuthorizationURL({
-              instanceURL,
-              client_id,
-              forceLogin,
-            });
-          } else {
-            alert(t`Failed to register application`);
-            setUIState('default');
-            return;
-          }
-        }
-
-        const popup = openAuthPopup(authUrl);
-
-        if (popup) {
-          watchAuthPopup(
-            popup,
-            (code) => {
-              const callbackUrl = `${window.location.origin}${window.location.pathname}?code=${encodeURIComponent(code)}`;
-              window.location.href = callbackUrl;
-            },
-            (error) => {
-              console.error('Popup auth error:', error);
-              setUIState('error');
-            },
-          );
-        } else {
-          // Popup blocked, fallback to redirect
-          console.log('Popup blocked, falling back to redirect');
-          location.href = authUrl;
-        }
-
-        setUIState('default');
-      } catch (e) {
+    setUIState('loading');
+    startMastodonLogin(instanceURL, { onError: () => setUIState('error') })
+      .then(() => setUIState('default'))
+      .catch((e) => {
         console.error(e);
         setUIState('error');
-      }
-    })();
+      });
   };
 
   const cleanInstanceText = instanceText
@@ -221,97 +114,11 @@ function Login() {
         ? instancesList.find((instance) => instance.includes(instanceText))
         : null;
 
-  const onBlueskyPasswordSubmit = (e) => {
-    e.preventDefault();
-    const { elements } = e.target;
-    const identifier = elements.bskyPwIdentifier.value;
-    const password = elements.bskyPassword.value;
-    const service = elements.bskyService?.value || DEFAULT_BLUESKY_SERVICE;
-    if (!identifier || !password) return;
-    setBskyError(null);
-    setBskyUIState('loading');
-    (async () => {
-      try {
-        await loginBluesky({ service, identifier, password });
-        // Hard reload so the app bootstraps with the new current account
-        location.hash = '/';
-        location.reload();
-      } catch (err) {
-        console.error(err);
-        setBskyError(err?.message || `${err}`);
-        setBskyUIState('error');
-      }
-    })();
+  const onBlueskyLoggedIn = () => {
+    // Hard reload so the app bootstraps with the new current account
+    location.hash = '/';
+    location.reload();
   };
-
-  const blueskyError = bskyUIState === 'error' && (
-    <p class="error">
-      <Trans>Failed to log in to Bluesky.</Trans> {bskyError}
-    </p>
-  );
-
-  // With a fixed handle the field is read-only but still submitted, so
-  // password managers can pair the saved app password with the handle.
-  const blueskyPasswordForm = ({ fixedHandle } = {}) => (
-    <form onSubmit={onBlueskyPasswordSubmit}>
-      <h2>
-        <Icon icon="bluesky" alt="" /> Bluesky
-      </h2>
-      <label>
-        <p>
-          <Trans>Handle</Trans>
-        </p>
-        <input
-          type="text"
-          class="large"
-          name="bskyPwIdentifier"
-          defaultValue={fixedHandle || blueskyHandle}
-          readOnly={!!fixedHandle}
-          required
-          autocorrect="off"
-          autocapitalize="off"
-          autocomplete="username"
-          spellCheck={false}
-          placeholder="you.bsky.social"
-          disabled={bskyUIState === 'loading'}
-          dir="auto"
-        />
-      </label>
-      <label>
-        <p>
-          <Trans>App password</Trans>
-        </p>
-        <input
-          type="password"
-          class="large"
-          name="bskyPassword"
-          required
-          autocomplete="current-password"
-          placeholder="xxxx-xxxx-xxxx-xxxx"
-          disabled={bskyUIState === 'loading'}
-        />
-      </label>
-      {blueskyError}
-      <div>
-        <button disabled={bskyUIState === 'loading'}>
-          <Trans>Log in with app password</Trans>
-        </button>
-      </div>
-      <p style={{ fontSize: '90%' }}>
-        <a
-          href="https://bsky.app/settings/app-passwords"
-          target="_blank"
-          rel="noopener"
-        >
-          <Trans>Create an app password on Bluesky</Trans>
-        </a>{' '}
-        <Trans>
-          — tick "Allow access to your direct messages" if you want DMs.
-        </Trans>
-      </p>
-      <Loader hidden={bskyUIState !== 'loading'} />
-    </form>
-  );
 
   const onSubmit = (e) => {
     e.preventDefault();
@@ -377,7 +184,10 @@ function Login() {
         {blueskyAccounts.map((account) => (
           <div key={account.label}>
             <hr />
-            {blueskyPasswordForm({ fixedHandle: account.handle })}
+            <BlueskyLoginForm
+              fixedHandle={account.handle}
+              onLoggedIn={onBlueskyLoggedIn}
+            />
           </div>
         ))}
       </main>
@@ -466,7 +276,10 @@ function Login() {
       <hr />
       <div id="bluesky-login">
         {showBluesky ? (
-          blueskyPasswordForm()
+          <BlueskyLoginForm
+            defaultHandle={blueskyHandle}
+            onLoggedIn={onBlueskyLoggedIn}
+          />
         ) : (
           <p>
             <button

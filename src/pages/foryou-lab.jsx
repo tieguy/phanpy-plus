@@ -3,6 +3,7 @@ import './foryou-lab.css';
 import { useEffect, useMemo, useReducer, useRef, useState } from 'preact/hooks';
 import { useSnapshot } from 'valtio';
 
+import FixedAccountsBanner from '../components/fixed-accounts-banner';
 import Link from '../components/link';
 import Loader from '../components/loader';
 import NavMenu from '../components/nav-menu';
@@ -496,6 +497,7 @@ function ForYouLab() {
           </div>
         </header>
         <main>
+          <FixedAccountsBanner />
           {error ? (
             <p class="ui-state">Failed: {error}</p>
           ) : !lab ? (

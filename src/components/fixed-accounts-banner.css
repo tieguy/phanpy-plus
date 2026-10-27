@@ -1,0 +1,38 @@
+.fixed-accounts-banner {
+  padding: 12px 16px;
+  font-size: 0.9em;
+  background-color: var(--bg-faded-color);
+  border-bottom: 1px solid var(--outline-color);
+
+  p {
+    margin: 0 0 8px;
+  }
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 0;
+
+    > form,
+    > .error {
+      flex-basis: 100%;
+    }
+  }
+
+  form h2 {
+    display: none;
+  }
+
+  form input.large {
+    width: 100%;
+  }
+}

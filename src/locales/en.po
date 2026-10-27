@@ -359,6 +359,30 @@ msgstr ""
 msgid "Cloak mode enabled"
 msgstr ""
 
+#: src/components/bluesky-login-form.jsx:45
+msgid "Handle"
+msgstr "Handle"
+
+#: src/components/bluesky-login-form.jsx:65
+msgid "App password"
+msgstr "App password"
+
+#: src/components/bluesky-login-form.jsx:79
+msgid "Failed to log in to Bluesky."
+msgstr "Failed to log in to Bluesky."
+
+#: src/components/bluesky-login-form.jsx:84
+msgid "Log in with app password"
+msgstr "Log in with app password"
+
+#: src/components/bluesky-login-form.jsx:93
+msgid "Create an app password on Bluesky"
+msgstr "Create an app password on Bluesky"
+
+#: src/components/bluesky-login-form.jsx:95
+msgid "— tick \"Allow access to your direct messages\" if you want DMs."
+msgstr "— tick \"Allow access to your direct messages\" if you want DMs."
+
 #. More from [Author]
 #: src/components/byline.jsx:17
 msgid "More from <0/>"
@@ -1001,7 +1025,7 @@ msgstr ""
 
 #: src/components/drafts.jsx:278
 #: src/pages/catchup.jsx:2108
-#: src/pages/conversations.jsx:70
+#: src/pages/conversations.jsx:71
 msgid "Poll"
 msgstr ""
 
@@ -1163,6 +1187,29 @@ msgstr "Profiles featured by @{0}"
 #: src/components/endorsements.jsx:98
 msgid "No featured profiles."
 msgstr "No featured profiles."
+
+#: src/components/fixed-accounts-banner.jsx:68
+msgid "Not logged in on this device:"
+msgstr "Not logged in on this device:"
+
+#: src/components/fixed-accounts-banner.jsx:78
+msgid "(session expired)"
+msgstr "(session expired)"
+
+#: src/components/fixed-accounts-banner.jsx:88
+#: src/components/fixed-accounts-banner.jsx:96
+#: src/components/nav-menu.jsx:386
+#: src/pages/login.jsx:30
+#: src/pages/login.jsx:158
+#: src/pages/login.jsx:203
+#: src/pages/status.jsx:1119
+msgid "Log in"
+msgstr ""
+
+#: src/components/fixed-accounts-banner.jsx:101
+#: src/pages/login.jsx:178
+msgid "Failed to log in. Please try again."
+msgstr "Failed to log in. Please try again."
 
 #: src/components/follow-request-buttons.jsx:45
 #: src/pages/notifications.jsx:1243
@@ -1871,14 +1918,6 @@ msgstr ""
 msgid "Accounts…"
 msgstr ""
 
-#: src/components/nav-menu.jsx:386
-#: src/pages/login.jsx:41
-#: src/pages/login.jsx:351
-#: src/pages/login.jsx:393
-#: src/pages/status.jsx:1119
-msgid "Log in"
-msgstr ""
-
 #: src/components/nav-menu.jsx:404
 #: src/components/shortcuts-settings.jsx:60
 #: src/components/shortcuts-settings.jsx:183
@@ -2197,7 +2236,7 @@ msgstr "Show results"
 
 #: src/components/poll.jsx:411
 #: src/components/poll.jsx:413
-#: src/pages/conversations.jsx:193
+#: src/pages/conversations.jsx:194
 #: src/pages/engagement.jsx:105
 #: src/pages/scheduled-posts.jsx:100
 #: src/pages/status.jsx:1583
@@ -2749,7 +2788,7 @@ msgstr ""
 #: src/components/shortcuts-settings.jsx:80
 #: src/components/shortcuts-settings.jsx:89
 #: src/components/shortcuts-settings.jsx:127
-#: src/pages/login.jsx:397
+#: src/pages/login.jsx:207
 msgid "Server"
 msgstr "Server"
 
@@ -3526,7 +3565,7 @@ msgstr "Login required."
 #: src/compose.jsx:96
 #: src/pages/annual-report.jsx:186
 #: src/pages/http-route.jsx:94
-#: src/pages/login.jsx:492
+#: src/pages/login.jsx:305
 msgid "Go home"
 msgstr ""
 
@@ -4081,28 +4120,28 @@ msgstr "Unable to load this conversation."
 #~ msgid "Conversations will appear here."
 #~ msgstr "Conversations will appear here."
 
-#: src/pages/conversations.jsx:43
+#: src/pages/conversations.jsx:44
 msgid "{images, plural, one {# image} other {# images}}"
 msgstr "{images, plural, one {# image} other {# images}}"
 
-#: src/pages/conversations.jsx:49
+#: src/pages/conversations.jsx:50
 msgid "{videos, plural, one {# video} other {# videos}}"
 msgstr "{videos, plural, one {# video} other {# videos}}"
 
-#: src/pages/conversations.jsx:55
+#: src/pages/conversations.jsx:56
 msgid "{others, plural, one {# attachment} other {# attachments}}"
 msgstr "{others, plural, one {# attachment} other {# attachments}}"
 
-#: src/pages/conversations.jsx:60
+#: src/pages/conversations.jsx:61
 msgid "Quoted post"
 msgstr "Quoted post"
 
-#: src/pages/conversations.jsx:65
+#: src/pages/conversations.jsx:66
 msgid "Link preview"
 msgstr "Link preview"
 
-#: src/pages/conversations.jsx:84
-#: src/pages/conversations.jsx:181
+#: src/pages/conversations.jsx:85
+#: src/pages/conversations.jsx:182
 #: src/pages/filters.jsx:31
 msgid "Conversations"
 msgstr ""
@@ -4112,7 +4151,7 @@ msgstr ""
 #~ msgid "{0, plural, one {# response} other {# responses}}"
 #~ msgstr "{0, plural, one {# response} other {# responses}}"
 
-#: src/pages/conversations.jsx:185
+#: src/pages/conversations.jsx:186
 msgid "New post"
 msgstr "New post"
 
@@ -4121,28 +4160,28 @@ msgstr "New post"
 #~ msgstr "{CONVERSATION_DAYS, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 
 #. placeholder {0}: failed.join(', ')
-#: src/pages/conversations.jsx:201
+#: src/pages/conversations.jsx:203
 msgid "Couldn’t load: {0}"
 msgstr "Couldn’t load: {0}"
 
-#: src/pages/conversations.jsx:207
+#: src/pages/conversations.jsx:209
 msgid "Unable to load conversations."
 msgstr "Unable to load conversations."
 
 #. placeholder {0}: entry.responseCount
-#: src/pages/conversations.jsx:251
+#: src/pages/conversations.jsx:253
 msgid "{0, plural, one {# reply} other {# replies}}"
 msgstr "{0, plural, one {# reply} other {# replies}}"
 
-#: src/pages/conversations.jsx:266
+#: src/pages/conversations.jsx:268
 msgid "{days, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 msgstr "{days, plural, one {No replies or mentions in the last day.} other {No replies or mentions in the last # days.}}"
 
-#: src/pages/conversations.jsx:283
+#: src/pages/conversations.jsx:285
 msgid "Show one more day"
 msgstr "Show one more day"
 
-#: src/pages/conversations.jsx:287
+#: src/pages/conversations.jsx:289
 msgid "No older replies or mentions."
 msgstr "No older replies or mentions."
 
@@ -4570,45 +4609,46 @@ msgstr ""
 
 #: src/pages/login.jsx:151
 #: src/pages/login.jsx:163
-msgid "Failed to register application"
-msgstr "Failed to register application"
+#~ msgid "Failed to register application"
+#~ msgstr "Failed to register application"
 
-#: src/pages/login.jsx:249
-msgid "Failed to log in to Bluesky."
-msgstr "Failed to log in to Bluesky."
-
-#: src/pages/login.jsx:262
-msgid "Handle"
-msgstr "Handle"
-
-#: src/pages/login.jsx:282
-msgid "App password"
-msgstr "App password"
-
-#: src/pages/login.jsx:297
-msgid "Log in with app password"
-msgstr "Log in with app password"
-
-#: src/pages/login.jsx:306
-msgid "Create an app password on Bluesky"
-msgstr "Create an app password on Bluesky"
-
-#: src/pages/login.jsx:308
-msgid "— tick \"Allow access to your direct messages\" if you want DMs."
-msgstr "— tick \"Allow access to your direct messages\" if you want DMs."
-
-#: src/pages/login.jsx:365
+#: src/pages/login.jsx:172
 msgid "Continue as {label}"
 msgstr "Continue as {label}"
+
+#: src/pages/login.jsx:222
+msgid "server domain"
+msgstr "server domain"
+
+#: src/pages/login.jsx:247
+msgid "e.g. “mastodon.social”"
+msgstr ""
+
+#: src/pages/login.jsx:258
+msgid "Failed to log in. Please try again or try another server."
+msgstr "Failed to log in. Please try again or try another server."
+
+#: src/pages/login.jsx:270
+msgid "Continue with {selectedInstanceText}"
+msgstr ""
+
+#: src/pages/login.jsx:271
+msgid "Continue"
+msgstr ""
+
+#: src/pages/login.jsx:290
+#: src/pages/welcome.jsx:60
+msgid "Log in with Bluesky"
+msgstr "Log in with Bluesky"
+
+#: src/pages/login.jsx:299
+msgid "Don't have an account? Create one!"
+msgstr ""
 
 #. placeholder {0}: account.label
 #: src/pages/login.jsx:365
 #~ msgid "Continue as {0}"
 #~ msgstr "Continue as {0}"
-
-#: src/pages/login.jsx:371
-msgid "Failed to log in. Please try again."
-msgstr "Failed to log in. Please try again."
 
 #: src/pages/login.jsx:402
 #~ msgid "You'll be sent to your Bluesky server to authorize this app."
@@ -4618,46 +4658,17 @@ msgstr "Failed to log in. Please try again."
 #~ msgid "Use an app password instead"
 #~ msgstr "Use an app password instead"
 
-#: src/pages/login.jsx:412
-msgid "server domain"
-msgstr "server domain"
-
 #: src/pages/login.jsx:433
 #~ msgid "Use OAuth instead"
 #~ msgstr "Use OAuth instead"
-
-#: src/pages/login.jsx:437
-msgid "e.g. “mastodon.social”"
-msgstr ""
-
-#: src/pages/login.jsx:448
-msgid "Failed to log in. Please try again or try another server."
-msgstr "Failed to log in. Please try again or try another server."
 
 #: src/pages/login.jsx:458
 #~ msgid "Continue with Bluesky"
 #~ msgstr "Continue with Bluesky"
 
-#: src/pages/login.jsx:460
-msgid "Continue with {selectedInstanceText}"
-msgstr ""
-
-#: src/pages/login.jsx:461
-msgid "Continue"
-msgstr ""
-
 #: src/pages/login.jsx:462
 #~ msgid "You'll be sent to your Bluesky server to authorize this app. No password is stored, but the session has to be renewed every two weeks."
 #~ msgstr "You'll be sent to your Bluesky server to authorize this app. No password is stored, but the session has to be renewed every two weeks."
-
-#: src/pages/login.jsx:477
-#: src/pages/welcome.jsx:60
-msgid "Log in with Bluesky"
-msgstr "Log in with Bluesky"
-
-#: src/pages/login.jsx:486
-msgid "Don't have an account? Create one!"
-msgstr ""
 
 #: src/pages/mentions.jsx:25
 msgid "Private mentions"
